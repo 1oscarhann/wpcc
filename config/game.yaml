@@ -1,0 +1,33 @@
+# Global rules. Every number here is balance; edit freely, the server validates on startup.
+max_timer_seconds: 3600          # "respect the player's time": no single timer above 1 h
+tick_rate_hz: 20
+
+build_queue:
+  base_slots: 2
+  bonus_slots:                   # extra slots unlocked by Town Hall level
+    - { town_hall: 4, slots: 1 }
+
+refunds:
+  cancel: 0.75                   # cancelling a running upgrade/construction
+  demolish: 0.5                  # of the building's base (level 1) cost
+  undo_window: 60s               # single-level undo, 100% refund
+
+# Feature gates for systems that ship in later phases. While a gate is off the
+# loader rewrites costs so the game stays playable (see DECISIONS D-034).
+gates:
+  intermediates_enabled: false   # Phase 6: planks/bricks in costs. Off → paid as 2 wood / 2 stone each
+  rare_costs_enabled: false      # Phase 4+: rare materials in costs. Off → requirement dropped
+  villagers_enabled: false       # Phase 14: staffing. Off → every building counts as fully staffed
+
+auth:
+  username_min: 3
+  username_max: 20
+  password_min: 8
+  session_ttl: 30d
+  recovery_codes: 8
+
+rate_limits:
+  auth_per_ip_per_min: 20
+  auth_per_username_per_min: 8
+  actions_per_min: 120
+  preview_per_min: 600

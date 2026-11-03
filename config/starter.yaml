@@ -1,0 +1,16 @@
+# What a brand-new player gets (BALANCE §1). Building positions are plot-frame coordinates (D-033).
+coins: 200
+resources: { wood: 300, stone: 200, food: 200, ore: 50 }
+buildings:
+  - { key: town_hall, level: 1, x: 22, y: 20 }
+  - { key: house,     level: 1, x: 18, y: 21 }
+containers:
+  inventory: 24
+  bank: 60
+  equipment: 8
+  mailbox: 50
+items:
+  - { container: equipment, slot: 0, item: training_sword, tier: 1, rarity: common, durability: 120 }
+  - { container: equipment, slot: 4, item: small_healing_potion, quantity: 3 }
+village_name_suffix: "'s Village"
+realm_name_suffix: "'s Realm"

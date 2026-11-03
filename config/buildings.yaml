@@ -1,0 +1,142 @@
+# Buildings. See docs/BALANCE.md §2.
+#
+# Costs: a building lists its level-1 `base_cost`; levels 2–5 are derived from `level_curve`
+# (multiplier, extra coins, planks/bricks conversion from level 3, rare requirement at level 5).
+# A building can instead list explicit `levels:` (the Town Hall does).
+# `max_count` is indexed by Town Hall level 1..5. `produces` is units/hour per level 1..5.
+
+level_curve:
+  times:      [10s, 45s, 5m, 15m, 40m]      # time to reach level 1 (build), 2, 3, 4, 5
+  cost_mult:  [1, 2.5, 6, 14, 30]
+  extra_coins: [0, 0, 100, 400, 1200]
+  intermediates_from_level: 3               # half of wood → planks, half of stone → bricks
+  intermediates:
+    wood: { item: planks, ratio: 2 }
+    stone: { item: bricks, ratio: 2 }
+  rare_at_level: 5
+  rare_cost:                                 # by building `rare_group`
+    default:  { ironbark: 4 }
+    crafting: { starstone: 4 }
+
+buildings:
+  town_hall:
+    name: Town Hall
+    description: The heart of your village. Its level caps every other building and unlocks new ones.
+    category: core
+    footprint: [3, 3]
+    max_count: [1, 1, 1, 1, 1]
+    demolishable: false
+    storage_base: [1000, 1500, 2000, 2500, 3000]   # base storage cap per resource, by TH level
+    levels:
+      - { cost: {}, time: 0s }
+      - { cost: { wood: 200, stone: 150, coins: 100 }, time: 55s }
+      - { cost: { wood: 600, stone: 500, ore: 150, coins: 400 }, time: 8m }
+      - { cost: { planks: 800, bricks: 700, ore: 500, coins: 1200, ironbark: 5 }, time: 20m }
+      - { cost: { planks: 2000, bricks: 1750, ore: 1400, crystal: 40, coins: 4000, starstone: 5 }, time: 45m }
+
+  house:
+    name: House
+    description: Homes for your villagers.
+    category: core
+    footprint: [2, 2]
+    max_count: [3, 5, 7, 9, 12]
+    base_cost: { wood: 50, stone: 20 }
+    housing: [2, 3, 4, 5, 6]
+
+  storehouse:
+    name: Storehouse
+    description: Raises how much of each resource you can store.
+    category: core
+    footprint: [2, 2]
+    max_count: [1, 1, 1, 1, 1]
+    base_cost: { wood: 100, stone: 80 }
+    storage_bonus: [1000, 2500, 5000, 9000, 15000]
+
+  market:
+    name: Market
+    description: Sell goods for coins. (Trading opens in a later update.)
+    category: core
+    footprint: [3, 2]
+    max_count: [1, 1, 1, 1, 1]
+    base_cost: { wood: 120, stone: 80 }
+
+  lumber_camp:
+    name: Lumber Camp
+    description: Woodcutters fell trees for a steady supply of wood.
+    category: production
+    footprint: [2, 2]
+    max_count: [1, 2, 2, 3, 3]
+    base_cost: { wood: 40, stone: 20 }
+    produces: { wood: [60, 100, 160, 240, 350] }
+
+  quarry:
+    name: Quarry
+    description: Cuts stone from the earth.
+    category: production
+    footprint: [2, 2]
+    max_count: [1, 1, 2, 2, 3]
+    base_cost: { wood: 50 }
+    produces: { stone: [50, 85, 135, 200, 290] }
+
+  farm:
+    name: Farm
+    description: Grows food. From level 2 its animals also give hide.
+    category: production
+    footprint: [3, 3]
+    max_count: [1, 2, 2, 3, 3]
+    base_cost: { wood: 40, stone: 10 }
+    produces:
+      food: [60, 100, 160, 240, 350]
+      hide: [0, 6, 10, 16, 24]
+
+  mine:
+    name: Mine
+    description: Digs ore. Deeper levels strike crystal.
+    category: production
+    unlock_town_hall: 2
+    footprint: [2, 2]
+    max_count: [0, 1, 1, 2, 2]
+    base_cost: { wood: 60, stone: 40 }
+    produces:
+      ore: [30, 50, 80, 120, 175]
+      crystal: [0, 0, 4, 8, 14]
+
+  fishing_dock:
+    name: Fishing Dock
+    description: Catches fish. Must touch water.
+    category: production
+    unlock_town_hall: 2
+    footprint: [2, 3]
+    requires_water: true
+    max_count: [0, 1, 1, 1, 2]
+    base_cost: { wood: 60, stone: 20 }
+    produces: { fish: [20, 35, 55, 80, 115] }
+
+  herb_garden:
+    name: Herb Garden
+    description: Grows herbs for potions.
+    category: production
+    unlock_town_hall: 2
+    footprint: [2, 2]
+    max_count: [0, 1, 1, 2, 2]
+    base_cost: { wood: 40, stone: 20 }
+    produces: { herbs: [25, 40, 65, 95, 140] }
+
+  forge:
+    name: Forge
+    description: Smelts ingots and forges weapons when placed next to the right buildings.
+    category: crafting
+    rare_group: crafting
+    footprint: [2, 2]
+    max_count: [1, 1, 1, 2, 2]
+    base_cost: { wood: 80, stone: 120, ore: 20 }
+
+  workshop:
+    name: Workshop
+    description: Turns wood into planks and stone into bricks.
+    category: crafting
+    rare_group: crafting
+    unlock_town_hall: 2
+    footprint: [2, 2]
+    max_count: [0, 1, 1, 1, 1]
+    base_cost: { wood: 120, stone: 60 }

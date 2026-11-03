@@ -1,0 +1,14 @@
+# Optional local Postgres for dev/tests (same settings as the README's native cluster).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hf
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: hearthforge
+    ports:
+      - "5433:5432"
+    volumes:
+      - hf-pg:/var/lib/postgresql/data
+volumes:
+  hf-pg:

@@ -19,6 +19,8 @@ I read the whole spec looking for contradictions, things that won't survive cont
 ### 1.1 Blocking: decide before Phase 2/3
 
 **B1. Perspective: isometric pixel art can't be built from CC0 packs. Proposal: top-down 3/4 pixel art.**
+
+> **Resolved:** top-down, and all art is original and generated in-house by `tools/artgen` (no packs at all). See ART.md and D-031.
 - I couldn't find a cohesive CC0 *isometric pixel-art* pack with animated characters.
   - Kenney's isometric packs are pre-rendered 3D-style sprites, not pixel art, and come with little or no character animation.
   - Kenney's pixel packs (Tiny Town, Tiny Dungeon, Roguelike) are all top-down.

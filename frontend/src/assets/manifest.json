@@ -1,0 +1,1741 @@
+{
+ "atlases": {
+  "world": "/assets/gen/world.json"
+ },
+ "blobMasks": [
+  0,
+  1,
+  4,
+  5,
+  7,
+  16,
+  17,
+  20,
+  21,
+  23,
+  28,
+  29,
+  31,
+  64,
+  65,
+  68,
+  69,
+  71,
+  80,
+  81,
+  84,
+  85,
+  87,
+  92,
+  93,
+  95,
+  112,
+  113,
+  116,
+  117,
+  119,
+  124,
+  125,
+  127,
+  193,
+  197,
+  199,
+  209,
+  213,
+  215,
+  221,
+  223,
+  241,
+  245,
+  247,
+  253,
+  255
+ ],
+ "chars": {
+  "frame": [
+   16,
+   24
+  ],
+  "frames": [
+   "down.idle.0",
+   "down.idle.1",
+   "down.walk.0",
+   "down.walk.1",
+   "down.walk.2",
+   "down.walk.3",
+   "up.idle.0",
+   "up.idle.1",
+   "up.walk.0",
+   "up.walk.1",
+   "up.walk.2",
+   "up.walk.3",
+   "side.idle.0",
+   "side.idle.1",
+   "side.walk.0",
+   "side.walk.1",
+   "side.walk.2",
+   "side.walk.3"
+  ],
+  "image": "/assets/gen/chars.png",
+  "layers": {
+   "char.body.slim": 0,
+   "char.body.sturdy": 1,
+   "char.eyes.bright": 2,
+   "char.eyes.keen": 3,
+   "char.eyes.round": 4,
+   "char.eyes.sleepy": 5,
+   "char.hair.braids": 6,
+   "char.hair.bun": 7,
+   "char.hair.crop": 8,
+   "char.hair.long": 9,
+   "char.hair.shaved": 10,
+   "char.hair.spiky": 11,
+   "char.outfit.cloak.slim": 12,
+   "char.outfit.cloak.sturdy": 13,
+   "char.outfit.dress.slim": 14,
+   "char.outfit.dress.sturdy": 15,
+   "char.outfit.overalls.slim": 16,
+   "char.outfit.overalls.sturdy": 17,
+   "char.outfit.robe.slim": 18,
+   "char.outfit.robe.sturdy": 19,
+   "char.outfit.tunic.slim": 20,
+   "char.outfit.tunic.sturdy": 21,
+   "char.outfit.vest.slim": 22,
+   "char.outfit.vest.sturdy": 23
+  },
+  "shadeKeys": [
+   "#404040",
+   "#707070",
+   "#a0a0a0",
+   "#d0d0d0"
+  ]
+ },
+ "fonts": {
+  "body": "Fredoka",
+  "heading": "Pixelify Sans"
+ },
+ "icons": {
+  "cols": 16,
+  "image": "/assets/gen/icons.png",
+  "names": {
+   "avatar": 0,
+   "bread": 1,
+   "bricks": 2,
+   "build": 3,
+   "check": 4,
+   "close": 5,
+   "coins": 6,
+   "crystal": 7,
+   "demolish": 8,
+   "fish": 9,
+   "food": 10,
+   "herbs": 11,
+   "hide": 12,
+   "home": 13,
+   "info": 14,
+   "ingots": 15,
+   "ironbark": 16,
+   "leather": 17,
+   "lock": 18,
+   "map": 19,
+   "move": 20,
+   "mute": 21,
+   "ore": 22,
+   "planks": 23,
+   "plus": 24,
+   "potion_base": 25,
+   "potion_red": 26,
+   "queue": 27,
+   "rotate": 28,
+   "settings": 29,
+   "sound": 30,
+   "star": 31,
+   "starstone": 32,
+   "stone": 33,
+   "sword": 34,
+   "timer": 35,
+   "undo": 36,
+   "upgrade": 37,
+   "wood": 38
+  },
+  "size": 16
+ },
+ "recolor": {
+  "eyes": {
+   "amber": [
+    "#2b1e2a",
+    "#a5631c",
+    "#e09a2c",
+    "#ffffff"
+   ],
+   "blue": [
+    "#2b1e2a",
+    "#2a5d94",
+    "#4f8fd0",
+    "#ffffff"
+   ],
+   "brown": [
+    "#2b1e2a",
+    "#5a3726",
+    "#8a5a3a",
+    "#ffffff"
+   ],
+   "green": [
+    "#2b1e2a",
+    "#2f6a3d",
+    "#4f9a55",
+    "#ffffff"
+   ],
+   "grey": [
+    "#2b1e2a",
+    "#585c6e",
+    "#8a90a0",
+    "#ffffff"
+   ],
+   "hazel": [
+    "#2b1e2a",
+    "#5e5a2a",
+    "#8f8a45",
+    "#ffffff"
+   ]
+  },
+  "hair": {
+   "auburn": [
+    "#4f1d17",
+    "#7a2c21",
+    "#a6402d",
+    "#c9613f"
+   ],
+   "black": [
+    "#16121c",
+    "#262033",
+    "#3a3249",
+    "#544a66"
+   ],
+   "blonde": [
+    "#8a6524",
+    "#bb9236",
+    "#e2bf57",
+    "#f7e18f"
+   ],
+   "chestnut": [
+    "#3d2216",
+    "#5e3421",
+    "#82492d",
+    "#a8643f"
+   ],
+   "ginger": [
+    "#7a3517",
+    "#b4541f",
+    "#df7a2e",
+    "#f5a457"
+   ],
+   "platinum": [
+    "#8f8a86",
+    "#bdb7ad",
+    "#e1dccf",
+    "#fbf8ef"
+   ],
+   "rose": [
+    "#7a2f4f",
+    "#ad4a72",
+    "#d9739a",
+    "#f5a6c4"
+   ],
+   "silver": [
+    "#4c5160",
+    "#71788a",
+    "#9da4b4",
+    "#d0d5df"
+   ],
+   "teal": [
+    "#174a4f",
+    "#226b6f",
+    "#2f9294",
+    "#58c2bd"
+   ],
+   "violet": [
+    "#35215a",
+    "#4f3283",
+    "#7050b0",
+    "#9b7fd6"
+   ]
+  },
+  "outfit": {
+   "charcoal": [
+    "#22222b",
+    "#33343f",
+    "#4a4c5a",
+    "#6a6d7d"
+   ],
+   "cream": [
+    "#9c8f76",
+    "#c4b799",
+    "#e3d8bd",
+    "#fbf5e6"
+   ],
+   "forest": [
+    "#1d3b2c",
+    "#2a5640",
+    "#3c7656",
+    "#5b9a72"
+   ],
+   "leaf": [
+    "#2b5a2e",
+    "#3f7d3a",
+    "#5fa447",
+    "#8cc663"
+   ],
+   "mustard": [
+    "#6b5216",
+    "#9c7a22",
+    "#cca434",
+    "#ebcb5f"
+   ],
+   "navy": [
+    "#1c2347",
+    "#2a3566",
+    "#3d4d8c",
+    "#5e72b3"
+   ],
+   "orange": [
+    "#6e3216",
+    "#a24e20",
+    "#d8742e",
+    "#f2a254"
+   ],
+   "plum": [
+    "#3c1f45",
+    "#5a2e66",
+    "#7d4590",
+    "#a76bb8"
+   ],
+   "red": [
+    "#5e1f24",
+    "#8f2f30",
+    "#c0473d",
+    "#e2735a"
+   ],
+   "rose": [
+    "#7a2f4f",
+    "#a8456f",
+    "#d26d94",
+    "#f0a3bf"
+   ],
+   "sky": [
+    "#2f5788",
+    "#4277b6",
+    "#5f9ad8",
+    "#93c3ef"
+   ],
+   "teal": [
+    "#1d4a4c",
+    "#286a69",
+    "#368f86",
+    "#5bb5a6"
+   ]
+  },
+  "skin": {
+   "ebony": [
+    "#2f1a14",
+    "#45271c",
+    "#5f3826",
+    "#7d4e36"
+   ],
+   "honey": [
+    "#8f5a37",
+    "#c07f4f",
+    "#e0a66f",
+    "#f4c995"
+   ],
+   "peach": [
+    "#b07055",
+    "#da9775",
+    "#f2bb97",
+    "#fcdcc0"
+   ],
+   "porcelain": [
+    "#b88a7a",
+    "#e0b3a0",
+    "#f6d3c2",
+    "#fff0e6"
+   ],
+   "tan": [
+    "#734428",
+    "#9c6038",
+    "#c3824f",
+    "#dca673"
+   ],
+   "umber": [
+    "#4e2c1d",
+    "#6e4029",
+    "#8f5838",
+    "#b07650"
+   ]
+  }
+ },
+ "sprites": {
+  "building.farm.a.l1": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.farm.a.l2": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.farm.a.l3": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.farm.a.l4": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.farm.a.l5": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.fishing_dock.a.l1": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.fishing_dock.a.l2": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.fishing_dock.a.l3": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.fishing_dock.a.l4": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.fishing_dock.a.l5": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.fishing_dock.b.l1": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.fishing_dock.b.l2": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.fishing_dock.b.l3": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.fishing_dock.b.l4": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.fishing_dock.b.l5": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.forge.a.l1": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.forge.a.l2": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.forge.a.l3": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.forge.a.l4": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.forge.a.l5": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.herb_garden.a.l1": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.herb_garden.a.l2": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.herb_garden.a.l3": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.herb_garden.a.l4": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.herb_garden.a.l5": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.house.a.l1": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.house.a.l2": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.house.a.l3": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.house.a.l4": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.house.a.l5": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.lumber_camp.a.l1": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.lumber_camp.a.l2": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.lumber_camp.a.l3": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.lumber_camp.a.l4": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.lumber_camp.a.l5": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.market.a.l1": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.market.a.l2": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.market.a.l3": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.market.a.l4": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.market.a.l5": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.market.b.l1": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.market.b.l2": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.market.b.l3": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.market.b.l4": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.market.b.l5": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.mine.a.l1": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.mine.a.l2": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.mine.a.l3": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.mine.a.l4": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.mine.a.l5": {
+   "anchor": [
+    0,
+    20
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.quarry.a.l1": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.quarry.a.l2": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.quarry.a.l3": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.quarry.a.l4": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.quarry.a.l5": {
+   "anchor": [
+    0,
+    18
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.scaffold.2x2": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.scaffold.2x3": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    3
+   ]
+  },
+  "building.scaffold.3x2": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    2
+   ]
+  },
+  "building.scaffold.3x3": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.storehouse.a.l1": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.storehouse.a.l2": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.storehouse.a.l3": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.storehouse.a.l4": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.storehouse.a.l5": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.town_hall.a.l1": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.town_hall.a.l2": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.town_hall.a.l3": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.town_hall.a.l4": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.town_hall.a.l5": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    3
+   ]
+  },
+  "building.workshop.a.l1": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.workshop.a.l2": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.workshop.a.l3": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.workshop.a.l4": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "building.workshop.a.l5": {
+   "anchor": [
+    0,
+    24
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ]
+  },
+  "fx.dust.0": {
+   "atlas": "world"
+  },
+  "fx.dust.1": {
+   "atlas": "world"
+  },
+  "fx.dust.2": {
+   "atlas": "world"
+  },
+  "fx.dust.3": {
+   "atlas": "world"
+  },
+  "fx.dust.4": {
+   "atlas": "world"
+  },
+  "fx.sparkle.0": {
+   "atlas": "world"
+  },
+  "fx.sparkle.1": {
+   "atlas": "world"
+  },
+  "fx.sparkle.2": {
+   "atlas": "world"
+  },
+  "fx.sparkle.3": {
+   "atlas": "world"
+  },
+  "obj.bush.0": {
+   "atlas": "world"
+  },
+  "obj.bush.1": {
+   "atlas": "world"
+  },
+  "obj.fence_post.0": {
+   "atlas": "world"
+  },
+  "obj.oak.0": {
+   "atlas": "world"
+  },
+  "obj.oak.1": {
+   "atlas": "world"
+  },
+  "obj.oak.2": {
+   "atlas": "world"
+  },
+  "obj.pine.0": {
+   "atlas": "world"
+  },
+  "obj.pine.1": {
+   "atlas": "world"
+  },
+  "obj.rock.0": {
+   "atlas": "world"
+  },
+  "obj.rock.1": {
+   "atlas": "world"
+  },
+  "obj.rock_big.0": {
+   "atlas": "world"
+  },
+  "obj.rock_big.1": {
+   "atlas": "world"
+  },
+  "obj.stump.0": {
+   "atlas": "world"
+  },
+  "obj.tall_grass.0": {
+   "atlas": "world"
+  },
+  "obj.tall_grass.1": {
+   "atlas": "world"
+  },
+  "obj.well.0": {
+   "atlas": "world"
+  },
+  "tile.cobble.0": {
+   "atlas": "world"
+  },
+  "tile.cobble.1": {
+   "atlas": "world"
+  },
+  "tile.cobble.112": {
+   "atlas": "world"
+  },
+  "tile.cobble.113": {
+   "atlas": "world"
+  },
+  "tile.cobble.116": {
+   "atlas": "world"
+  },
+  "tile.cobble.117": {
+   "atlas": "world"
+  },
+  "tile.cobble.119": {
+   "atlas": "world"
+  },
+  "tile.cobble.124": {
+   "atlas": "world"
+  },
+  "tile.cobble.125": {
+   "atlas": "world"
+  },
+  "tile.cobble.127": {
+   "atlas": "world"
+  },
+  "tile.cobble.16": {
+   "atlas": "world"
+  },
+  "tile.cobble.17": {
+   "atlas": "world"
+  },
+  "tile.cobble.193": {
+   "atlas": "world"
+  },
+  "tile.cobble.197": {
+   "atlas": "world"
+  },
+  "tile.cobble.199": {
+   "atlas": "world"
+  },
+  "tile.cobble.20": {
+   "atlas": "world"
+  },
+  "tile.cobble.209": {
+   "atlas": "world"
+  },
+  "tile.cobble.21": {
+   "atlas": "world"
+  },
+  "tile.cobble.213": {
+   "atlas": "world"
+  },
+  "tile.cobble.215": {
+   "atlas": "world"
+  },
+  "tile.cobble.221": {
+   "atlas": "world"
+  },
+  "tile.cobble.223": {
+   "atlas": "world"
+  },
+  "tile.cobble.23": {
+   "atlas": "world"
+  },
+  "tile.cobble.241": {
+   "atlas": "world"
+  },
+  "tile.cobble.245": {
+   "atlas": "world"
+  },
+  "tile.cobble.247": {
+   "atlas": "world"
+  },
+  "tile.cobble.253": {
+   "atlas": "world"
+  },
+  "tile.cobble.255": {
+   "atlas": "world"
+  },
+  "tile.cobble.28": {
+   "atlas": "world"
+  },
+  "tile.cobble.29": {
+   "atlas": "world"
+  },
+  "tile.cobble.31": {
+   "atlas": "world"
+  },
+  "tile.cobble.4": {
+   "atlas": "world"
+  },
+  "tile.cobble.5": {
+   "atlas": "world"
+  },
+  "tile.cobble.64": {
+   "atlas": "world"
+  },
+  "tile.cobble.65": {
+   "atlas": "world"
+  },
+  "tile.cobble.68": {
+   "atlas": "world"
+  },
+  "tile.cobble.69": {
+   "atlas": "world"
+  },
+  "tile.cobble.7": {
+   "atlas": "world"
+  },
+  "tile.cobble.71": {
+   "atlas": "world"
+  },
+  "tile.cobble.80": {
+   "atlas": "world"
+  },
+  "tile.cobble.81": {
+   "atlas": "world"
+  },
+  "tile.cobble.84": {
+   "atlas": "world"
+  },
+  "tile.cobble.85": {
+   "atlas": "world"
+  },
+  "tile.cobble.87": {
+   "atlas": "world"
+  },
+  "tile.cobble.92": {
+   "atlas": "world"
+  },
+  "tile.cobble.93": {
+   "atlas": "world"
+  },
+  "tile.cobble.95": {
+   "atlas": "world"
+  },
+  "tile.flowers.0": {
+   "atlas": "world"
+  },
+  "tile.flowers.1": {
+   "atlas": "world"
+  },
+  "tile.flowers.2": {
+   "atlas": "world"
+  },
+  "tile.grass.0": {
+   "atlas": "world"
+  },
+  "tile.grass.1": {
+   "atlas": "world"
+  },
+  "tile.grass.2": {
+   "atlas": "world"
+  },
+  "tile.grass.3": {
+   "atlas": "world"
+  },
+  "tile.path.0": {
+   "atlas": "world"
+  },
+  "tile.path.1": {
+   "atlas": "world"
+  },
+  "tile.path.112": {
+   "atlas": "world"
+  },
+  "tile.path.113": {
+   "atlas": "world"
+  },
+  "tile.path.116": {
+   "atlas": "world"
+  },
+  "tile.path.117": {
+   "atlas": "world"
+  },
+  "tile.path.119": {
+   "atlas": "world"
+  },
+  "tile.path.124": {
+   "atlas": "world"
+  },
+  "tile.path.125": {
+   "atlas": "world"
+  },
+  "tile.path.127": {
+   "atlas": "world"
+  },
+  "tile.path.16": {
+   "atlas": "world"
+  },
+  "tile.path.17": {
+   "atlas": "world"
+  },
+  "tile.path.193": {
+   "atlas": "world"
+  },
+  "tile.path.197": {
+   "atlas": "world"
+  },
+  "tile.path.199": {
+   "atlas": "world"
+  },
+  "tile.path.20": {
+   "atlas": "world"
+  },
+  "tile.path.209": {
+   "atlas": "world"
+  },
+  "tile.path.21": {
+   "atlas": "world"
+  },
+  "tile.path.213": {
+   "atlas": "world"
+  },
+  "tile.path.215": {
+   "atlas": "world"
+  },
+  "tile.path.221": {
+   "atlas": "world"
+  },
+  "tile.path.223": {
+   "atlas": "world"
+  },
+  "tile.path.23": {
+   "atlas": "world"
+  },
+  "tile.path.241": {
+   "atlas": "world"
+  },
+  "tile.path.245": {
+   "atlas": "world"
+  },
+  "tile.path.247": {
+   "atlas": "world"
+  },
+  "tile.path.253": {
+   "atlas": "world"
+  },
+  "tile.path.255": {
+   "atlas": "world"
+  },
+  "tile.path.28": {
+   "atlas": "world"
+  },
+  "tile.path.29": {
+   "atlas": "world"
+  },
+  "tile.path.31": {
+   "atlas": "world"
+  },
+  "tile.path.4": {
+   "atlas": "world"
+  },
+  "tile.path.5": {
+   "atlas": "world"
+  },
+  "tile.path.64": {
+   "atlas": "world"
+  },
+  "tile.path.65": {
+   "atlas": "world"
+  },
+  "tile.path.68": {
+   "atlas": "world"
+  },
+  "tile.path.69": {
+   "atlas": "world"
+  },
+  "tile.path.7": {
+   "atlas": "world"
+  },
+  "tile.path.71": {
+   "atlas": "world"
+  },
+  "tile.path.80": {
+   "atlas": "world"
+  },
+  "tile.path.81": {
+   "atlas": "world"
+  },
+  "tile.path.84": {
+   "atlas": "world"
+  },
+  "tile.path.85": {
+   "atlas": "world"
+  },
+  "tile.path.87": {
+   "atlas": "world"
+  },
+  "tile.path.92": {
+   "atlas": "world"
+  },
+  "tile.path.93": {
+   "atlas": "world"
+  },
+  "tile.path.95": {
+   "atlas": "world"
+  },
+  "tile.water.0": {
+   "atlas": "world"
+  },
+  "tile.water.1": {
+   "atlas": "world"
+  },
+  "tile.water.112": {
+   "atlas": "world"
+  },
+  "tile.water.113": {
+   "atlas": "world"
+  },
+  "tile.water.116": {
+   "atlas": "world"
+  },
+  "tile.water.117": {
+   "atlas": "world"
+  },
+  "tile.water.119": {
+   "atlas": "world"
+  },
+  "tile.water.124": {
+   "atlas": "world"
+  },
+  "tile.water.125": {
+   "atlas": "world"
+  },
+  "tile.water.127": {
+   "atlas": "world"
+  },
+  "tile.water.16": {
+   "atlas": "world"
+  },
+  "tile.water.17": {
+   "atlas": "world"
+  },
+  "tile.water.193": {
+   "atlas": "world"
+  },
+  "tile.water.197": {
+   "atlas": "world"
+  },
+  "tile.water.199": {
+   "atlas": "world"
+  },
+  "tile.water.20": {
+   "atlas": "world"
+  },
+  "tile.water.209": {
+   "atlas": "world"
+  },
+  "tile.water.21": {
+   "atlas": "world"
+  },
+  "tile.water.213": {
+   "atlas": "world"
+  },
+  "tile.water.215": {
+   "atlas": "world"
+  },
+  "tile.water.221": {
+   "atlas": "world"
+  },
+  "tile.water.223": {
+   "atlas": "world"
+  },
+  "tile.water.23": {
+   "atlas": "world"
+  },
+  "tile.water.241": {
+   "atlas": "world"
+  },
+  "tile.water.245": {
+   "atlas": "world"
+  },
+  "tile.water.247": {
+   "atlas": "world"
+  },
+  "tile.water.253": {
+   "atlas": "world"
+  },
+  "tile.water.255": {
+   "atlas": "world"
+  },
+  "tile.water.28": {
+   "atlas": "world"
+  },
+  "tile.water.29": {
+   "atlas": "world"
+  },
+  "tile.water.31": {
+   "atlas": "world"
+  },
+  "tile.water.4": {
+   "atlas": "world"
+  },
+  "tile.water.5": {
+   "atlas": "world"
+  },
+  "tile.water.64": {
+   "atlas": "world"
+  },
+  "tile.water.65": {
+   "atlas": "world"
+  },
+  "tile.water.68": {
+   "atlas": "world"
+  },
+  "tile.water.69": {
+   "atlas": "world"
+  },
+  "tile.water.7": {
+   "atlas": "world"
+  },
+  "tile.water.71": {
+   "atlas": "world"
+  },
+  "tile.water.80": {
+   "atlas": "world"
+  },
+  "tile.water.81": {
+   "atlas": "world"
+  },
+  "tile.water.84": {
+   "atlas": "world"
+  },
+  "tile.water.85": {
+   "atlas": "world"
+  },
+  "tile.water.87": {
+   "atlas": "world"
+  },
+  "tile.water.92": {
+   "atlas": "world"
+  },
+  "tile.water.93": {
+   "atlas": "world"
+  },
+  "tile.water.95": {
+   "atlas": "world"
+  }
+ },
+ "tileSize": 16,
+ "title": "/assets/gen/title.png",
+ "ui": {
+  "ui.bar": "/assets/gen/ui/bar.png",
+  "ui.button_danger_disabled": "/assets/gen/ui/button_danger_disabled.png",
+  "ui.button_danger_hover": "/assets/gen/ui/button_danger_hover.png",
+  "ui.button_danger_normal": "/assets/gen/ui/button_danger_normal.png",
+  "ui.button_danger_pressed": "/assets/gen/ui/button_danger_pressed.png",
+  "ui.button_gold_disabled": "/assets/gen/ui/button_gold_disabled.png",
+  "ui.button_gold_hover": "/assets/gen/ui/button_gold_hover.png",
+  "ui.button_gold_normal": "/assets/gen/ui/button_gold_normal.png",
+  "ui.button_gold_pressed": "/assets/gen/ui/button_gold_pressed.png",
+  "ui.button_primary_disabled": "/assets/gen/ui/button_primary_disabled.png",
+  "ui.button_primary_hover": "/assets/gen/ui/button_primary_hover.png",
+  "ui.button_primary_normal": "/assets/gen/ui/button_primary_normal.png",
+  "ui.button_primary_pressed": "/assets/gen/ui/button_primary_pressed.png",
+  "ui.button_secondary_disabled": "/assets/gen/ui/button_secondary_disabled.png",
+  "ui.button_secondary_hover": "/assets/gen/ui/button_secondary_hover.png",
+  "ui.button_secondary_normal": "/assets/gen/ui/button_secondary_normal.png",
+  "ui.button_secondary_pressed": "/assets/gen/ui/button_secondary_pressed.png",
+  "ui.panel": "/assets/gen/ui/panel.png",
+  "ui.panel_dark": "/assets/gen/ui/panel_dark.png",
+  "ui.ribbon": "/assets/gen/ui/ribbon.png",
+  "ui.slot": "/assets/gen/ui/slot.png",
+  "ui.tab": "/assets/gen/ui/tab.png",
+  "ui.tab_active": "/assets/gen/ui/tab_active.png",
+  "ui.tooltip": "/assets/gen/ui/tooltip.png"
+ },
+ "version": 1
+}

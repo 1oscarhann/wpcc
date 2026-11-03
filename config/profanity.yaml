@@ -1,0 +1,62 @@
+# Username filter. Matching runs on a normalised form: lowercase, leetspeak mapped,
+# separators removed, repeated letters collapsed. Substring match.
+leet:
+  "0": o
+  "1": i
+  "3": e
+  "4": a
+  "5": s
+  "7": t
+  "8": b
+  "@": a
+  "$": s
+  "!": i
+blocked:
+  - fuck
+  - shit
+  - cunt
+  - bitch
+  - nigger
+  - nigga
+  - faggot
+  - fag
+  - retard
+  - whore
+  - slut
+  - rape
+  - nazi
+  - hitler
+  - kike
+  - spic
+  - chink
+  - tranny
+  - dick
+  - cock
+  - pussy
+  - penis
+  - vagina
+  - porn
+  - asshole
+  - bastard
+  - wank
+  - twat
+# Whole names that are fine even though they contain a blocked substring.
+allowed:
+  - scunthorpe
+  - cockatoo
+  - cockatiel
+  - dickens
+  - shitake
+  - grapefruit
+  - therapist
+  - drape
+  - spicy
+  - spice
+reserved:
+  - admin
+  - administrator
+  - moderator
+  - system
+  - hearthforge
+  - anthropic
+  - claude

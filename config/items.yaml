@@ -1,0 +1,27 @@
+# Non-resource items. Every resource above is also registered as a stackable item automatically.
+items:
+  training_sword:
+    name: Training Sword
+    category: weapon
+    stackable: false
+    weapon_type: sword
+    icon: icon.sword
+  small_healing_potion:
+    name: Small Healing Potion
+    category: consumable
+    stackable: true
+    max_stack: 20
+    icon: icon.potion_red
+  ironbark:
+    name: Ironbark
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.ironbark
+  starstone:
+    name: Starstone
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.starstone
+resource_max_stack: 999

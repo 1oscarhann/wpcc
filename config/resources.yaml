@@ -1,0 +1,19 @@
+# Village resources (lazy production, stored in the Storehouse). Amounts are whole units here.
+resources:
+  wood:        { name: Wood,        kind: raw,          icon: icon.wood }
+  stone:       { name: Stone,       kind: raw,          icon: icon.stone }
+  ore:         { name: Ore,         kind: raw,          icon: icon.ore }
+  food:        { name: Food,        kind: raw,          icon: icon.food }
+  herbs:       { name: Herbs,       kind: raw,          icon: icon.herbs }
+  fish:        { name: Fish,        kind: raw,          icon: icon.fish }
+  hide:        { name: Hide,        kind: raw,          icon: icon.hide }
+  crystal:     { name: Crystal,     kind: raw,          icon: icon.crystal, cap_fraction: 0.1 }
+  planks:      { name: Planks,      kind: intermediate, icon: icon.planks }
+  bricks:      { name: Bricks,      kind: intermediate, icon: icon.bricks }
+  ingots:      { name: Ingots,      kind: intermediate, icon: icon.ingots }
+  leather:     { name: Leather,     kind: intermediate, icon: icon.leather }
+  bread:       { name: Bread,       kind: intermediate, icon: icon.bread }
+  potion_base: { name: Potion Base, kind: intermediate, icon: icon.potion_base }
+
+# Which resources the HUD shows by default (others appear once you own some).
+hud_order: [wood, stone, ore, food, herbs, fish, hide, crystal]

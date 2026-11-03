@@ -1,0 +1,25 @@
+# Avatar base stats and the character creator's allowed options (BALANCE §4).
+base_stats: { hp: 100, stamina: 100, attack: 10, defence: 5, crit_chance: 0.05, move_speed: 5.0 }
+per_level:  { hp: 8, stamina: 1, attack: 1, defence: 1 }
+level_cap: 30
+
+# Option keys must exist in tools/artgen (parts + colour ramps); artgen fails loudly if one is missing.
+creator:
+  bodies: [slim, sturdy]
+  skin_tones: [porcelain, peach, honey, tan, umber, ebony]
+  hair_styles: [crop, long, bun, spiky, braids, shaved]
+  hair_colors: [black, chestnut, auburn, ginger, blonde, platinum, rose, teal, violet, silver]
+  eye_styles: [round, bright, sleepy, keen]
+  eye_colors: [brown, hazel, green, blue, grey, amber]
+  outfits: [tunic, dress, overalls, robe, vest, cloak]
+  outfit_colors: [red, orange, mustard, leaf, forest, teal, sky, navy, plum, rose, cream, charcoal]
+
+default_appearance:
+  body: slim
+  skin: honey
+  hair_style: crop
+  hair_color: chestnut
+  eyes: round
+  eye_color: brown
+  outfit: tunic
+  outfit_color: leaf
