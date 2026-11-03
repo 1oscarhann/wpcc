@@ -45,7 +45,7 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 |---|---|---|---|
 | `0x01` | HELLO | `proto_ver:u16, build:str, resume:bool` | First frame. The server answers `WELCOME` or `KICK(version)`. |
 | `0x02` | PING | `client_ms:f64` | Every 2 s. Used for clock sync and RTT. |
-| `0x10` | SUB_VILLAGE | `owner_id:uuid(bin16)` | Watch a village (yours, or one you're visiting). |
+| `0x10` | SUB_VILLAGE | `owner_id:str` (UUID text, D-037) | Watch a village (yours; visiting arrives in Phase 15). The server replies with `VILLAGE_STATE`. |
 | `0x11` | UNSUB_VILLAGE | `owner_id` | |
 | `0x20` | ENTER_AVATAR | `target:u8 (0 own realm, 1 visit)`, `host_id?:uuid` | Ask to join a Realm Room. Refused during a mode-switch cooldown or when blocked. |
 | `0x21` | LEAVE_AVATAR | — | Refused while "in combat" (took or dealt damage in the last 5 s). |
@@ -92,7 +92,7 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 | `0x82` | PONG | `client_ms:f64, server_ms:f64, server_tick:u32` |
 | `0x83` | ERROR | `code:u16, key:str, ctx?:map` (`key` is an i18n key, e.g. `err.in_combat`) |
 | `0x84` | KICK | `reason:u8 (version, cheat, replaced, server_shutdown, banned)` |
-| `0x90` | VILLAGE_STATE | `owner_id, version:u32, village:map` (full) |
+| `0x90` | VILLAGE_STATE | `owner_id, version:u32, village:map` (full state, same shape as `GET /api/village`; pushed on every change, D-036) |
 | `0x91` | VILLAGE_PATCH | `owner_id, version:u32, ops:[[op_kind, ...]]` |
 | `0xA0` | ROOM_JOINED | `room_kind:u8 (realm, dungeon), realm_id, tick:u32, you:u32 (entity id), map:{seed, ver, chunk_url}, clock:{day_phase, weather, season}, party:[…], nodes_depleted:[u32], snapshot` |
 | `0xA1` | **SNAPSHOT** | see §3.1 |

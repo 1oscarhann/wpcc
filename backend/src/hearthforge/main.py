@@ -36,6 +36,9 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = make_engine(settings.database_url, settings.db_pool_size)
         sm = make_sessionmaker(engine)
+        from hearthforge.realtime.hubs import VillageHub
+        from hearthforge.realtime.pg_listener import PgListener
+
         st = AppState(
             settings=settings,
             config=config,
@@ -44,12 +47,20 @@ def create_app(
             clock=clock or Clock(),
             passwords=Passwords(settings.argon2_profile),
         )
+        st.village_hub = VillageHub(st)
         app.state.hf = st
         async with sm() as session, session.begin():
             await sync_config(session, config)
         log.info("config %s loaded (%s)", config.hash, config.summary())
 
         tasks: list[asyncio.Task[None]] = []
+        if settings.enable_listener:
+            tasks.append(asyncio.create_task(PgListener(st).run(), name="pg-listener"))
+            tasks.append(asyncio.create_task(st.village_hub.fallback_poll(), name="village-poll"))
+        if settings.run_worker_in_process:
+            from hearthforge.worker.poller import Worker
+
+            tasks.append(asyncio.create_task(Worker(st).run_forever(), name="worker"))
         try:
             yield
         finally:
@@ -84,10 +95,14 @@ def create_app(
                 )
         return await call_next(request)
 
-    from hearthforge.api import auth, me
+    from hearthforge.api import auth, me, realm, village
+    from hearthforge.realtime import gateway
 
     app.include_router(auth.router)
     app.include_router(me.router)
+    app.include_router(village.router)
+    app.include_router(realm.router)
+    app.include_router(gateway.router)
 
     @app.get("/api/health")
     async def health() -> dict[str, str]:

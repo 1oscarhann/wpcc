@@ -2,7 +2,7 @@
 
 A cozy-but-action-packed browser game. You build a village in **Build Mode**, then drop into **Avatar Mode** to explore, fight monsters and gather rare loot with friends. There's no PvP: other players can only help you.
 
-**Status:** Phase 2 (foundations) and Phase 3 (Build Mode core) are in progress. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** Phases 1–3 are done (plan, foundations, Build Mode core). Next up is Phase 4, Avatar Mode. See [docs/PLAN.md](docs/PLAN.md).
 
 | Doc | What's in it |
 |---|---|
@@ -54,7 +54,15 @@ cd backend && uv sync && uv run alembic upgrade head
 uv run uvicorn hearthforge.main:app --reload --port 8000
 ```
 
-### 3. Frontend (on :5173)
+### 3. Timer worker (completes buildings on time)
+
+```bash
+cd backend && uv run python -m hearthforge.worker
+```
+
+Without it, timers still complete the next time the village is read (lazy settle), so the game works either way.
+
+### 4. Frontend (on :5173)
 
 ```bash
 cd frontend && npm install && npm run dev
@@ -81,6 +89,19 @@ cd tools/artgen && uv run python -m artgen.validate
 ```
 
 Backend tests create and drop a throwaway database on the Postgres at `TEST_DATABASE_ADMIN_URL` (default `postgresql://hf@127.0.0.1:5433/postgres`).
+
+## Admin tools
+
+```bash
+cd backend && uv run hf --help
+```
+
+| Command | What it does |
+|---|---|
+| `hf config check` | Validate `/config` |
+| `hf test-account NAME` | Allow fast-forward on an account |
+| `hf fast-forward NAME 2h` | Move timers and production forward |
+| `hf grant NAME --coins 500 --res wood=1000` | Give coins and resources (written to the ledger) |
 
 ## Art
 

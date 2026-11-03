@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "client_to_server": {
+    "HELLO": "0x01",
+    "PING": "0x02",
+    "SUB_VILLAGE": "0x10",
+    "UNSUB_VILLAGE": "0x11",
+    "ENTER_AVATAR": "0x20",
+    "LEAVE_AVATAR": "0x21",
+    "INPUT": "0x22",
+    "ACTION": "0x23"
+  },
+  "server_to_client": {
+    "WELCOME": "0x81",
+    "PONG": "0x82",
+    "ERROR": "0x83",
+    "KICK": "0x84",
+    "VILLAGE_STATE": "0x90",
+    "VILLAGE_PATCH": "0x91",
+    "NOTIFY": "0xB0",
+    "RESYNC": "0xC0"
+  }
+}

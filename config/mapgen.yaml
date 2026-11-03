@@ -10,12 +10,12 @@ plot:
   start_size: 24
   max_size: 48
   expand_step: 4
-  clear_margin: 3      # tiles around the frame kept free of trees/rocks
+  clear_margin: 1      # tiles around the frame kept free of trees/rocks
   pond: { x: 14, y: 31, w: 5, h: 3 }   # frame coordinates, inside the starting square
 meadow:
   flower_patch_threshold: 0.68
-  tree_density_near: 0.010             # per tile, just outside plots
-  tree_density_far: 0.060              # per tile, at the meadow's outer edge
+  tree_density_near: 0.035             # per tile, just outside plots
+  tree_density_far: 0.080              # per tile, at the meadow's outer edge
   rock_density: 0.006
-  bush_density: 0.012
+  bush_density: 0.02
   tall_grass_density: 0.03

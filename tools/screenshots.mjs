@@ -70,25 +70,33 @@ const PHASES = {
   async 3(page, kind) {
     await signupFlow(page, kind);
     await page.locator("canvas").first().waitFor();
+    await page.waitForFunction(() => window.__hfGame);
     await shot(page, "01-village", kind, { wait: 1500 });
+    // screen position of a frame tile, straight from the renderer
+    const at = (tx, ty) => page.evaluate(([x, y]) => window.__hfGame.frameTileToScreen(x, y), [tx, ty]);
+    const canvas = page.locator("canvas").first();
+    const box = await canvas.boundingBox();
     await page.getByRole("button", { name: /^Build/ }).click();
     await shot(page, "02-build-menu", kind, { wait: 500 });
     await page.getByRole("button", { name: /Lumber Camp/ }).click();
-    const canvas = page.locator("canvas").first();
-    const box = await canvas.boundingBox();
-    await page.mouse.move(box.x + box.width * 0.62, box.y + box.height * 0.42);
-    await shot(page, "03-placing", kind, { wait: 500 });
+    const spot = await at(27, 15); // centre of a free 2×2 at (26,14)
+    await page.mouse.move(box.x + spot.x, box.y + spot.y);
     if (kind === "mobile") {
-      await page.mouse.click(box.x + box.width * 0.62, box.y + box.height * 0.42);
+      await page.mouse.click(box.x + spot.x, box.y + spot.y);
+      await shot(page, "03-placing", kind, { wait: 500 });
       await page.getByRole("button", { name: "Place here" }).click();
     } else {
-      await page.mouse.click(box.x + box.width * 0.62, box.y + box.height * 0.42);
+      await shot(page, "03-placing", kind, { wait: 500 });
+      await page.mouse.click(box.x + spot.x, box.y + spot.y);
     }
     await shot(page, "04-constructing", kind, { wait: 900 });
     await page.waitForTimeout(11000);
     await shot(page, "05-built", kind, { wait: 600 });
-    await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5 - 20);
+    const th = await at(23.5, 21.5);
+    await page.mouse.click(box.x + th.x, box.y + th.y);
     await shot(page, "06-selected", kind, { wait: 600 });
+    await page.getByRole("button", { name: /Upgrade/ }).click();
+    await shot(page, "07-upgrading", kind, { wait: 900 });
   },
 };
 

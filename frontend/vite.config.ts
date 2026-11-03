@@ -9,12 +9,13 @@ export default defineConfig({
   server: {
     port: 5173,
     host: "127.0.0.1",
+    fs: { allow: [".."] }, // shared/protocol.json lives at the repo root
     proxy: {
       "/api": { target: API, changeOrigin: false },
       "/ws": { target: API.replace(/^http/, "ws"), ws: true },
     },
   },
   preview: { port: 4173 },
-  build: { target: "es2022", sourcemap: true, assetsInlineLimit: 0 },
+  build: { target: "es2022", sourcemap: true, assetsInlineLimit: 0, chunkSizeWarningLimit: 900 },
   test: { environment: "jsdom", include: ["tests/unit/**/*.test.ts"] },
 });
