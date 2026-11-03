@@ -1,0 +1,136 @@
+# Decision log
+
+Every non-obvious technical or design decision gets a short entry here: what was decided, why, and what it costs. Status is **Accepted**, **Proposed** (waiting on your approval in Phase 1), or **Superseded**.
+
+| ID | Decision | Status |
+|---|---|---|
+| D-001 | Top-down 3/4 pixel art instead of isometric (PLAN B1) | Proposed |
+| D-002 | Frontend and API must be same-site (custom domain or Cloudflare proxy) for cookie auth (PLAN B2) | Proposed |
+| D-003 | Realm Rooms run in the API process behind a `RealmRoom` interface | Accepted (spec) |
+| D-004 | Worker → API signalling via Postgres LISTEN/NOTIFY on a direct connection | Proposed |
+| D-005 | Neon **direct** endpoint for v1, not the pooler | Proposed |
+| D-006 | Unified `containers` + `container_slots` item storage with a mailbox | Proposed |
+| D-007 | Resources stored as bigint milli-units; weather integrated piecewise | Proposed |
+| D-008 | Timers settle on two paths (worker + lazy-on-read), both idempotent | Proposed |
+| D-009 | "Favour the player" netcode: lag compensation + dodge grace | Proposed |
+| D-010 | Hit-stop is render-only, never pauses the simulation | Proposed |
+| D-011 | Fixed 50 ms sim step on both sides; shared movement code checked by golden vectors | Proposed |
+| D-012 | Client config bundle strips secret sections (combos, secret POIs) | Proposed |
+| D-013 | Server-side placement preview with a "mystery sparkle" for undiscovered combos | Proposed |
+| D-014 | Admin fast-forward rewrites a test account's timestamps rather than faking a per-user clock | Proposed |
+| D-015 | Building rotation = mirror + footprint swap | Proposed |
+| D-016 | Level overlays for buildings, palette ramps for weapon tiers, palette-swap character creator | Proposed |
+| D-017 | Market baseline scales with active population | Proposed |
+| D-018 | Durability 0 → Dull, never broken | Proposed |
+| D-019 | Pixi engine is imperative; React only renders DOM UI; zustand for shared state | Proposed |
+| D-020 | Realm maps = seed + version, generated in Python only, streamed as chunks | Proposed |
+| D-021 | Fog of war as a per-chunk bitmap | Proposed |
+| D-022 | Monsters spawn lazily near players and sleep otherwise | Proposed |
+| D-023 | Rate limits, presence and parties in memory (single instance) | Accepted (spec) |
+| D-024 | Append-only ledger enforced by trigger; lazy production accrual not logged | Proposed |
+| D-025 | Parties are in-memory only | Proposed |
+| D-026 | Friend visits join the host's Realm Room, confined to the host's plot | Proposed |
+| D-027 | uuid v7 PKs for entities, bigint identity for logs | Proposed |
+| D-028 | KO drops persisted in `death_drops` so a restart doesn't eat them | Proposed |
+| D-029 | Separate F key for offhand abilities | Proposed |
+| D-030 | Branch strategy: session branch until you OK `phase-N-*` branches | Proposed |
+
+---
+
+### D-001: top-down 3/4 instead of isometric
+**Context.** The spec asks for cozy isometric pixel art built from CC0 packs. Kenney's isometric packs aren't pixel art and have no animated characters, Kenney's pixel packs are top-down, and I couldn't find a cohesive CC0 isometric pixel pack with animated characters and monsters.
+**Decision.** Top-down 3/4 at 16 px, using Ninja Adventure (CC0) as the primary pack.
+**Consequences.**
+- Orthogonal combos are visually obvious, there's no isometric depth sorting, and combat hitboxes are simpler.
+- It loses the diorama look, and the style leans Zelda-like.
+- Reversible at the cost of a renderer rewrite plus new art, so it has to be decided before Phase 3.
+
+### D-002: same-site deployment
+**Context.** `*.pages.dev` and `*.onrender.com` are different registrable domains. Safari blocks third-party cookies regardless of `SameSite=None`.
+**Decision.** `play.<domain>` (Pages) and `api.<domain>` (Render). Cookies are `HttpOnly; Secure; SameSite=Lax`, scoped to the API host. Fallback: a Pages Function reverse proxy for `/api` and `/ws`.
+**Consequences.** Needs a domain (around $10/yr). CORS allows exactly one origin.
+
+### D-003: in-process Realm Rooms
+**Decision.** The `RealmRoom` abstract interface (`join`, `leave`, `on_input`, `on_action`, `tick`, `snapshot_for`, `apply_world_event`, `shutdown`) is implemented by `InProcessRealmRoom`. The gateway only talks to `RoomManager`, never to the simulation directly.
+**Consequences.** Every room shares one event loop and 50 ms per tick. The Phase 4 benchmark sets the real capacity. Moving rooms to worker processes later means swapping the implementation for an IPC proxy.
+
+### D-004: LISTEN/NOTIFY between worker and API
+**Context.** The worker completes timers and spawns bosses, but rooms and sockets live in the API process.
+**Decision.** The worker sends `NOTIFY hf_events, '<json>'` after commit. The API holds one dedicated LISTEN connection on the direct endpoint, and if that drops it falls back to polling `notifications` / `scheduled_events` every 10 s.
+**Consequences.** No Redis. PgBouncer transaction mode can't LISTEN, which is why the direct endpoint is used (see D-005).
+
+### D-005: Neon direct endpoint
+**Decision.** Use the non-pooled endpoint with small SQLAlchemy pools (API about 10, worker about 3, plus 1 listener).
+**Consequences.** It supports LISTEN and server-side prepared statements. If the pooler is ever used, asyncpg needs `statement_cache_size=0` and LISTEN has to keep a direct connection.
+
+### D-006: containers + slots
+**Decision.** Inventory, bank, equipment, realm stash and mailbox are all `containers`. Items are `container_slots` rows: either a stack, or a single `item_instance`.
+**Consequences.**
+- One transfer function, one locking rule, one set of ledger entries.
+- The mailbox absorbs every "inventory full" edge case (gifts, recovered KO drops, expired listings, quest overflow).
+
+### D-007: milli-units + piecewise weather
+**Decision.** Resource amounts and rates are `bigint` thousandths. Weather is a deterministic timeline (realm seed × 20-minute blocks), so lazy settling integrates across blocks and clamps to the cap per block.
+**Consequences.** It's exact, cheap (at most about 216 blocks for 3 days offline), and property-tested.
+
+### D-008: two settle paths for timers
+**Decision.** The worker settles due events in `due_at` order. Every read or write of a village or job also settles anything already due under the same row lock. Handlers check the target's state before applying anything.
+**Consequences.** The game keeps working even when the worker is down. Double processing can't double-apply.
+
+### D-009: favour the player
+**Context.** There's no PvP, so leniency costs nothing in fairness between players.
+**Decision.**
+- Player hits are checked against monster positions at the client's `view_tick` (≤ 200 ms back).
+- Monster hits are held up to 100 ms and cancelled by a dodge with `client_tick ≤ hit_tick`.
+- Hard anti-cheat stays on everything that touches the economy or leaderboards: speed, cooldowns, range, stamina, pickups, fishing windows.
+
+### D-010: render-only hit-stop
+**Decision.** Hit-stop freezes animation playback and the camera for 40–60 ms. The predicted simulation and input sampling keep running.
+**Consequences.** Freezing the simulation would desync prediction from the server.
+
+### D-011: shared fixed-step movement
+**Decision.** Both sides run `movement.step(state, input, collision)` at 50 ms using only + − × ÷ and `sqrt`. Inputs are quantized identically before use. Golden vectors in `/shared/golden/movement.json` are run by pytest and vitest.
+**Consequences.** Reconciliation stays exact, and corrections only happen on real divergence (collisions with moving things, server-applied knockback).
+
+### D-012: secret config sections
+**Decision.** `combos.yaml`, secret POIs, hidden lore and hidden achievements never go in `GET /api/config`. Players get per-player views of them.
+**Consequences.** The discovery pillar survives DevTools.
+
+### D-013: placement preview endpoint
+**Decision.** `GET /api/village/preview` is debounced to 150 ms while dragging. It returns validity, the discovered combos formed, and a `mystery` count, which the client shows as a sparkle.
+**Consequences.** One small request per settled hover, rate-limited.
+
+### D-014: fast-forward by rewriting timestamps
+**Decision.** `hf fast-forward <user> 2h` subtracts 2 h from that test account's `last_updated_at`, `work_completes_at`, job `completes_at`, and pending `scheduled_events.due_at`, then settles. It's only allowed on `is_test_account` users.
+**Consequences.** No per-user clock to thread through every code path.
+
+### D-015 to D-018: art and balance shortcuts
+See PLAN §1.3 (P2, P6, P7, P1). Each one trades a little fidelity to the spec for something that's buildable with CC0 art, or that keeps the economy stable across population sizes.
+
+### D-019: imperative Pixi
+**Decision.** `Game.ts` owns the Pixi `Application` and frame loop. React components never render Pixi objects. Communication goes through zustand stores (React → game: settings, selected building; game → React: HUD values) and a typed event emitter.
+**Consequences.** Predictable performance with no React reconciliation inside the 60 fps loop.
+
+### D-020: mapgen in Python only
+**Decision.** The server generates chunks from `(seed, mapgen_version)`. The client fetches them via an immutable, cacheable endpoint.
+**Consequences.** There's no cross-language determinism to maintain. `mapgen_version` lets the generator evolve without changing existing realms.
+
+### D-021: fog bitmap
+**Decision.** 1 bit per 16×16 chunk (288 bytes per player per realm), with OR-merge updates from the room every 5 s.
+
+### D-022: lazy monsters
+**Decision.** Monsters spawn from mapgen spawn points within 2 chunks of a player, run AI at 10 Hz beyond 1 screen, and despawn 60 s after nobody is near.
+**Consequences.** This is what makes the tick budget achievable.
+
+### D-024: ledger scope
+**Decision.** Every coin, item or resource *transfer* or *spend* writes a row with a reason code. Continuous production accrual doesn't (it's reconstructible from rates and timestamps). `UPDATE`/`DELETE` on `transactions` raise an exception via a trigger.
+
+### D-026: visits via the host's room
+**Decision.** A visitor joins the host realm's Room flagged `visitor`, with movement clamped to the host's plot plus a margin. Visitors can't gather, fight or open the stash.
+
+### D-028: persisted KO drops
+**Decision.** A KO writes `death_drops` (and its ledger rows) at once, and the room re-hydrates unexpired drops on start. A friend recovering a drop mails the items to the owner.
+
+### D-030: branches
+**Context.** The spec wants `phase-N-short-name` branches. This session is pinned to `claude/serene-galileo-iyapi2`.
+**Decision.** Phase 1 is committed on the session branch. Phase branches only with your explicit OK.
