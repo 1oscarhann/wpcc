@@ -2,7 +2,7 @@
 
 A cozy-but-action-packed browser game. You build a village in **Build Mode**, then drop into **Avatar Mode** to explore, fight monsters and gather rare loot with friends. There's no PvP: other players can only help you.
 
-**Status:** Phases 1–3 are done (plan, foundations, Build Mode core). Next up is Phase 4, Avatar Mode. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** Phases 1–3 are done (plan, foundations, Build Mode core), plus an art and atmosphere pass. Next up is Phase 4, Avatar Mode. See [docs/PLAN.md](docs/PLAN.md).
 
 | Doc | What's in it |
 |---|---|

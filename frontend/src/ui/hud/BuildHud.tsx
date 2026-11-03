@@ -49,7 +49,7 @@ function TopBar({ v, now, onSettings }: { v: VillageState; now: number; onSettin
   });
   return (
     <div className="hud-top">
-      <div className="panel-dark hud-resources" role="status" aria-label="Resources">
+      <div className="hud-bar hud-resources" role="status" aria-label="Resources">
         {keys.map((k) => {
           const r = v.resources[k];
           const amount = amountAt(r, v.at_ms, now);
@@ -65,11 +65,11 @@ function TopBar({ v, now, onSettings }: { v: VillageState; now: number; onSettin
         })}
         <span className="hud-res" title="Coins">
           <Icon name="coins" scale={iconScale} />
-          <span className="head">{formatNum(v.coins)}</span>
+          <span className="head">{formatNum(v.coins ?? 0)}</span>
         </span>
       </div>
       <div className="row" style={{ gap: 6 }}>
-        <span className="panel-dark hud-chip" title="Builders busy / available">
+        <span className="hud-bar hud-chip" title="Builders busy / available">
           <Icon name="build" scale={1.5} /> {v.queue.used}/{v.queue.slots}
         </span>
         <button className="btn secondary icon-only" onClick={onSettings} aria-label="Settings">
@@ -253,6 +253,33 @@ function PlacementBar({ v, touch }: { v: VillageState; touch: boolean }) {
   );
 }
 
+function ClearHint({ v }: { v: VillageState }) {
+  const [seen, setSeen] = useState(() => {
+    try {
+      return localStorage.getItem("hf.hint.clear") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [startCount] = useState(v.debris.length);
+  useEffect(() => {
+    if (!seen && v.debris.length < startCount) {
+      setSeen(true);
+      try {
+        localStorage.setItem("hf.hint.clear", "1");
+      } catch {
+        /* private mode: the hint just shows again next time */
+      }
+    }
+  }, [v.debris.length, startCount, seen]);
+  if (seen || v.debris.length === 0) return null;
+  return (
+    <div className="hud-hint hud-bar small">
+      <Icon name="demolish" scale={1.5} /> Tap trees, rocks and bushes on your land to clear them for wood, stone and food.
+    </div>
+  );
+}
+
 export function BuildHud({ onSettings, touch, onZoom }: {
   onSettings: () => void;
   touch: boolean;
@@ -271,6 +298,8 @@ export function BuildHud({ onSettings, touch, onZoom }: {
   return (
     <div className="hud">
       <TopBar v={v} now={now} onSettings={onSettings} />
+      <div className="village-name"><span className="ribbon">{v.name}</span></div>
+      <ClearHint v={v} />
       {!wsConnected && <div className="panel-dark hud-offline small">Reconnecting… (updates every few seconds)</div>}
       <div className="hud-bottom">
         {placing ? (
@@ -293,7 +322,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
               <button className="btn secondary small icon-only" onClick={() => onZoom(1)} aria-label="Zoom in">+</button>
             </div>
             <button className="btn secondary" disabled title="Avatar Mode arrives in Phase 4" aria-label="Adventure (coming soon)">
-              <Icon name="avatar" /> Adventure
+              <Icon name="avatar" /> <span className="hide-narrow">Adventure</span>
             </button>
           </div>
         )}

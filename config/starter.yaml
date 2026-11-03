@@ -2,8 +2,8 @@
 coins: 200
 resources: { wood: 300, stone: 200, food: 200, ore: 50 }
 buildings:
-  - { key: town_hall, level: 1, x: 22, y: 20 }
-  - { key: house,     level: 1, x: 18, y: 21 }
+  - { key: town_hall, level: 1, x: 22, y: 19 }
+  - { key: house,     level: 1, x: 17, y: 20 }
 containers:
   inventory: 24
   bank: 60

@@ -23,7 +23,7 @@ const def = (fp: [number, number], water = false) =>
   ({ footprint: fp, requires_water: water } as unknown as BuildingDef);
 const DEFS = { house: def([2, 2]), dock: def([2, 3], true), market: def([3, 2]) };
 const V = {
-  frame: 48, size: 24, blocked: [[14, 31, 5, 3]],
+  frame: 48, size: 24, blocked: [[14, 31, 5, 3]], debris: [[0, "oak", 0, 30, 15]],
   buildings: [{ id: "h", key: "house", x: 20, y: 20, rotation: 0 }],
 } as unknown as VillageState;
 
@@ -35,6 +35,10 @@ describe("localPlacementError (mirrors backend placement rules)", () => {
     expect(localPlacementError(V, DEFS, "house", 21, 21, 0)).toBe("overlap");
     expect(localPlacementError(V, DEFS, "house", 21, 21, 0, "h")).toBeNull();
     expect(localPlacementError(V, DEFS, "house", 14, 31, 0)).toBe("on_water");
+  });
+  it("debris blocks until cleared", () => {
+    expect(localPlacementError(V, DEFS, "house", 29, 14, 0)).toBe("debris");
+    expect(localPlacementError(V, DEFS, "house", 31, 14, 0)).toBeNull();
   });
   it("docks must touch the pond", () => {
     expect(localPlacementError(V, DEFS, "dock", 26, 14, 0)).toBe("needs_water");

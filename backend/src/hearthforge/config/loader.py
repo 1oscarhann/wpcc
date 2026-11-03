@@ -29,6 +29,7 @@ FILES: dict[str, type[BaseModel]] = {
     "starter": s.StarterCfg,
     "mapgen": s.MapgenCfg,
     "profanity": s.ProfanityCfg,
+    "debris": s.DebrisCfg,
 }
 
 
@@ -85,6 +86,7 @@ class GameConfig:
     starter: s.StarterCfg
     mapgen: s.MapgenCfg
     profanity: s.ProfanityCfg
+    debris: s.DebrisCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -210,6 +212,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     starter: s.StarterCfg = parsed["starter"]
     mapgen: s.MapgenCfg = parsed["mapgen"]
     profanity: s.ProfanityCfg = parsed["profanity"]
+    debris: s.DebrisCfg = parsed["debris"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -345,6 +348,11 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         if it.slot >= starter.containers.get(it.container, 0):
             errors.append(f"starter.yaml:items.{i}: slot {it.slot} outside the {it.container} capacity")
 
+    for dk, kind in debris.kinds.items():
+        for rk in list(kind.yields) + list(kind.bonus):
+            if rk not in res.resources:
+                errors.append(f"debris.yaml:kinds.{dk}: yields unknown resource '{rk}'")
+
     if mapgen.map_size % mapgen.chunk_size:
         errors.append("mapgen.yaml:map_size: must be a multiple of chunk_size")
 
@@ -364,6 +372,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         starter=starter,
         mapgen=mapgen,
         profanity=profanity,
+        debris=debris,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

@@ -50,8 +50,9 @@ def placement_errors(
     size: int,
     existing: Iterable[Placed],
     ignore_id: str | None = None,
+    debris: Iterable[tuple[int, int]] = (),
 ) -> list[str]:
-    """Empty list = valid. Otherwise error codes: out_of_bounds | overlap | on_water | needs_water."""
+    """Empty list = valid. Otherwise codes: out_of_bounds | overlap | debris | on_water | needs_water."""
     if key not in cfg.buildings:
         return ["unknown_building"]
     if rotation not in (0, 1, 2, 3):
@@ -67,6 +68,8 @@ def placement_errors(
         if p.id != ignore_id and p.rect.overlaps(r):
             errors.append("overlap")
             break
+    if any(r.x <= dx < r.x + r.w and r.y <= dy < r.y + r.h for dx, dy in debris):
+        errors.append("debris")
     pond = Rect(plot.pond.x, plot.pond.y, plot.pond.w, plot.pond.h)
     if r.overlaps(pond):
         errors.append("on_water")
@@ -100,6 +103,7 @@ ERROR_TEXT = {
     "bad_rotation": "That rotation isn't valid.",
     "out_of_bounds": "That's outside your plot.",
     "overlap": "Something is already there.",
+    "debris": "Clear the trees and rocks there first: tap them!",
     "on_water": "You can't build on the pond.",
     "needs_water": "This needs to touch the pond.",
     "locked": "Upgrade your Town Hall to unlock this.",

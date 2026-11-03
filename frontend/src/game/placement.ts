@@ -44,6 +44,9 @@ export function localPlacementError(
     const [bw, bh] = rotatedFootprint(defs[b.key].footprint, b.rotation);
     if (overlaps(r, { x: b.x, y: b.y, w: bw, h: bh })) return "overlap";
   }
+  for (const [, , , dx, dy] of v.debris ?? []) {
+    if (dx >= x && dx < x + w && dy >= y && dy < y + h) return "debris";
+  }
   const [px, py, pw, ph] = v.blocked[0] ?? [0, 0, 0, 0];
   const pond = { x: px, y: py, w: pw, h: ph };
   if (overlaps(r, pond)) return "on_water";
@@ -54,6 +57,7 @@ export function localPlacementError(
 export const PLACEMENT_TEXT: Record<string, string> = {
   out_of_bounds: "That's outside your plot.",
   overlap: "Something is already there.",
+  debris: "Clear the trees and rocks there first: tap them!",
   on_water: "You can't build on the pond.",
   needs_water: "This needs to touch the pond.",
   locked: "Upgrade your Town Hall to unlock this.",

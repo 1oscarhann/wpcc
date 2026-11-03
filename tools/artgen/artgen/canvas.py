@@ -106,6 +106,18 @@ class Canvas:
                 if ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1.0:
                     self.put(x, y, c)
 
+    def poly(self, pts: list[tuple[float, float]], color: Callable[[int, int], Color | None] | Color) -> set[tuple[int, int]]:
+        """Fill a polygon (even-odd). `color` is a colour or a function of (x, y). Returns the filled pixels."""
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        out = set()
+        for y in range(max(0, int(min(ys))), min(self.h, int(max(ys)) + 1)):
+            for x in range(max(0, int(min(xs))), min(self.w, int(max(xs)) + 1)):
+                if point_in_poly(x + 0.5, y + 0.5, pts):
+                    out.add((x, y))
+                    self.put(x, y, color(x, y) if callable(color) else color)
+        return out
+
     def shape(self, test: Callable[[int, int], bool], color: Callable[[int, int], Color | None]) -> None:
         for y in range(self.h):
             for x in range(self.w):
@@ -178,6 +190,18 @@ class Canvas:
         out.img.paste(self.img)
         out.px = out.img.load()
         return out
+
+
+def point_in_poly(x: float, y: float, pts: list[tuple[float, float]]) -> bool:
+    inside = False
+    j = len(pts) - 1
+    for i in range(len(pts)):
+        xi, yi = pts[i]
+        xj, yj = pts[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+            inside = not inside
+        j = i
+    return inside
 
 
 def dist(x0: float, y0: float, x1: float, y1: float) -> float:

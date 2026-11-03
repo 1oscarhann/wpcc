@@ -70,7 +70,7 @@ def buildings_sheet():
     sprites, meta = buildings.generate()
     t = terrain.generate()
     keys = list(buildings.BUILDINGS)
-    cell_w, cell_h = 56, 80
+    cell_w, cell_h = 76, 140
     cols = 6
     names = []
     for k in keys:
@@ -88,10 +88,11 @@ def buildings_sheet():
             s = sprites[name]
             img.alpha_composite(s.img, (cc * cell_w + (cell_w - s.w) // 2, r * cell_h + cell_h - s.h - 2))
     img.resize((img.width * 2, img.height * 2), Image.NEAREST).save(OUT / "buildings.png")
-    sc = Image.new("RGBA", (4 * 56, 80))
-    for i, fp in enumerate(("2x2", "3x3", "3x2", "2x3")):
-        s = sprites[f"building.scaffold.{fp}"]
-        sc.alpha_composite(s.img, (i * 56 + 2, 80 - s.h))
+    scs = [k for k in sprites if k.startswith("building.scaffold.")]
+    sc = Image.new("RGBA", (len(scs) * 76, 110))
+    for i, k in enumerate(scs):
+        s = sprites[k]
+        sc.alpha_composite(s.img, (i * 76 + 2, 110 - s.h))
     sc.resize((sc.width * 3, sc.height * 3), Image.NEAREST).save(OUT / "scaffolds.png")
 
 

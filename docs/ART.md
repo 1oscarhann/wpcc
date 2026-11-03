@@ -41,6 +41,17 @@ It writes `frontend/src/assets/gen/*.png` (atlases), `frontend/src/assets/gen/at
 
 **Audio** is synthesized by `tools/artgen/sfx.py` (chiptune blips for UI, placement, completion), so it's original too. Music and ambience come in later phases, made the same way or composed.
 
+## 2b. Scene and atmosphere (art pass 2)
+
+| Layer | What |
+|---|---|
+| Terrain | Calm grass tiles, flower meadows, 2-wide dirt roads and paths, natural ponds |
+| Nature | Big oaks, oaks, birches, pines, apple trees, flowering bushes, mossy rocks, logs, mushrooms, reeds, lily pads, pebbles, flower clumps. Forest groves frame every plot like a clearing. |
+| Village | A post-and-rail fence around the buildable square, a lantern-lit gate facing the hub, a signpost, and a path to the Town Hall door |
+| Light | Ground colour variation (multiply), warm sun patches (add), drifting cloud shadows, and a vignette with a warm grade (D-042) |
+| Life | Villagers strolling between buildings (layered characters with pathfinding), ducks on the pond, butterflies over flowers, chimney smoke, water glints, falling leaves, passing birds |
+| Juice | Pop-in squash and stretch, dust, sparkles on level-up, a wobble plus a leaf burst plus floating "+10 Wood" when clearing debris |
+
 ## 3. Building visuals
 
 | Need | Approach |

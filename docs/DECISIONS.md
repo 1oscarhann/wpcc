@@ -42,7 +42,11 @@ Every non-obvious technical or design decision gets a short entry here: what was
 | D-036 | The village channel pushes the full `VILLAGE_STATE` (a few KB) instead of patches; the client diffs it for juice. `VILLAGE_PATCH` is deferred | Accepted (Phase 3) |
 | D-037 | WebSocket ids (user/owner) are UUID strings in v1, not 16-byte binary | Accepted (Phase 3) |
 | D-038 | Build Mode opens at 2× zoom so the whole starting plot fits on a laptop screen | Accepted (Phase 3) |
-| D-039 | Early passive production (60 wood/h at L1) feels slow without hand-gathering; revisit at the Phase 8 playtest | **Open** |
+| D-039 | Early passive production (60 wood/h at L1) feels slow without hand-gathering | **Mostly resolved by D-040**; recheck at the Phase 8 playtest |
+| D-040 | New plots start overgrown: trees, rocks and bushes you tap to clear for resources | Accepted (art pass 2) |
+| D-041 | Village scale: buildings are 3×3 / 4×4 tiles (were 2×2 / 3×3), the starting plot is 32×32 (was 24) | Accepted (art pass 2) |
+| D-042 | Soft (non-pixel) light layers on top of the pixel art: ground colour variation, sun patches, cloud shadows, vignette | Accepted (art pass 2) |
+| D-043 | Docs screenshots are 1× JPEG q90 (2× PNGs of the lit scenes were ~1 MB each) | Accepted |
 
 ---
 
@@ -173,3 +177,21 @@ See PLAN §1.3 (P2, P6, P7, P1). Each one trades a little fidelity to the spec f
 ### D-039 (open): early pacing
 **Observation.** A Lumber Camp L1 makes 1 wood per minute. The Town Hall 2 upgrade (200 wood, 150 stone) right after the first buildings means about 2 hours of waiting in Build Mode alone, which misses the "TH2 in ~20 min" target. The plan assumed hand-gathering (Phase 4) would supply the early wood.
 **Proposal.** Keep it until Phase 4 lands. If the Phase 8 playtest still drags, raise L1–L2 production about 2.5× (they're capped by storage anyway) or lower the TH2 cost.
+
+### D-040: overgrown plots and clearing
+**Context.** After Phase 3 the village was a big empty field ("looks cheap"). Early wood was also too slow (D-039).
+**Decision.**
+- At signup, `domain/debris.py` scatters about 70 trees, rocks, bushes, logs and weeds over the buildable square. They're deterministic from the village id and clustered into thickets. A radius around the Town Hall stays open so the first buildings fit.
+- Debris is stored on `villages.debris` (migration 0002) and blocks placement.
+- Tapping a piece calls `POST /api/village/debris/{id}/clear`: it's removed and its yield (from `debris.yaml`, with seeded bonus rolls) goes into storage through the ledger (`debris.clear`).
+- Unclaimed plots on the realm map get the same kind of wild growth from mapgen, flagged so the client hides it once a village moves in.
+
+**Consequences.**
+- The map is full from minute one.
+- Clearing is a satisfying first-session activity that pays roughly 350 wood, 120 stone and some food and ore. That's what fixes the slow start.
+
+### D-041: village scale
+**Decision.** Buildings were redrawn bigger and much more detailed (two-storey timber town hall with a clock tower, thatched cottage, red barn, log cabin, stone smithy, market stalls…). Footprints went to 3×3 (4×4 for the Town Hall and Farm, 4×3 Market, 3×4 Dock) so a 16×24 character reads at a sensible scale next to them. The starting plot grew to 32×32 inside the same 48×48 frame. Expansions now go 32 → 36 → 40 → 44 → 48.
+
+### D-042: light layers
+**Decision.** Above the terrain go a tiled multiply layer (lush and dry grass patches several tiles wide), an additive warm "sun" layer, drifting multiply cloud shadows, and a CSS vignette with a warm grade. They're smooth on purpose, the way light works in modern pixel-art games, and they break the tile repetition without adding tile variants.

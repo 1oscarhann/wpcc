@@ -122,6 +122,18 @@ async def cancel(
     return await _respond(st, ld, {"refunded": refunded})
 
 
+@router.post("/debris/{debris_id}/clear", dependencies=[Depends(act)])
+async def clear_debris(
+    debris_id: int,
+    auth: Auth = Depends(current_user),
+    st: AppState = Depends(get_state),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    async with db.begin():
+        ld, gained = await svc.clear_debris(db, st.config, auth.user.id, st.clock.now(), debris_id)
+    return await _respond(st, ld, {"gained": gained})
+
+
 @router.post("/undo", dependencies=[Depends(act)])
 async def undo(
     auth: Auth = Depends(current_user), st: AppState = Depends(get_state), db: AsyncSession = Depends(get_db)

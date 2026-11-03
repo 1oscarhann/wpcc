@@ -80,6 +80,7 @@ export function PlayScreen() {
   return (
     <div className="play">
       <div ref={host} className="game-canvas" aria-label="Your village" />
+      <div className="vignette" aria-hidden />
       {!village && (
         <div className="center" style={{ position: "absolute", inset: 0 }}>
           <Panel><div className="head">Unrolling the map…</div></Panel>

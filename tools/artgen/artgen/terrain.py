@@ -38,31 +38,27 @@ assert len(BLOB_MASKS) == 47
 
 def grass_color(x: int, y: int, variant: int) -> Color:
     h = hash2(x, y, 11 + variant * 7)
-    if h < 0.03:
+    if h < 0.015:
         return GRASS[1]
-    if h > 0.95:
+    if h > 0.975:
         return GRASS[3]
-    # soft low-frequency patches so neighbouring tiles don't look stamped
-    if hash2(x // 4, y // 4, 300 + variant) < 0.18:
-        return GRASS[1] if h < 0.5 else GRASS[2]
     return GRASS[2]
 
 
 def grass_tile(variant: int) -> Canvas:
+    """Calm base grass with a few soft blade clusters. Large-scale colour variation is added by the client."""
     c = Canvas(T, T)
     for y in range(T):
         for x in range(T):
             c.put(x, y, grass_color(x, y, variant))
-    # a couple of tufts
-    for i in range(2 + variant % 2):
-        tx = int(hash2(i, variant, 5) * 13) + 1
-        ty = int(hash2(variant, i, 6) * 12) + 3
-        c.put(tx, ty, GRASS[1])
-        c.put(tx + 2, ty, GRASS[1])
-        c.put(tx, ty - 1, GRASS[3])
-        c.put(tx + 1, ty - 1, GRASS[1])
-        c.put(tx + 2, ty - 1, GRASS[3])
-        c.put(tx + 1, ty - 2, GRASS[4])
+    for i in range(2 + variant % 3):
+        tx = int(hash2(i, variant, 5) * 12) + 2
+        ty = int(hash2(variant, i, 6) * 11) + 3
+        for bx, h in ((0, 2), (2, 3), (4, 2)):
+            if tx + bx >= T:
+                continue
+            for d in range(h):
+                c.put(tx + bx - (d == h - 1 and bx == 0), ty - d, GRASS[3] if d == h - 1 else GRASS[1] if d == 0 else GRASS[2])
     return c
 
 

@@ -1,8 +1,12 @@
 """Realm map generation from (seed, version) (PLAN §2.6, D-020). Pure and deterministic.
 
-Generated server-side only; the client fetches chunks. v1 terrain: a cobbled hub with a well, ten
-plot frames on a ring (kept clear, with a pond each), dirt roads from the hub to every plot, and
-meadow everywhere else with flowers, trees (denser further out), bushes, rocks and tall grass.
+Generated server-side only; the client fetches chunks. v1 terrain:
+- a cobbled hub with a well, and lamp-lit dirt roads to every plot's gate;
+- ten plot frames on a ring; each is a forest clearing around a fenced, buildable square with a pond and a
+  path from the gate to the Town Hall. Unclaimed plots are overgrown (their wild growth is flagged so the
+  client hides it once someone moves in and their own village debris takes over);
+- a meadow everywhere else with forest groves, rock outcrops, flower meadows and natural ponds with reeds
+  and lily pads.
 Biome rings beyond the meadow arrive in Phase 4/10 (bump `version` in mapgen.yaml then).
 """
 
@@ -10,12 +14,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from functools import lru_cache
 
 from hearthforge.config.schemas import MapgenCfg
 
 N, NE, E, SE, S, SW, W, NW = 1, 2, 4, 8, 16, 32, 64, 128
 _NBRS = ((N, 0, -1), (NE, 1, -1), (E, 1, 0), (SE, 1, 1), (S, 0, 1), (SW, -1, 1), (W, -1, 0), (NW, -1, -1))
+FLAG_WILD_PLOT = 1  # object belongs to an unclaimed plot's wild growth
 
 
 def reduce_mask(m: int) -> int:
@@ -44,17 +48,45 @@ OBJECT_NAMES: list[str] = [
     "obj.oak.0",
     "obj.oak.1",
     "obj.oak.2",
+    "obj.big_oak.0",
+    "obj.big_oak.1",
+    "obj.birch.0",
+    "obj.birch.1",
     "obj.pine.0",
     "obj.pine.1",
+    "obj.apple.0",
+    "obj.apple.1",
     "obj.bush.0",
     "obj.bush.1",
+    "obj.flower_bush.0",
+    "obj.flower_bush.1",
+    "obj.flower_bush.2",
+    "obj.flower_bush.3",
     "obj.rock.0",
     "obj.rock.1",
     "obj.rock_big.0",
     "obj.rock_big.1",
+    "obj.mossy_rock.0",
+    "obj.mossy_rock.1",
+    "obj.pebbles.0",
+    "obj.pebbles.1",
     "obj.tall_grass.0",
     "obj.tall_grass.1",
+    "obj.mushrooms.0",
+    "obj.mushrooms.1",
     "obj.stump.0",
+    "obj.log.0",
+    "obj.reeds.0",
+    "obj.reeds.1",
+    "obj.lilypad.0",
+    "obj.lilypad.1",
+    "obj.flowers.0",
+    "obj.flowers.1",
+    "obj.flowers.2",
+    "obj.flowers.3",
+    "obj.flowers.4",
+    "obj.lamp.0",
+    "obj.signpost.0",
     "obj.well.0",
 ]
 OBJECT_ID = {n: i for i, n in enumerate(OBJECT_NAMES)}
@@ -114,12 +146,39 @@ def layout(cfg: MapgenCfg) -> Layout:
     )
 
 
+def _seg_dist(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
+    vx, vy = bx - ax, by - ay
+    wx, wy = px - ax, py - ay
+    t = max(0.0, min(1.0, (wx * vx + wy * vy) / (vx * vx + vy * vy)))
+    return math.hypot(wx - t * vx, wy - t * vy)
+
+
 class Generator:
-    def __init__(self, cfg: MapgenCfg, seed: int) -> None:
-        self.cfg = cfg
+    def __init__(self, cfg, seed: int) -> None:  # noqa: ANN001 - GameConfig
+        from hearthforge.domain import debris as debris_mod
+        from hearthforge.domain import plotlayout
+
+        self.game = cfg
+        self.cfg: MapgenCfg = cfg.mapgen
         self.seed = seed
-        self.lay = layout(cfg)
-        self.margin = cfg.plot.clear_margin
+        self.lay = layout(self.cfg)
+        self.margin = self.cfg.plot.clear_margin
+        self.tpl = plotlayout.template(cfg)
+        hub = (self.lay.center, self.lay.center)
+        self.gates = [plotlayout.gate(self.tpl, o, hub) for o in self.lay.plot_origins]
+        self.paths = [plotlayout.village_path(self.tpl, g) for g in self.gates]
+        self.roads = [
+            (self.lay.center + 0.5, self.lay.center + 0.5, o[0] + g[0] + 0.5, o[1] + g[1] + 0.5)
+            for o, g in zip(self.lay.plot_origins, self.gates, strict=True)
+        ]
+        # unclaimed plots grow wild; the same generator makes a claimed village's debris
+        self.wild: list[dict[tuple[int, int], tuple[str, int]]] = []
+        for i in range(len(self.lay.plot_origins)):
+            items = debris_mod.generate(
+                cfg.debris, self.tpl, _mix(seed, i, 99) & 0x7FFFFFFF, self.paths[i], 1.6
+            )
+            self.wild.append({(x, y): (cfg.debris.kinds[k].sprites[v], 0) for _id, k, v, x, y in items})
+        self._chunks: dict[tuple[int, int], dict] = {}
 
     # ── classification ─────────────────────────────────────────────────────
     def plot_at(self, x: int, y: int, margin: int = 0) -> int | None:
@@ -129,44 +188,49 @@ class Generator:
                 return i
         return None
 
-    def is_water(self, x: int, y: int) -> bool:
-        i = self.plot_at(x, y)
-        if i is None:
-            return False
+    def road_dist(self, x: int, y: int) -> float:
+        return min(_seg_dist(x + 0.5, y + 0.5, *r) for r in self.roads)
+
+    def in_start_square(self, i: int, x: int, y: int, pad: int = 0) -> bool:
         ox, oy = self.lay.plot_origins[i]
-        px, py, pw, ph = self.lay.pond
-        return ox + px <= x < ox + px + pw and oy + py <= y < oy + py + ph
+        fx, fy = x - ox, y - oy
+        return self.tpl.lo - pad <= fx < self.tpl.hi + pad and self.tpl.lo - pad <= fy < self.tpl.hi + pad
 
     def is_hub(self, x: int, y: int) -> bool:
         c = self.lay.center
         wobble = (value_noise(self.seed, x, y, 6, 17) - 0.5) * 2.0
         return math.hypot(x + 0.5 - c, y + 0.5 - c) <= self.lay.hub_radius + wobble
 
-    def is_path(self, x: int, y: int) -> bool:
-        if self.is_hub(x, y) or self.plot_at(x, y) is not None:
-            return False
-        c = self.lay.center
-        half = self.lay.frame / 2
-        for ox, oy in self.lay.plot_origins:
-            tx, ty = ox + half, oy + half
-            # distance from tile centre to the hub→plot segment
-            vx, vy = tx - c, ty - c
-            wx, wy = x + 0.5 - c, y + 0.5 - c
-            t = max(0.0, min(1.0, (wx * vx + wy * vy) / (vx * vx + vy * vy)))
-            dx, dy = wx - t * vx, wy - t * vy
-            wiggle = (value_noise(self.seed, x, y, 9, 23) - 0.5) * 1.2
-            if math.hypot(dx, dy) <= 1.0 + wiggle * 0.5 and t > 0.05:
-                return True
-        return False
-
     def kind(self, x: int, y: int) -> str:
-        if self.is_water(x, y):
-            return "water"
+        i = self.plot_at(x, y)
+        if i is not None:
+            ox, oy = self.lay.plot_origins[i]
+            fx, fy = x - ox, y - oy
+            px, py, pw, ph = self.lay.pond
+            if px <= fx < px + pw and py <= fy < py + ph:
+                return "water"
+            if (fx, fy) in self.paths[i]:
+                return "path"
+            if not self.in_start_square(i, x, y) and self.road_dist(x, y) <= 1.15:
+                return "path"
+            return "grass"
         if self.is_hub(x, y):
             return "cobble"
-        if self.is_path(x, y):
+        rd = self.road_dist(x, y)
+        wiggle = (value_noise(self.seed, x, y, 9, 23) - 0.5) * 0.6
+        if rd <= 1.15 + wiggle:
             return "path"
+        if self._natural_pond(x, y, rd):
+            return "water"
         return "grass"
+
+    def _natural_pond(self, x: int, y: int, rd: float) -> bool:
+        if rd < 4 or self.plot_at(x, y, 4) is not None:
+            return False
+        c = self.lay.center
+        if math.hypot(x - c, y - c) < self.lay.hub_radius + 8:
+            return False
+        return value_noise(self.seed, x, y, 11, 61) > 0.80
 
     def _mask(self, x: int, y: int, k: str, kinds: dict[tuple[int, int], str]) -> int:
         m = 0
@@ -181,6 +245,9 @@ class Generator:
 
     # ── chunks ─────────────────────────────────────────────────────────────
     def chunk(self, cx: int, cy: int) -> dict:
+        hit = self._chunks.get((cx, cy))
+        if hit is not None:
+            return hit
         cs = self.cfg.chunk_size
         x0, y0 = cx * cs, cy * cs
         kinds = {
@@ -189,7 +256,6 @@ class Generator:
         ground = bytearray(cs * cs)
         objects: list[list[int]] = []
         md = self.cfg.meadow
-        c = self.lay.center
         for ly in range(cs):
             for lx in range(cs):
                 x, y = x0 + lx, y0 + ly
@@ -197,70 +263,148 @@ class Generator:
                 if k == "grass":
                     flowers = value_noise(self.seed, x, y, 7, 31) > md.flower_patch_threshold
                     r = rand01(self.seed, x, y, 1)
-                    name = (
-                        f"tile.flowers.{int(r * 3)}"
-                        if flowers and r < 0.55
-                        else f"tile.grass.{int(r * 4) % 4}"
-                    )
+                    if flowers and r < 0.55:
+                        name = f"tile.flowers.{int(r * 3 / 0.55) % 3}"
+                    else:
+                        name = f"tile.grass.{int(r * 4) % 4}"
                 else:
                     name = f"tile.{k}.{self._mask(x, y, k, kinds)}"
                 ground[ly * cs + lx] = TILE_ID[name]
-                obj = self._object(x, y, k, c, md)
+                obj = self._object(x, y, k, kinds)
                 if obj is not None:
-                    objects.append([lx, ly, OBJECT_ID[obj], 0])
-        return {"cx": cx, "cy": cy, "ground": bytes(ground), "objects": objects}
+                    objects.append([lx, ly, OBJECT_ID[obj[0]], obj[1]])
+        out = {"cx": cx, "cy": cy, "ground": bytes(ground), "objects": objects}
+        if len(self._chunks) > 4096:
+            self._chunks.clear()
+        self._chunks[(cx, cy)] = out
+        return out
 
-    def _object(self, x: int, y: int, k: str, c: int, md) -> str | None:  # noqa: ANN001
+    def _object(self, x: int, y: int, k: str, kinds: dict[tuple[int, int], str]) -> tuple[str, int] | None:
+        c = self.lay.center
+        s = self.seed
         if (x, y) == (c, c):
-            return "obj.well.0"
+            return ("obj.well.0", 0)
+        if k == "water":
+            # lily pads on open water (not on the bank)
+            if rand01(s, x, y, 21) < 0.08 and all(
+                kinds.get((x + dx, y + dy), "water") == "water"
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            ):
+                return (f"obj.lilypad.{int(rand01(s, x, y, 22) * 2)}", 0)
+            return None
         if k != "grass":
             return None
         i = self.plot_at(x, y)
         if i is not None:
-            # inside a plot frame: keep the buildable starting square (+1 tile) clear; the reserved ring
-            # around it grows nature until the owner expands (the client hides objects inside the plot)
-            ox, oy = self.lay.plot_origins[i]
-            lo = (self.lay.frame - self.cfg.plot.start_size) // 2 - 1
-            hi = lo + self.cfg.plot.start_size + 2
-            if lo <= x - ox < hi and lo <= y - oy < hi:
-                return None
-        elif self.plot_at(x, y, self.margin) is not None:
+            return self._plot_object(i, x, y, kinds)
+        if self.plot_at(x, y, self.margin) is not None:
             return None
         dist = math.hypot(x - c, y - c)
         if dist <= self.lay.hub_radius + 2:
             return None
-        # trees thicken towards the meadow's outer edge, and cluster into groves
-        ring = self.cfg.plot.ring_radius + self.lay.frame
-        t = max(0.0, min(1.0, (dist - ring * 0.6) / (ring * 1.2)))
-        grove = value_noise(self.seed, x, y, 11, 41)
-        density = (md.tree_density_near + (md.tree_density_far - md.tree_density_near) * t) * (
-            0.4 + grove * 1.6
+        near_water = any(
+            kinds.get((x + dx, y + dy)) == "water" for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
         )
-        r = rand01(self.seed, x, y, 2)
-        if r < density and (x + y) % 2 == 0:
-            pick = rand01(self.seed, x, y, 3)
-            if t > 0.5 and pick < 0.45:
-                return f"obj.pine.{int(pick * 4) % 2}"
-            return f"obj.oak.{int(pick * 9) % 3}"
-        r -= density
-        if 0 <= r < md.bush_density:
-            return f"obj.bush.{int(rand01(self.seed, x, y, 4) * 2)}"
-        r -= md.bush_density
-        if 0 <= r < md.rock_density:
-            big = rand01(self.seed, x, y, 5) < 0.3
-            return (
-                f"obj.rock_big.{int(rand01(self.seed, x, y, 6) * 2)}"
-                if big
-                else f"obj.rock.{int(rand01(self.seed, x, y, 6) * 2)}"
+        if near_water and rand01(s, x, y, 23) < 0.45:
+            return (f"obj.reeds.{int(rand01(s, x, y, 24) * 2)}", 0)
+        rd = self.road_dist(x, y)
+        if 1.4 < rd < 2.3 and rand01(s, x, y, 25) < 0.035:
+            return ("obj.lamp.0", 0)
+        if rd < 2.5:
+            return (f"obj.flowers.{int(rand01(s, x, y, 26) * 5)}", 0) if rand01(s, x, y, 27) < 0.06 else None
+        return self._nature(x, y, dist)
+
+    def _nature(self, x: int, y: int, dist: float, forest_boost: float = 0.0) -> tuple[str, int] | None:
+        s = self.seed
+        md = self.cfg.meadow
+        grove = min(1.0, value_noise(s, x, y, 12, 41) + forest_boost)
+        outcrop = value_noise(s, x, y, 9, 47)
+        flowers = value_noise(s, x, y, 7, 31) > md.flower_patch_threshold
+        far = max(0.0, min(1.0, (dist - 140) / 160))
+        r = rand01(s, x, y, 2)
+        if grove > 0.62:
+            p_tree, p_bush, p_mush, p_log = 0.24, 0.05, 0.03, 0.008
+        elif grove > 0.52:
+            p_tree, p_bush, p_mush, p_log = 0.06, 0.07, 0.015, 0.006
+        else:
+            p_tree, p_bush, p_mush, p_log = (
+                md.tree_density_near * 0.5 + far * 0.02,
+                md.bush_density * 0.6,
+                0.0,
+                0.002,
             )
-        r -= md.rock_density
-        if 0 <= r < md.tall_grass_density:
-            return f"obj.tall_grass.{int(rand01(self.seed, x, y, 7) * 2)}"
-        if 0 <= r - md.tall_grass_density < 0.002:
-            return "obj.stump.0"
+        if r < p_tree:
+            pick = rand01(s, x, y, 3)
+            if pick < 0.18:
+                return (f"obj.big_oak.{int(pick * 100) % 2}", 0)
+            if pick < 0.30 + far * 0.25:
+                return (f"obj.pine.{int(pick * 100) % 2}", 0)
+            if pick < 0.48 + far * 0.1:
+                return (f"obj.birch.{int(pick * 100) % 2}", 0)
+            if pick < 0.53:
+                return (f"obj.apple.{int(pick * 100) % 2}", 0)
+            return (f"obj.oak.{int(pick * 100) % 3}", 0)
+        r -= p_tree
+        if 0 <= r < p_bush:
+            v = int(rand01(s, x, y, 4) * 6)
+            return (f"obj.bush.{v}", 0) if v < 2 else (f"obj.flower_bush.{v - 2}", 0)
+        r -= p_bush
+        if 0 <= r < p_mush:
+            return (f"obj.mushrooms.{int(rand01(s, x, y, 5) * 2)}", 0)
+        r -= p_mush
+        if 0 <= r < p_log:
+            return ("obj.log.0", 0)
+        r -= p_log
+        if outcrop > 0.74:
+            q = rand01(s, x, y, 6)
+            if q < 0.07:
+                return (f"obj.rock_big.{int(q * 100) % 2}", 0)
+            if q < 0.11:
+                return (f"obj.mossy_rock.{int(q * 100) % 2}", 0)
+            if q < 0.19:
+                return (f"obj.rock.{int(q * 100) % 2}", 0)
+            if q < 0.26:
+                return (f"obj.pebbles.{int(q * 100) % 2}", 0)
+        if flowers and r < 0.14:
+            return (f"obj.flowers.{int(rand01(s, x, y, 7) * 5)}", 0)
+        if 0 <= r - 0.14 < md.tall_grass_density:
+            return (f"obj.tall_grass.{int(rand01(s, x, y, 8) * 2)}", 0)
+        if 0 <= r - 0.14 - md.tall_grass_density < md.rock_density:
+            return (f"obj.rock.{int(rand01(s, x, y, 9) * 2)}", 0)
+        if r > 0.995:
+            return ("obj.stump.0", 0)
         return None
 
+    def _plot_object(
+        self, i: int, x: int, y: int, kinds: dict[tuple[int, int], str]
+    ) -> tuple[str, int] | None:
+        ox, oy = self.lay.plot_origins[i]
+        fx, fy = x - ox, y - oy
+        gx, gy, side = self.gates[i]
+        # signpost beside the gate, just outside the fence
+        out_dx, out_dy = {"N": (0, -1), "S": (0, 1), "W": (-1, 0), "E": (1, 0)}[side]
+        sign = (gx + out_dx + (2 if out_dy else 0), gy + out_dy + (2 if out_dx else 0))
+        if (fx, fy) == sign:
+            return ("obj.signpost.0", 0)
+        if self.in_start_square(i, x, y):
+            wild = self.wild[i].get((fx, fy))
+            return (wild[0], FLAG_WILD_PLOT) if wild else None
+        # the ring between the fence and the frame edge is a forest clearing
+        if self.in_start_square(i, x, y, pad=2) or self.road_dist(x, y) < 3.2:
+            if rand01(self.seed, x, y, 31) < 0.08:
+                return (f"obj.flowers.{int(rand01(self.seed, x, y, 32) * 5)}", 0)
+            return None
+        return self._nature(x, y, 200, forest_boost=0.25)
 
-@lru_cache(maxsize=64)
-def generator(cfg: MapgenCfg, seed: int) -> Generator:
-    return Generator(cfg, seed)
+
+_cache: dict[tuple[str, int], Generator] = {}
+
+
+def generator(cfg, seed: int) -> Generator:  # noqa: ANN001 - GameConfig
+    key = (cfg.hash, seed)
+    g = _cache.get(key)
+    if g is None:
+        if len(_cache) > 32:
+            _cache.clear()
+        g = _cache[key] = Generator(cfg, seed)
+    return g

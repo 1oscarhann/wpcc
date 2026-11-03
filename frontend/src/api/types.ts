@@ -60,6 +60,7 @@ export interface ConfigBundle {
   };
   plot: { frame: number; start_size: number; max_size: number; pond: { x: number; y: number; w: number; h: number } };
   map: { size: number; chunk_size: number };
+  debris: Record<string, { sprites: string[]; yields: Record<string, number> }>;
 }
 
 export interface Me {
@@ -122,4 +123,7 @@ export interface VillageState {
   undo: { op: string; expires_at_ms: number } | null;
   blocked: [number, number, number, number][];
   water: [number, number, number, number][];
+  /** [id, kind, variant, x, y] wild growth still covering the plot */
+  debris: [number, string, number, number, number][];
+  gate: [number, number, "N" | "S" | "E" | "W"];
 }

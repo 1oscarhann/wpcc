@@ -5,8 +5,14 @@ import { AnimatedSprite, Application, Container, Graphics, Sprite, Text } from "
 import type { BuildingDef, BuildingState, VillageState } from "../api/types";
 import { serverNow, useSession } from "../state/session";
 import { onVillageChange, useVillage, type MapMeta } from "../state/village";
+import { manifest } from "../assets/manifest";
+import { Ambient } from "./ambient";
+import { CloudShadows, groundLighting } from "./atmosphere";
 import { localPlacementError, rotatedFootprint, usableBounds } from "./placement";
 import { buildingLook, loadWorldAtlas, tex } from "./sprites";
+
+const TREE_PREFIXES = ["obj.oak", "obj.big_oak", "obj.birch", "obj.pine", "obj.apple"];
+const DEBRIS_LEAVES = new Set(["oak", "big_oak", "birch", "pine", "apple", "bush", "weeds"]);
 
 const T = 16;
 const ZOOMS = [2, 3, 4];
@@ -42,8 +48,19 @@ export class Game {
   private chunks = new Map<string, Container | "loading">();
   private views = new Map<string, BuildingView>();
   private ghost: { sprite: Sprite; foot: Graphics } | null = null;
-  private plotBorder = new Graphics();
   private selectRing = new Graphics();
+  private lighting: Container | null = null;
+  private clouds = new CloudShadows(5);
+  private sky = new Container();
+  private ambient: Ambient | null = null;
+  private debrisViews = new Map<number, Sprite>();
+  private clearing = new Set<number>();
+  private fence: Sprite[] = [];
+  private fenceKey = "";
+  private waterTiles = new Set<string>();
+  private treeSpots: { x: number; y: number }[] = [];
+  private flowerSpots: { x: number; y: number }[] = [];
+  private hoverDebris: number | null = null;
   private map: MapMeta | null = null;
   private defs: Record<string, BuildingDef> = {};
   private origin: [number, number] = [0, 0];
@@ -74,8 +91,24 @@ export class Game {
     this.defs = useSession.getState().config!.buildings;
     this.map = await useVillage.getState().fetchMap();
     this.objects.sortableChildren = true;
-    this.world.addChild(this.ground, this.below, this.objects, this.above, this.fx);
-    this.below.addChild(this.plotBorder, this.selectRing);
+    this.lighting = groundLighting(this.map.size * T);
+    this.world.addChild(this.ground, this.lighting, this.below, this.objects, this.above, this.fx, this.clouds.layer, this.sky);
+    this.below.addChild(this.selectRing);
+    this.ambient = new Ambient(
+      {
+        origin: () => this.origin,
+        village: () => useVillage.getState().village,
+        defs: () => this.defs,
+        view: () => this.viewRect(),
+        waterTiles: this.waterTiles,
+        treeSpots: this.treeSpots,
+        flowerSpots: this.flowerSpots,
+        smokeSpots: () => this.smokeSpots(),
+      },
+      this.objects,
+      this.fx,
+      this.sky,
+    );
     this.app.stage.addChild(this.world, this.screen);
 
     const v = useVillage.getState().village;
@@ -167,11 +200,12 @@ export class Game {
     const v = useVillage.getState().village;
     if (!v) return;
     const th = v.buildings.find((b) => b.key === "town_hall");
-    const cx = th ? th.x + 1.5 : v.frame / 2;
-    const cy = th ? th.y + 2.5 : v.frame / 2;
+    const cx = th ? th.x + 2 : v.frame / 2;
+    const cy = th ? th.y + 3 : v.frame / 2;
     this.cam.x = (this.origin[0] + cx) * T;
     this.cam.y = (this.origin[1] + cy) * T;
-    this.cam.zoom = 2; // Build overview: the whole starting plot fits on a laptop screen
+    // close enough to enjoy the pixel art; phones get a wider view
+    this.cam.zoom = this.app.screen.width >= 700 ? 3 : 2;
   }
 
   // ── frame loop ────────────────────────────────────────────────────────────
@@ -198,6 +232,34 @@ export class Game {
     this.applyCamera();
     this.loadVisibleChunks();
     this.updateTimers();
+    this.ambient?.update(dms);
+    this.clouds.update(dt, this.viewRect());
+  }
+
+  private viewRect(): { x0: number; y0: number; x1: number; y1: number } {
+    const { width, height } = this.app.screen;
+    const a = this.screenToWorld(0, 0);
+    const b = this.screenToWorld(width, height);
+    return { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
+  }
+
+  private smokeSpots(): { x: number; y: number }[] {
+    const out: { x: number; y: number }[] = [];
+    for (const v of this.views.values()) {
+      if (v.level < 1) continue;
+      const meta = manifest.sprites[this.lookName(v)] as { smoke?: [number, number][] } | undefined;
+      for (const [sx, sy] of meta?.smoke ?? []) {
+        const w = v.sprite.texture.width;
+        out.push({ x: v.root.x + (v.sprite.scale.x < 0 ? w - sx : sx), y: v.root.y - v.anchorTop + sy });
+      }
+    }
+    return out;
+  }
+
+  private lookName(v: BuildingView): string {
+    return buildingLook(v.key, this.defs[v.key].footprint, {
+      rotation: v.rotation, level: v.level, state: v.state as BuildingState["state"],
+    }).name;
   }
 
   // ── terrain chunks ────────────────────────────────────────────────────────
@@ -243,39 +305,60 @@ export class Game {
     const c = new Container();
     c.position.set(ch.cx * cs * T, ch.cy * cs * T);
     for (let i = 0; i < ch.ground.length; i++) {
-      const s = new Sprite(tex(m.tile_names[ch.ground[i]]));
+      const name = m.tile_names[ch.ground[i]];
+      const s = new Sprite(tex(name));
       s.position.set((i % cs) * T, Math.floor(i / cs) * T);
       c.addChild(s);
+      const tx = ch.cx * cs + (i % cs);
+      const ty = ch.cy * cs + Math.floor(i / cs);
+      if (name.startsWith("tile.water")) this.waterTiles.add(`${tx},${ty}`);
+      else if (name.startsWith("tile.flowers") && (tx * 7 + ty * 3) % 4 === 0) this.flowerSpots.push({ x: tx * T + 8, y: ty * T + 8 });
     }
     c.cacheAsTexture(true);
     this.ground.addChild(c);
     this.chunks.set(`${ch.cx}_${ch.cy}`, c);
     const v = useVillage.getState().village;
     const [lo, hi] = v ? usableBounds(v.frame, v.size) : [0, 0];
-    for (const [lx, ly, k] of ch.objects) {
+    for (const [lx, ly, k, flags] of ch.objects) {
       const name = m.object_names[k];
-      // nature in the reserved ring of our plot disappears as the plot expands over it
-      const fx = ch.cx * cs + lx - this.origin[0];
-      const fy = ch.cy * cs + ly - this.origin[1];
-      if (v && fx >= lo - 1 && fx < hi + 1 && fy >= lo - 1 && fy < hi + 1) continue;
+      const wtx = ch.cx * cs + lx;
+      const wty = ch.cy * cs + ly;
+      // a claimed plot's wild growth is replaced by that village's own debris
+      if (flags & 1 && this.plotOwnerAt(wtx, wty)) continue;
+      // nature inside our buildable square disappears as the plot expands over it (pond decor stays)
+      const fx = wtx - this.origin[0];
+      const fy = wty - this.origin[1];
+      if (v && fx >= lo - 1 && fx < hi + 1 && fy >= lo - 1 && fy < hi + 1 && !name.startsWith("obj.lilypad")) continue;
       const s = new Sprite(tex(name));
       s.anchor.set(0.5, 1);
       const wx = (ch.cx * cs + lx) * T + T / 2;
       const wy = (ch.cy * cs + ly) * T + T - 1;
       s.position.set(wx, wy);
-      s.zIndex = wy;
+      s.zIndex = name.startsWith("obj.lilypad") ? wy - 16 : wy;
       this.objects.addChild(s);
+      if (TREE_PREFIXES.some((p) => name.startsWith(p))) this.treeSpots.push({ x: wx, y: wy - s.height * 0.6 });
+      else if (name.startsWith("obj.flowers") || name.startsWith("obj.flower_bush")) this.flowerSpots.push({ x: wx, y: wy - 4 });
     }
+  }
+
+  private plotOwnerAt(tx: number, ty: number): string | null {
+    for (const p of this.map?.plots ?? []) {
+      if (tx >= p.origin[0] && tx < p.origin[0] + 48 && ty >= p.origin[1] && ty < p.origin[1] + 48) return p.owner;
+    }
+    return null;
   }
 
   // ── village ───────────────────────────────────────────────────────────────
   private onVillage(prev: VillageState | null, next: VillageState, first: boolean): void {
     if (first || !prev) {
       this.origin = next.origin;
-      this.drawPlotBorder(next);
       this.centerOnVillage();
-    } else if (prev.size !== next.size) {
-      this.drawPlotBorder(next);
+    }
+    this.drawFence(next);
+    this.syncDebris(next, first);
+    if (prev && (prev.buildings.length !== next.buildings.length || prev.debris.length !== next.debris.length ||
+        prev.buildings.some((b, i) => next.buildings[i]?.x !== b.x || next.buildings[i]?.y !== b.y))) {
+      this.ambient?.invalidate();
     }
     const seen = new Set<string>();
     for (const b of next.buildings) {
@@ -304,21 +387,153 @@ export class Game {
     this.syncGhost();
   }
 
-  private drawPlotBorder(v: VillageState): void {
-    const g = this.plotBorder;
-    g.clear();
+  /** A wooden fence just outside the buildable square, open at the gate (2 tiles, matching the path). */
+  private drawFence(v: VillageState): void {
+    const key = `${v.size}:${v.gate.join(",")}`;
+    if (key === this.fenceKey) return;
+    this.fenceKey = key;
+    for (const s of this.fence) s.destroy();
+    this.fence = [];
     const [lo, hi] = usableBounds(v.frame, v.size);
-    const x0 = (this.origin[0] + lo) * T;
-    const y0 = (this.origin[1] + lo) * T;
-    const len = (hi - lo) * T;
-    // dashed wooden boundary with posts at the corners
-    for (let i = 0; i < len; i += 8) {
-      g.rect(x0 + i, y0 - 1, 5, 2).rect(x0 + i, y0 + len - 1, 5, 2).rect(x0 - 1, y0 + i, 2, 5).rect(x0 + len - 1, y0 + i, 2, 5);
+    const [gx, gy, side] = v.gate;
+    const gap = new Set<string>(side === "N" || side === "S" ? [`${gx},${gy}`, `${gx + 1},${gy}`] : [`${gx},${gy}`, `${gx},${gy + 1}`]);
+    const [ox, oy] = this.origin;
+    const add = (name: string, wx: number, wy: number, z: number, ax = 0, ay = 0) => {
+      const s = new Sprite(tex(name));
+      s.anchor.set(ax, ay);
+      s.position.set(wx, wy);
+      s.zIndex = z;
+      this.objects.addChild(s);
+      this.fence.push(s);
+    };
+    for (let x = lo - 1; x <= hi; x++) {
+      for (const y of [lo - 1, hi]) {
+        if (gap.has(`${x},${y}`)) continue;
+        const wx = (ox + x) * T;
+        const wy = (oy + y + 1) * T;
+        if (x === lo - 1 || x === hi) add("obj.fence.post", wx + 5, wy - 2, wy - 1, 0, 1);
+        else add("obj.fence.h", wx, wy - 2, wy - 1, 0, 1);
+      }
     }
-    g.fill({ color: 0xf3e8cc, alpha: 0.55 });
-    for (const [px, py] of [[x0, y0], [x0 + len, y0], [x0, y0 + len], [x0 + len, y0 + len]]) {
-      g.rect(px - 2, py - 3, 4, 6).fill({ color: 0x7e4e31 }).stroke({ width: 1, color: INK });
+    for (let y = lo; y < hi; y++) {
+      for (const x of [lo - 1, hi]) {
+        if (gap.has(`${x},${y}`)) continue;
+        const wx = (ox + x) * T + 5;
+        const wy = (oy + y + 1) * T;
+        add("obj.fence.v", wx, wy + 2, wy, 0, 1);
+      }
     }
+    // gate posts with lanterns either side of the gap
+    const posts = side === "N" || side === "S" ? [[gx - 1, gy], [gx + 2, gy]] : [[gx, gy - 1], [gx, gy + 2]];
+    for (const [px, py] of posts) {
+      const wx = (ox + px) * T + 8;
+      const wy = (oy + py + 1) * T;
+      add("obj.fence.gate", wx, wy, wy + 1, 0.5, 1);
+    }
+  }
+
+  private debrisSprite(id: number): Sprite | undefined {
+    return this.debrisViews.get(id);
+  }
+
+  private syncDebris(v: VillageState, first: boolean): void {
+    const config = useSession.getState().config!;
+    const seen = new Set<number>();
+    for (const [id, kind, variant, x, y] of v.debris) {
+      seen.add(id);
+      if (this.debrisViews.has(id)) continue;
+      const name = config.debris[kind]?.sprites[variant] ?? "obj.bush.0";
+      const s = new Sprite(tex(name));
+      s.anchor.set(0.5, 1);
+      const wx = (this.origin[0] + x) * T + T / 2;
+      const wy = (this.origin[1] + y) * T + T - 1;
+      s.position.set(wx, wy);
+      s.zIndex = wy;
+      this.objects.addChild(s);
+      this.debrisViews.set(id, s);
+      if (TREE_PREFIXES.some((p) => name.startsWith(p))) this.treeSpots.push({ x: wx, y: wy - s.height * 0.6 });
+      if (name.startsWith("obj.flower_bush")) this.flowerSpots.push({ x: wx, y: wy - 6 });
+      void first;
+    }
+    for (const [id, s] of this.debrisViews) {
+      if (!seen.has(id) && !this.clearing.has(id)) {
+        s.destroy();
+        this.debrisViews.delete(id);
+      }
+    }
+  }
+
+  private debrisAt(sx: number, sy: number): number | null {
+    const v = useVillage.getState().village;
+    if (!v) return null;
+    const w = this.screenToWorld(sx, sy);
+    let best: { id: number; z: number } | null = null;
+    for (const [id, s] of this.debrisViews) {
+      if (this.clearing.has(id)) continue;
+      const b = { x0: s.x - s.width / 2, x1: s.x + s.width / 2, y0: s.y - s.height, y1: s.y };
+      if (w.x >= b.x0 && w.x < b.x1 && w.y >= b.y0 && w.y < b.y1 && (!best || s.zIndex > best.z)) {
+        best = { id, z: s.zIndex };
+      }
+    }
+    return best?.id ?? null;
+  }
+
+  private async clearDebris(id: number): Promise<void> {
+    const s = this.debrisViews.get(id);
+    if (!s || this.clearing.has(id)) return;
+    this.clearing.add(id);
+    const v = useVillage.getState().village!;
+    const kind = v.debris.find((d) => d[0] === id)?.[1] ?? "oak";
+    gsap.to(s, { rotation: 0.09, duration: 0.05, yoyo: true, repeat: 5, ease: "sine.inOut", onComplete: () => void (s.rotation = 0) });
+    const gained = await useVillage.getState().clearDebris(id);
+    if (!gained) {
+      this.clearing.delete(id);
+      return;
+    }
+    const x = s.x;
+    const y = s.y;
+    if (DEBRIS_LEAVES.has(kind)) {
+      for (let i = 0; i < 7; i++) {
+        const leaf = new AnimatedSprite([tex("fx.leaf.0"), tex("fx.leaf.1")]);
+        leaf.animationSpeed = 0.2;
+        leaf.play();
+        leaf.position.set(x + (Math.random() - 0.5) * 16, y - s.height * (0.3 + Math.random() * 0.5));
+        this.fx.addChild(leaf);
+        gsap.to(leaf, { x: leaf.x + (Math.random() - 0.5) * 40, y: y + 2, alpha: 0, duration: 0.9 + Math.random() * 0.5, ease: "power1.in", onComplete: () => leaf.destroy() });
+      }
+    }
+    this.dust(x, y - 2);
+    gsap.to(s.scale, { x: 1.25, y: 0.6, duration: 0.12, ease: "power2.in" });
+    gsap.to(s, { alpha: 0, duration: 0.18, delay: 0.06, onComplete: () => {
+      s.destroy();
+      this.debrisViews.delete(id);
+      this.clearing.delete(id);
+    } });
+    const config = useSession.getState().config!;
+    Object.entries(gained).forEach(([res, qty], i) => {
+      const name = config.resources[res]?.name ?? res;
+      this.floatText(x, y - s.height - 4 - i * 12, `+${qty} ${name}`, 0xf7d66a, i * 0.12);
+    });
+  }
+
+  private floatText(wx: number, wy: number, text: string, color: number, delay = 0): void {
+    const t = new Text({
+      text,
+      style: { fontFamily: "Pixelify Sans", fontSize: 17, fill: color, stroke: { color: INK, width: 4 }, fontWeight: "700" },
+    });
+    t.anchor.set(0.5, 1);
+    t.alpha = 0;
+    this.screen.addChild(t);
+    const state = { lift: 0, a: 0 };
+    const place = () => {
+      const p = { x: this.world.x + wx * this.cam.zoom, y: this.world.y + wy * this.cam.zoom };
+      t.position.set(Math.round(p.x), Math.round(p.y - state.lift));
+      t.alpha = state.a;
+    };
+    gsap.timeline({ delay, onUpdate: place, onComplete: () => t.destroy() })
+      .to(state, { a: 1, lift: 14, duration: 0.18, ease: "back.out(2)" })
+      .to(state, { lift: 40, duration: 0.9, ease: "power1.out" })
+      .to(state, { a: 0, duration: 0.35 }, "-=0.35");
   }
 
   private createView(b: BuildingState): BuildingView {
@@ -609,7 +824,20 @@ export class Game {
 
   private hover(sx: number, sy: number): void {
     const store = useVillage.getState();
-    if (!store.placing) return;
+    if (!store.placing) {
+      const id = this.debrisAt(sx, sy);
+      if (id !== this.hoverDebris) {
+        if (this.hoverDebris !== null) {
+          const old = this.debrisSprite(this.hoverDebris);
+          if (old && !old.destroyed) old.tint = 0xffffff;
+        }
+        this.hoverDebris = id;
+        const s = id !== null ? this.debrisSprite(id) : undefined;
+        if (s) s.tint = 0xfff2c0;
+        this.app.canvas.style.cursor = id !== null || this.buildingAt(sx, sy) ? "pointer" : "grab";
+      }
+      return;
+    }
     const [tx, ty] = this.ghostTileFor(sx, sy);
     this.hoverTile = [tx, ty];
     store.setGhost(tx, ty);
@@ -623,7 +851,16 @@ export class Game {
       if (!this.touchMode) store.confirmPlacement();
       return;
     }
-    store.select(this.buildingAt(sx, sy));
+    const b = this.buildingAt(sx, sy);
+    if (!b) {
+      const d = this.debrisAt(sx, sy);
+      if (d !== null) {
+        store.select(null);
+        void this.clearDebris(d);
+        return;
+      }
+    }
+    store.select(b);
   }
 
   private buildingAt(sx: number, sy: number): string | null {

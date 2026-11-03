@@ -191,10 +191,11 @@ def title_scene(world: dict[str, Canvas]) -> Canvas:
     for x in range(0, w, 16):
         c.blit(world["tile.path.68"], x, 156)  # E|W: a straight east-west road
     placements = [
-        ("obj.pine.0", 14, 128), ("obj.oak.1", 40, 136), ("building.house.a.l3", 68, 150),
-        ("building.town_hall.a.l4", 126, 152), ("building.lumber_camp.a.l2", 190, 150),
-        ("building.forge.a.l3", 232, 152), ("obj.oak.0", 280, 140), ("obj.pine.1", 304, 132),
-        ("building.market.a.l2", 70, 182), ("obj.bush.1", 176, 176), ("obj.well.0", 285, 182),
+        ("obj.pine.0", 10, 132), ("obj.big_oak.0", 22, 142), ("obj.birch.1", 54, 136),
+        ("building.house.a.l3", 70, 160), ("building.town_hall.a.l4", 128, 162),
+        ("building.forge.a.l3", 200, 160), ("obj.apple.0", 246, 150), ("obj.big_oak.1", 264, 146),
+        ("obj.pine.1", 300, 136), ("building.market.a.l2", 40, 186), ("obj.flower_bush.0", 176, 182),
+        ("obj.lamp.0", 120, 184), ("obj.well.0", 286, 186), ("obj.flowers.1", 230, 176), ("obj.flowers.3", 112, 172),
     ]
     for name, x, by in placements:
         s = world[name]

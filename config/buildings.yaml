@@ -23,7 +23,7 @@ buildings:
     name: Town Hall
     description: The heart of your village. Its level caps every other building and unlocks new ones.
     category: core
-    footprint: [3, 3]
+    footprint: [4, 4]
     max_count: [1, 1, 1, 1, 1]
     demolishable: false
     storage_base: [1000, 1500, 2000, 2500, 3000]   # base storage cap per resource, by TH level
@@ -38,7 +38,7 @@ buildings:
     name: House
     description: Homes for your villagers.
     category: core
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [3, 5, 7, 9, 12]
     base_cost: { wood: 50, stone: 20 }
     housing: [2, 3, 4, 5, 6]
@@ -47,7 +47,7 @@ buildings:
     name: Storehouse
     description: Raises how much of each resource you can store.
     category: core
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [1, 1, 1, 1, 1]
     base_cost: { wood: 100, stone: 80 }
     storage_bonus: [1000, 2500, 5000, 9000, 15000]
@@ -56,7 +56,7 @@ buildings:
     name: Market
     description: Sell goods for coins. (Trading opens in a later update.)
     category: core
-    footprint: [3, 2]
+    footprint: [4, 3]
     max_count: [1, 1, 1, 1, 1]
     base_cost: { wood: 120, stone: 80 }
 
@@ -64,7 +64,7 @@ buildings:
     name: Lumber Camp
     description: Woodcutters fell trees for a steady supply of wood.
     category: production
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [1, 2, 2, 3, 3]
     base_cost: { wood: 40, stone: 20 }
     produces: { wood: [60, 100, 160, 240, 350] }
@@ -73,7 +73,7 @@ buildings:
     name: Quarry
     description: Cuts stone from the earth.
     category: production
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [1, 1, 2, 2, 3]
     base_cost: { wood: 50 }
     produces: { stone: [50, 85, 135, 200, 290] }
@@ -82,7 +82,7 @@ buildings:
     name: Farm
     description: Grows food. From level 2 its animals also give hide.
     category: production
-    footprint: [3, 3]
+    footprint: [4, 4]
     max_count: [1, 2, 2, 3, 3]
     base_cost: { wood: 40, stone: 10 }
     produces:
@@ -94,7 +94,7 @@ buildings:
     description: Digs ore. Deeper levels strike crystal.
     category: production
     unlock_town_hall: 2
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [0, 1, 1, 2, 2]
     base_cost: { wood: 60, stone: 40 }
     produces:
@@ -106,7 +106,7 @@ buildings:
     description: Catches fish. Must touch water.
     category: production
     unlock_town_hall: 2
-    footprint: [2, 3]
+    footprint: [3, 4]
     requires_water: true
     max_count: [0, 1, 1, 1, 2]
     base_cost: { wood: 60, stone: 20 }
@@ -117,7 +117,7 @@ buildings:
     description: Grows herbs for potions.
     category: production
     unlock_town_hall: 2
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [0, 1, 1, 2, 2]
     base_cost: { wood: 40, stone: 20 }
     produces: { herbs: [25, 40, 65, 95, 140] }
@@ -127,7 +127,7 @@ buildings:
     description: Smelts ingots and forges weapons when placed next to the right buildings.
     category: crafting
     rare_group: crafting
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [1, 1, 1, 2, 2]
     base_cost: { wood: 80, stone: 120, ore: 20 }
 
@@ -137,6 +137,6 @@ buildings:
     category: crafting
     rare_group: crafting
     unlock_town_hall: 2
-    footprint: [2, 2]
+    footprint: [3, 3]
     max_count: [0, 1, 1, 1, 1]
     base_cost: { wood: 120, stone: 60 }

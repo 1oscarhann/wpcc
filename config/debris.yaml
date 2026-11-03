@@ -1,0 +1,17 @@
+# Wild growth covering a brand-new village plot (D-040). Players tap to clear it; yields go into storage
+# through the ledger. Clearing is free and instant: it's the satisfying early-game resource source.
+density: 0.085            # fraction of free tiles in the starting square that start covered
+keep_clear_radius: 6      # tiles around the town hall kept open so the first buildings fit
+avoid_buildings: 1        # tiles kept clear around every starting building
+kinds:
+  oak:      { sprites: [obj.oak.0, obj.oak.1, obj.oak.2], weight: 20, yields: { wood: 10 } }
+  big_oak:  { sprites: [obj.big_oak.0, obj.big_oak.1], weight: 5, yields: { wood: 18 } }
+  birch:    { sprites: [obj.birch.0, obj.birch.1], weight: 8, yields: { wood: 8 } }
+  pine:     { sprites: [obj.pine.0, obj.pine.1], weight: 7, yields: { wood: 9 } }
+  apple:    { sprites: [obj.apple.0, obj.apple.1], weight: 4, yields: { wood: 6, food: 8 } }
+  rock:     { sprites: [obj.rock.0, obj.rock.1], weight: 13, yields: { stone: 6 }, bonus: { ore: { chance: 0.25, qty: 2 } } }
+  big_rock: { sprites: [obj.rock_big.0, obj.rock_big.1, obj.mossy_rock.0, obj.mossy_rock.1], weight: 6, yields: { stone: 14 }, bonus: { ore: { chance: 0.5, qty: 3 } } }
+  bush:     { sprites: [obj.bush.0, obj.bush.1, obj.flower_bush.0, obj.flower_bush.1, obj.flower_bush.2, obj.flower_bush.3], weight: 14, yields: { food: 4 } }
+  stump:    { sprites: [obj.stump.0], weight: 4, yields: { wood: 4 } }
+  log:      { sprites: [obj.log.0], weight: 3, yields: { wood: 12 } }
+  weeds:    { sprites: [obj.tall_grass.0, obj.tall_grass.1, obj.mushrooms.0, obj.mushrooms.1], weight: 12, yields: { herbs: 2 } }

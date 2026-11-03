@@ -382,9 +382,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.farm.a.l2": {
    "anchor": [
@@ -393,9 +394,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.farm.a.l3": {
    "anchor": [
@@ -404,9 +406,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.farm.a.l4": {
    "anchor": [
@@ -415,9 +418,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.farm.a.l5": {
    "anchor": [
@@ -426,173 +430,214 @@
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.fishing_dock.a.l1": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.fishing_dock.a.l2": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.fishing_dock.a.l3": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.fishing_dock.a.l4": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.fishing_dock.a.l5": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.fishing_dock.b.l1": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.fishing_dock.b.l2": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.fishing_dock.b.l3": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.fishing_dock.b.l4": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.fishing_dock.b.l5": {
    "anchor": [
     0,
-    22
+    26
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.forge.a.l1": {
    "anchor": [
     0,
-    28
+    38
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     36,
+     18
+    ]
    ]
   },
   "building.forge.a.l2": {
    "anchor": [
     0,
-    28
+    38
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     36,
+     18
+    ]
    ]
   },
   "building.forge.a.l3": {
    "anchor": [
     0,
-    28
+    38
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     36,
+     18
+    ]
    ]
   },
   "building.forge.a.l4": {
    "anchor": [
     0,
-    28
+    38
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     36,
+     18
+    ]
    ]
   },
   "building.forge.a.l5": {
    "anchor": [
     0,
-    28
+    38
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     36,
+     18
+    ]
    ]
   },
   "building.herb_garden.a.l1": {
@@ -602,9 +647,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.herb_garden.a.l2": {
    "anchor": [
@@ -613,9 +659,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.herb_garden.a.l3": {
    "anchor": [
@@ -624,9 +671,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.herb_garden.a.l4": {
    "anchor": [
@@ -635,9 +683,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.herb_garden.a.l5": {
    "anchor": [
@@ -646,229 +695,275 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.house.a.l1": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     35,
+     20
+    ]
    ]
   },
   "building.house.a.l2": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     35,
+     20
+    ]
    ]
   },
   "building.house.a.l3": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     35,
+     20
+    ]
    ]
   },
   "building.house.a.l4": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     35,
+     20
+    ]
    ]
   },
   "building.house.a.l5": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
+    3,
+    3
+   ],
+   "smoke": [
+    [
+     35,
+     20
+    ]
    ]
   },
   "building.lumber_camp.a.l1": {
    "anchor": [
     0,
-    20
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.lumber_camp.a.l2": {
    "anchor": [
     0,
-    20
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.lumber_camp.a.l3": {
    "anchor": [
     0,
-    20
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.lumber_camp.a.l4": {
    "anchor": [
     0,
-    20
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.lumber_camp.a.l5": {
    "anchor": [
     0,
-    20
+    26
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.market.a.l1": {
    "anchor": [
     0,
-    24
+    16
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.market.a.l2": {
    "anchor": [
     0,
-    24
+    16
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.market.a.l3": {
    "anchor": [
     0,
-    24
+    16
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.market.a.l4": {
    "anchor": [
     0,
-    24
+    16
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.market.a.l5": {
    "anchor": [
     0,
-    24
+    16
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    2
-   ]
+    4,
+    3
+   ],
+   "smoke": []
   },
   "building.market.b.l1": {
    "anchor": [
     0,
-    24
+    14
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.market.b.l2": {
    "anchor": [
     0,
-    24
+    14
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.market.b.l3": {
    "anchor": [
     0,
-    24
+    14
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.market.b.l4": {
    "anchor": [
     0,
-    24
+    14
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.market.b.l5": {
    "anchor": [
     0,
-    24
+    14
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    3
-   ]
+    3,
+    4
+   ],
+   "smoke": []
   },
   "building.mine.a.l1": {
    "anchor": [
@@ -877,9 +972,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.mine.a.l2": {
    "anchor": [
@@ -888,9 +984,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.mine.a.l3": {
    "anchor": [
@@ -899,9 +996,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.mine.a.l4": {
    "anchor": [
@@ -910,9 +1008,10 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.mine.a.l5": {
    "anchor": [
@@ -921,273 +1020,334 @@
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.quarry.a.l1": {
    "anchor": [
     0,
-    18
+    22
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.quarry.a.l2": {
    "anchor": [
     0,
-    18
+    22
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.quarry.a.l3": {
    "anchor": [
     0,
-    18
+    22
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.quarry.a.l4": {
    "anchor": [
     0,
-    18
+    22
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.quarry.a.l5": {
    "anchor": [
     0,
-    18
-   ],
-   "atlas": "world",
-   "footprint": [
-    2,
-    2
-   ]
-  },
-  "building.scaffold.2x2": {
-   "anchor": [
-    0,
-    22
-   ],
-   "atlas": "world",
-   "footprint": [
-    2,
-    2
-   ]
-  },
-  "building.scaffold.2x3": {
-   "anchor": [
-    0,
-    22
-   ],
-   "atlas": "world",
-   "footprint": [
-    2,
-    3
-   ]
-  },
-  "building.scaffold.3x2": {
-   "anchor": [
-    0,
     22
    ],
    "atlas": "world",
    "footprint": [
     3,
-    2
-   ]
+    3
+   ],
+   "smoke": []
   },
   "building.scaffold.3x3": {
    "anchor": [
     0,
-    22
+    14
    ],
    "atlas": "world",
    "footprint": [
     3,
     3
-   ]
+   ],
+   "smoke": []
+  },
+  "building.scaffold.3x4": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    3,
+    4
+   ],
+   "smoke": []
+  },
+  "building.scaffold.4x3": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    4,
+    3
+   ],
+   "smoke": []
+  },
+  "building.scaffold.4x4": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.storehouse.a.l1": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.storehouse.a.l2": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.storehouse.a.l3": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.storehouse.a.l4": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.storehouse.a.l5": {
    "anchor": [
     0,
-    24
+    30
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.town_hall.a.l1": {
    "anchor": [
     0,
-    34
+    58
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.town_hall.a.l2": {
    "anchor": [
     0,
-    34
+    58
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.town_hall.a.l3": {
    "anchor": [
     0,
-    34
+    58
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.town_hall.a.l4": {
    "anchor": [
     0,
-    34
+    58
    ],
    "atlas": "world",
    "footprint": [
-    3,
-    3
-   ]
+    4,
+    4
+   ],
+   "smoke": []
   },
   "building.town_hall.a.l5": {
    "anchor": [
     0,
-    34
+    58
+   ],
+   "atlas": "world",
+   "footprint": [
+    4,
+    4
+   ],
+   "smoke": []
+  },
+  "building.workshop.a.l1": {
+   "anchor": [
+    0,
+    28
    ],
    "atlas": "world",
    "footprint": [
     3,
     3
-   ]
-  },
-  "building.workshop.a.l1": {
-   "anchor": [
-    0,
-    24
    ],
-   "atlas": "world",
-   "footprint": [
-    2,
-    2
-   ]
+   "smoke": []
   },
   "building.workshop.a.l2": {
    "anchor": [
     0,
-    24
+    28
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.workshop.a.l3": {
    "anchor": [
     0,
-    24
+    28
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.workshop.a.l4": {
    "anchor": [
     0,
-    24
+    28
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
   },
   "building.workshop.a.l5": {
    "anchor": [
     0,
-    24
+    28
    ],
    "atlas": "world",
    "footprint": [
-    2,
-    2
-   ]
+    3,
+    3
+   ],
+   "smoke": []
+  },
+  "fx.bird.0": {
+   "atlas": "world"
+  },
+  "fx.bird.1": {
+   "atlas": "world"
+  },
+  "fx.butterfly0.0": {
+   "atlas": "world"
+  },
+  "fx.butterfly0.1": {
+   "atlas": "world"
+  },
+  "fx.butterfly1.0": {
+   "atlas": "world"
+  },
+  "fx.butterfly1.1": {
+   "atlas": "world"
+  },
+  "fx.butterfly2.0": {
+   "atlas": "world"
+  },
+  "fx.butterfly2.1": {
+   "atlas": "world"
+  },
+  "fx.butterfly3.0": {
+   "atlas": "world"
+  },
+  "fx.butterfly3.1": {
+   "atlas": "world"
+  },
+  "fx.duck.0": {
+   "atlas": "world"
+  },
+  "fx.duck.1": {
+   "atlas": "world"
   },
   "fx.dust.0": {
    "atlas": "world"
@@ -1204,6 +1364,39 @@
   "fx.dust.4": {
    "atlas": "world"
   },
+  "fx.glint.0": {
+   "atlas": "world"
+  },
+  "fx.glint.1": {
+   "atlas": "world"
+  },
+  "fx.glint.2": {
+   "atlas": "world"
+  },
+  "fx.glint.3": {
+   "atlas": "world"
+  },
+  "fx.leaf.0": {
+   "atlas": "world"
+  },
+  "fx.leaf.1": {
+   "atlas": "world"
+  },
+  "fx.smoke.0": {
+   "atlas": "world"
+  },
+  "fx.smoke.1": {
+   "atlas": "world"
+  },
+  "fx.smoke.2": {
+   "atlas": "world"
+  },
+  "fx.smoke.3": {
+   "atlas": "world"
+  },
+  "fx.smoke.4": {
+   "atlas": "world"
+  },
   "fx.sparkle.0": {
    "atlas": "world"
   },
@@ -1216,13 +1409,94 @@
   "fx.sparkle.3": {
    "atlas": "world"
   },
+  "obj.apple.0": {
+   "atlas": "world"
+  },
+  "obj.apple.1": {
+   "atlas": "world"
+  },
+  "obj.big_oak.0": {
+   "atlas": "world"
+  },
+  "obj.big_oak.1": {
+   "atlas": "world"
+  },
+  "obj.birch.0": {
+   "atlas": "world"
+  },
+  "obj.birch.1": {
+   "atlas": "world"
+  },
   "obj.bush.0": {
    "atlas": "world"
   },
   "obj.bush.1": {
    "atlas": "world"
   },
+  "obj.fence.gate": {
+   "atlas": "world"
+  },
+  "obj.fence.h": {
+   "atlas": "world"
+  },
+  "obj.fence.post": {
+   "atlas": "world"
+  },
+  "obj.fence.v": {
+   "atlas": "world"
+  },
   "obj.fence_post.0": {
+   "atlas": "world"
+  },
+  "obj.flower_bush.0": {
+   "atlas": "world"
+  },
+  "obj.flower_bush.1": {
+   "atlas": "world"
+  },
+  "obj.flower_bush.2": {
+   "atlas": "world"
+  },
+  "obj.flower_bush.3": {
+   "atlas": "world"
+  },
+  "obj.flowers.0": {
+   "atlas": "world"
+  },
+  "obj.flowers.1": {
+   "atlas": "world"
+  },
+  "obj.flowers.2": {
+   "atlas": "world"
+  },
+  "obj.flowers.3": {
+   "atlas": "world"
+  },
+  "obj.flowers.4": {
+   "atlas": "world"
+  },
+  "obj.lamp.0": {
+   "atlas": "world"
+  },
+  "obj.lilypad.0": {
+   "atlas": "world"
+  },
+  "obj.lilypad.1": {
+   "atlas": "world"
+  },
+  "obj.log.0": {
+   "atlas": "world"
+  },
+  "obj.mossy_rock.0": {
+   "atlas": "world"
+  },
+  "obj.mossy_rock.1": {
+   "atlas": "world"
+  },
+  "obj.mushrooms.0": {
+   "atlas": "world"
+  },
+  "obj.mushrooms.1": {
    "atlas": "world"
   },
   "obj.oak.0": {
@@ -1234,10 +1508,22 @@
   "obj.oak.2": {
    "atlas": "world"
   },
+  "obj.pebbles.0": {
+   "atlas": "world"
+  },
+  "obj.pebbles.1": {
+   "atlas": "world"
+  },
   "obj.pine.0": {
    "atlas": "world"
   },
   "obj.pine.1": {
+   "atlas": "world"
+  },
+  "obj.reeds.0": {
+   "atlas": "world"
+  },
+  "obj.reeds.1": {
    "atlas": "world"
   },
   "obj.rock.0": {
@@ -1250,6 +1536,9 @@
    "atlas": "world"
   },
   "obj.rock_big.1": {
+   "atlas": "world"
+  },
+  "obj.signpost.0": {
    "atlas": "world"
   },
   "obj.stump.0": {

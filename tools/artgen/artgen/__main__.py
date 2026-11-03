@@ -33,6 +33,7 @@ def main() -> None:
     world = {}
     world.update(terrain.generate())
     world.update(nature.generate())
+    world.update(nature.generate_extra())
     bsprites, bmeta = buildings.generate()
     world.update(bsprites)
     world.update(ui.fx())

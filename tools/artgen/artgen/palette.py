@@ -37,6 +37,12 @@ RAMPS: dict[str, list[str]] = {
     "flower_purple": ["#5d3f8c", "#8d66c4", "#b99ae3"],
     "flower_red": ["#8a2430", "#cf3f3f", "#f07b6c"],
     "crop": ["#7a6a23", "#a99434", "#d4bd4a", "#f1df7c"],
+    "barn": ["#4a1d1f", "#6e2a28", "#933a32", "#b5513f", "#d27455"],
+    "cabbage": ["#2d5a3a", "#3f7f45", "#5fa452", "#8ccb6c"],
+    "pumpkin": ["#7a3517", "#b4541f", "#df7a2e", "#f5a457"],
+    "lilypad": ["#2b5a3a", "#3f8045", "#5f9f4f"],
+    "birch": ["#3d3a3a", "#9c958a", "#d8d2c4", "#f4f0e6"],
+    "mushroom": ["#7a2430", "#b8383d", "#e0574d", "#f4ece0"],
     "cloth_cream": ["#a99a80", "#cfc3a8", "#ece3cc", "#fffaf0"],
     "shadow": ["#2b1e2a"],
     # Rarity / UI accents

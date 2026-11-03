@@ -13,8 +13,9 @@ export interface MapMeta {
   tile_names: string[];
   object_names: string[];
   hub: { center: number; radius: number };
-  plots: { index: number; origin: [number, number]; owner: string | null }[];
+  plots: { index: number; origin: [number, number]; owner: string | null; gate: [number, number, string] }[];
   my_plot: number;
+  start_size: number;
 }
 
 export interface Placing {
@@ -46,6 +47,7 @@ interface VillageStore {
   cancel: (id: string) => Promise<void>;
   demolish: (id: string) => Promise<void>;
   undo: () => Promise<void>;
+  clearDebris: (id: number) => Promise<Record<string, number> | null>;
   setWs: (connected: boolean) => void;
 }
 
@@ -141,6 +143,19 @@ export const useVillage = create<VillageStore>((set, get) => {
       }
     },
     undo: async () => void (await mutate("/api/village/undo", "POST", undefined, "Undone!")),
+    async clearDebris(id) {
+      try {
+        const r = await api<{ village: VillageState; gained: Record<string, number> }>(
+          `/api/village/debris/${id}/clear`,
+          { method: "POST" },
+        );
+        get().apply(r.village);
+        return r.gained;
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 404)) errorToast(e);
+        return null;
+      }
+    },
 
     setWs(connected) {
       set({ wsConnected: connected });

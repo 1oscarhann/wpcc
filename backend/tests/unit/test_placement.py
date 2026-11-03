@@ -15,11 +15,13 @@ from hearthforge.settings import REPO_ROOT
 
 pytestmark = pytest.mark.nodb
 CFG = load_config(REPO_ROOT / "config")
-POND = CFG.mapgen.plot.pond  # x 14..18, y 31..33 in frame coords; start square is 12..35
+POND = CFG.mapgen.plot.pond  # x 10..15, y 33..36 in frame coords; start square is 8..39
 
 
-def errs(key: str, x: int, y: int, rot: int = 0, existing=(), ignore=None, size=24) -> list[str]:  # noqa: ANN001
-    return placement_errors(CFG, key, x, y, rot, size=size, existing=list(existing), ignore_id=ignore)
+def errs(key: str, x: int, y: int, rot: int = 0, existing=(), ignore=None, size=32, debris=()) -> list[str]:  # noqa: ANN001
+    return placement_errors(
+        CFG, key, x, y, rot, size=size, existing=list(existing), ignore_id=ignore, debris=list(debris)
+    )
 
 
 def test_rotation_swaps_non_square_footprints() -> None:
@@ -30,21 +32,21 @@ def test_rotation_swaps_non_square_footprints() -> None:
 
 
 def test_valid_spot() -> None:
-    assert errs("lumber_camp", 26, 14) == []
+    assert errs("lumber_camp", 27, 12) == []
 
 
-@pytest.mark.parametrize(("x", "y"), [(11, 20), (35, 20), (20, 11), (20, 35), (0, 0)])
+@pytest.mark.parametrize(("x", "y"), [(7, 20), (38, 20), (20, 7), (20, 38), (0, 0)])
 def test_out_of_bounds(x: int, y: int) -> None:
     assert "out_of_bounds" in errs("lumber_camp", x, y)
 
 
 def test_bigger_plot_allows_more_room() -> None:
-    assert "out_of_bounds" in errs("lumber_camp", 10, 20)
-    assert errs("lumber_camp", 10, 20, size=28) == []
+    assert "out_of_bounds" in errs("lumber_camp", 6, 20)
+    assert errs("lumber_camp", 6, 20, size=36) == []
 
 
 def test_overlap_and_ignore_self_when_moving() -> None:
-    house = Placed("h1", "house", Rect(20, 20, 2, 2))
+    house = Placed("h1", "house", Rect(20, 20, 3, 3))
     assert "overlap" in errs("lumber_camp", 21, 21, existing=[house])
     assert errs("house", 21, 21, existing=[house], ignore="h1") == []
 
@@ -54,11 +56,16 @@ def test_cannot_build_on_pond() -> None:
 
 
 def test_dock_needs_water() -> None:
-    assert "needs_water" in errs("fishing_dock", 26, 14)
-    # 2×3 dock right of the pond, touching its east edge
-    assert errs("fishing_dock", POND.x + POND.w, POND.y) == []
-    # rotated (3×2) dock directly above the pond
-    assert errs("fishing_dock", POND.x, POND.y - 2, rot=1) == []
+    assert "needs_water" in errs("fishing_dock", 27, 12)
+    # 3×4 dock right of the pond, touching its east edge
+    assert errs("fishing_dock", POND.x + POND.w, POND.y - 1) == []
+    # rotated (4×3) dock directly above the pond
+    assert errs("fishing_dock", POND.x, POND.y - 3, rot=1) == []
+
+
+def test_debris_blocks() -> None:
+    assert errs("house", 27, 12, debris=[(28, 13)]) == ["debris"]
+    assert errs("house", 27, 12, debris=[(30, 13)]) == []
 
 
 def test_touches_is_edge_only() -> None:

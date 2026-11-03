@@ -690,3 +690,71 @@ a {
     font-size: 16px;
   }
 }
+
+/* ── Build Mode polish (art pass 2) ─────────────────────────────────── */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgb(0 0 0 / 0) 55%, rgb(28 18 36 / 0.38) 100%),
+    linear-gradient(160deg, rgb(255 214 150 / 0.10), rgb(255 214 150 / 0) 45%, rgb(60 40 90 / 0.08));
+}
+.hud-bar {
+  background: rgb(36 24 34 / 0.8);
+  border: calc(var(--px) * 1) solid var(--ink);
+  box-shadow: inset 0 calc(var(--px) * 1) 0 rgb(255 255 255 / 0.10), 0 calc(var(--px) * 1.5) 0 rgb(0 0 0 / 0.28);
+  color: var(--paper-light);
+  border-radius: calc(var(--px) * 3);
+  padding: 4px 12px;
+  backdrop-filter: blur(2px);
+}
+.hud-resources {
+  min-height: 46px;
+}
+.hud-chip {
+  padding: 2px 10px;
+}
+.village-name {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.village-name .ribbon {
+  font-size: 20px;
+}
+.hud-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(520px, calc(100vw - 24px));
+  animation: hint-bob 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes hint-bob {
+  50% {
+    transform: translate(-50%, -4px);
+  }
+}
+@media (max-width: 1100px) {
+  .village-name {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .hud-hint {
+    bottom: 74px;
+    font-size: 13px;
+  }
+}
+@media (max-width: 640px) {
+  .hide-narrow {
+    display: none;
+  }
+}

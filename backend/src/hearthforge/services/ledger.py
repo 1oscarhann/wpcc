@@ -23,6 +23,7 @@ BUILD_DEMOLISH_REFUND = "build.demolish_refund"
 BUILD_UNDO_REFUND = "build.undo_refund"
 BUILD_UNDO_REPAY = "build.undo_repay"
 ADMIN_GRANT = "admin.grant"
+DEBRIS_CLEAR = "debris.clear"
 
 
 async def lock_wallet(session: AsyncSession, user_id: uuid.UUID) -> Wallet:

@@ -25,7 +25,7 @@
 | Coins | 200 |
 | Resources | wood 300, stone 200, food 200, ore 50 |
 | Pre-placed | Town Hall L1 (centre), House L1 |
-| Plot | 24×24, with a small fixed pond on one edge (for the Fishing Dock) |
+| Plot | 32×32 (D-041), with a 6×4 pond near one edge (for the Fishing Dock), overgrown with ~70 pieces of clearable debris (D-040) |
 | Inventory / bank / mailbox | 24 / 60 / 50 slots |
 | Starter gear | Training Sword (copper, common, 120 durability), 3× Small Healing Potion |
 | Build queue | 2 slots (3 at TH4) |
@@ -109,10 +109,10 @@ Units marked ×1 are unique.
 
 ### 2.4 Plot expansion
 
-| Size | 24 | 28 | 32 | 36 | 40 | 44 | 48 |
-|---|---|---|---|---|---|---|---|
-| Coins | — | 500 | 1,200 | 2,500 | 5,000 | 9,000 | 15,000 |
-| Needs TH | — | 2 | 2 | 3 | 3 | 4 | 5 |
+| Size | 32 | 36 | 40 | 44 | 48 |
+|---|---|---|---|---|---|
+| Coins | — | 1,200 | 3,500 | 8,000 | 15,000 |
+| Needs TH | — | 2 | 3 | 4 | 5 |
 
 ---
 
@@ -146,7 +146,20 @@ Units marked ×1 are unique.
 
 A batch of 30 planks takes 60 s, which is the upper bound on purpose.
 
-### 3.2 Hand gathering (Avatar Mode)
+### 3.2 Clearing your plot (Build Mode, D-040)
+
+| Debris | Yield | Share of debris |
+|---|---|---|
+| Oak / big oak / birch / pine | 10 / 18 / 8 / 9 wood | ~40% |
+| Apple tree | 6 wood + 8 food | ~4% |
+| Rock / big rock | 6 / 14 stone (+25% / 50% chance of 2–3 ore) | ~19% |
+| Bush / flowering bush | 4 food | ~14% |
+| Stump / fallen log | 4 / 12 wood | ~7% |
+| Weeds and mushrooms | 2 herbs | ~12% |
+
+Clearing is free and instant. A fresh plot has about 70 pieces (≈350 wood, 120 stone, 60 food, some ore and herbs), which is roughly the TH2 upgrade plus the first production buildings.
+
+### 3.3 Hand gathering (Avatar Mode)
 
 | Node | Biome | Hits | Yield | Per-player respawn |
 |---|---|---|---|---|

@@ -11,6 +11,7 @@ from hearthforge.api.deps import Auth, current_user, get_db, get_state
 from hearthforge.core.errors import Forbidden, GameError
 from hearthforge.db.models import Realm, RealmMember, User
 from hearthforge.domain import mapgen
+from hearthforge.services import plots
 from hearthforge.state import AppState
 
 router = APIRouter(prefix="/api", tags=["realm"])
@@ -53,8 +54,10 @@ async def realm_map(
         "object_names": mapgen.OBJECT_NAMES,
         "hub": {"center": lay.center, "radius": lay.hub_radius},
         "plots": [
-            {"index": i, "origin": list(o), "owner": members.get(i)} for i, o in enumerate(lay.plot_origins)
+            {"index": i, "origin": list(o), "owner": members.get(i), "gate": list(plots.gate(st.config, i))}
+            for i, o in enumerate(lay.plot_origins)
         ],
+        "start_size": st.config.mapgen.plot.start_size,
         "my_plot": me.plot_index,
     }
 
@@ -72,7 +75,7 @@ async def chunks(
         raise Forbidden("not_member", "You can only load your own realm.")
     if realm.mapgen_version != st.config.mapgen.version:
         raise GameError("mapgen_version", "This realm was made with a different map generator version.")
-    gen = mapgen.generator(st.config.mapgen, realm.seed)
+    gen = mapgen.generator(st.config, realm.seed)
     n = st.config.mapgen.map_size // st.config.mapgen.chunk_size
     out = []
     for part in ids.split(";")[:MAX_CHUNKS]:

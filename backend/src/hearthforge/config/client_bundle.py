@@ -67,4 +67,5 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
             "pond": plot.pond.model_dump(),
         },
         "map": {"size": cfg.mapgen.map_size, "chunk_size": cfg.mapgen.chunk_size},
+        "debris": {k: {"sprites": d.sprites, "yields": d.yields} for k, d in cfg.debris.kinds.items()},
     }

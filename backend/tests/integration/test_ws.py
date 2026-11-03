@@ -42,7 +42,7 @@ def test_village_channel_pushes_state(settings: Settings, game_config: Any, data
             # a REST change is pushed to the socket
             r2 = client.post(
                 "/api/village/buildings",
-                json={"key": "house", "x": 26, "y": 14, "rotation": 0},
+                json={"key": "house", "x": 27, "y": 21, "rotation": 0},  # inside the always-clear radius
                 headers={"x-csrf-token": csrf},
             )
             assert r2.status_code == 200, r2.text

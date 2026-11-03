@@ -42,6 +42,7 @@ class Village(Base):
     happiness: Mapped[int] = mapped_column(SmallInteger, default=50)
     likes_count: Mapped[int] = mapped_column(Integer, default=0)
     last_action: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    debris: Mapped[list[list[Any]]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     created_at: Mapped[datetime] = created_at_col()
     updated_at: Mapped[datetime] = created_at_col()
 

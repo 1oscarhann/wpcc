@@ -301,3 +301,25 @@ class ProfanityCfg(Strict):
     blocked: list[str]
     allowed: list[str] = []
     reserved: list[str] = []
+
+
+# ── debris.yaml ──────────────────────────────────────────────────────────────
+
+
+class DebrisBonus(Strict):
+    chance: float = Field(ge=0, le=1)
+    qty: int = Field(ge=1)
+
+
+class DebrisKind(Strict):
+    sprites: list[str] = Field(min_length=1)
+    weight: float = Field(gt=0)
+    yields: dict[str, int]
+    bonus: dict[str, DebrisBonus] = {}
+
+
+class DebrisCfg(Strict):
+    density: float = Field(ge=0, le=0.5)
+    keep_clear_radius: int = Field(ge=0)
+    avoid_buildings: int = Field(ge=0)
+    kinds: dict[str, DebrisKind]

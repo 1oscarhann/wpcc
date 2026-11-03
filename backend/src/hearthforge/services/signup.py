@@ -35,9 +35,11 @@ from hearthforge.db.models import (
     VillageBuilding,
     Wallet,
 )
+from hearthforge.domain import debris as debris_gen
+from hearthforge.domain import plotlayout
 from hearthforge.domain.economy import BuildingView, caps_milli, rates_milli
 from hearthforge.domain.resources import MILLI
-from hearthforge.services import ledger
+from hearthforge.services import ledger, plots
 
 DEFAULT_AUDIO = {"master": 0.8, "music": 0.6, "sfx": 0.8, "muted": False}
 
@@ -136,6 +138,9 @@ async def create_player(
         size=cfg.mapgen.plot.start_size,
         created_at=now,
         updated_at=now,
+    )
+    village.debris = debris_gen.generate(
+        cfg.debris, plotlayout.template(cfg), plots.debris_seed(village.id), plots.path(cfg, 0)
     )
     session.add(village)
     await session.flush()

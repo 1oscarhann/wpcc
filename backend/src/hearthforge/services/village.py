@@ -28,6 +28,7 @@ from hearthforge.db.models import (
     VillageBuilding,
     Wallet,
 )
+from hearthforge.domain import debris as debris_gen
 from hearthforge.domain import mapgen
 from hearthforge.domain.economy import BuildingView, caps_milli, rates_milli, town_hall_level
 from hearthforge.domain.placement import (
@@ -39,7 +40,7 @@ from hearthforge.domain.placement import (
     rotated_footprint,
 )
 from hearthforge.domain.resources import MILLI, ResState, settle
-from hearthforge.services import events, ledger
+from hearthforge.services import events, ledger, plots
 
 
 @dataclass
@@ -200,6 +201,8 @@ def village_state(cfg: GameConfig, ld: Loaded, now: datetime) -> dict[str, Any]:
         "at_ms": to_ms(now),
         "undo": undo,
         "blocked": [[plot.pond.x, plot.pond.y, plot.pond.w, plot.pond.h]],
+        "debris": ld.village.debris or [],
+        "gate": list(plots.gate(cfg, ld.plot_index)),
         "water": [[plot.pond.x, plot.pond.y, plot.pond.w, plot.pond.h]],
     }
 
@@ -219,6 +222,10 @@ async def read_state(
 
 def _queue_used(ld: Loaded) -> int:
     return sum(1 for b in ld.buildings if b.state != BuildingState.active)
+
+
+def _debris_tiles(ld: Loaded) -> list[tuple[int, int]]:
+    return [(d[3], d[4]) for d in ld.village.debris or []]
 
 
 def _placed(ld: Loaded, cfg: GameConfig) -> list[Placed]:
@@ -373,7 +380,16 @@ async def place(
     count = sum(1 for b in ld.buildings if b.building_key == key)
     _raise_placement(limit_errors(cfg, key, th, count))
     _raise_placement(
-        placement_errors(cfg, key, x, y, rotation, size=ld.village.size, existing=_placed(ld, cfg))
+        placement_errors(
+            cfg,
+            key,
+            x,
+            y,
+            rotation,
+            size=ld.village.size,
+            existing=_placed(ld, cfg),
+            debris=_debris_tiles(ld),
+        )
     )
     if _queue_used(ld) >= cfg.build_queue_slots(th):
         raise GameError("queue_full", "All your builders are busy. Wait for one to finish.")
@@ -419,6 +435,7 @@ async def move(
             rotation,
             size=ld.village.size,
             existing=_placed(ld, cfg),
+            debris=_debris_tiles(ld),
             ignore_id=building_id,
         )
     )
@@ -551,6 +568,7 @@ async def undo(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: 
                 p["rotation"],
                 size=ld.village.size,
                 existing=_placed(ld, cfg),
+                debris=_debris_tiles(ld),
                 ignore_id=str(b.id),
             )
         )
@@ -593,6 +611,7 @@ async def undo(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: 
                 snap["rotation"],
                 size=ld.village.size,
                 existing=_placed(ld, cfg),
+                debris=_debris_tiles(ld),
             )
         )
         for key, qty in snap["refunded"].items():  # take the demolish refund back
@@ -638,6 +657,35 @@ async def undo(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: 
     return ld
 
 
+async def clear_debris(
+    session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: datetime, debris_id: int
+) -> tuple[Loaded, dict[str, int]]:
+    """Tap a tree/rock/bush on your plot: it's removed and its yield goes into storage (D-040)."""
+    ld = await load_locked(session, user_id=user_id, with_wallet=True)
+    settle_village(session, cfg, ld, now)
+    items = list(ld.village.debris or [])
+    found = next((d for d in items if d[0] == debris_id), None)
+    if found is None:
+        raise NotFound("no_debris", "That's already been cleared.")
+    _id, kind, _variant, x, y = found
+    gained = debris_gen.roll_yields(cfg.debris, kind, plots.debris_seed(ld.village.id), debris_id)
+    for key, qty in gained.items():
+        ld.resources[key].amount_milli += qty * MILLI  # like refunds, may exceed the cap; never lost
+        ledger.log_resource(
+            session,
+            ld.village.user_id,
+            ld.village.realm_id,
+            key,
+            qty * MILLI,
+            ledger.DEBRIS_CLEAR,
+            ref_type="debris",
+            ref_id=str(debris_id),
+        )
+    ld.village.debris = [d for d in items if d[0] != debris_id]
+    _touch(ld, now)
+    return ld, gained
+
+
 async def preview(
     session: AsyncSession,
     cfg: GameConfig,
@@ -657,7 +705,15 @@ async def preview(
     )
     ld = Loaded(village, buildings, {}, None, 0)
     errors = placement_errors(
-        cfg, key, x, y, rotation, size=village.size, existing=_placed(ld, cfg), ignore_id=move_id
+        cfg,
+        key,
+        x,
+        y,
+        rotation,
+        size=village.size,
+        existing=_placed(ld, cfg),
+        ignore_id=move_id,
+        debris=_debris_tiles(ld),
     )
     if move_id is None and key in cfg.buildings:
         th = town_hall_level(_views(buildings))
