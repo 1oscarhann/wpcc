@@ -116,8 +116,165 @@ const PHASES = {
   },
 };
 
+// ── Phase 4: Avatar Mode ─────────────────────────────────────────────────
+async function enterAvatar(page) {
+  await page.getByRole("button", { name: "Explore" }).click();
+  await page.waitForFunction(() => window.__hfGame?.avatar?.client);
+  await page.waitForTimeout(900); // camera tween
+}
+
+const walk = (page, x, y) => page.evaluate(([tx, ty]) => window.__hfGame.devWalkTo(tx, ty), [x, y]);
+
+async function chop(page, kind, presses) {
+  const found = await page.evaluate((k) => window.__hfGame.devFindNode(k), kind);
+  if (!found) return false;
+  await walk(page, found.stand[0], found.stand[1]);
+  const box = await page.locator("canvas").first().boundingBox();
+  const target = await page.evaluate(([x, y]) => {
+    const g = window.__hfGame;
+    return g.worldHost.toScreen((x + 0.5) * 16, (y + 0.5) * 16);
+  }, found.node);
+  if (presses.mouse) {
+    await page.mouse.move(box.x + target.x, box.y + target.y);
+    await page.mouse.down();
+    await page.waitForTimeout(presses.ms);
+    await page.mouse.up();
+  } else {
+    for (let i = 0; i < presses.taps; i++) {
+      await page.getByRole("button", { name: "Attack", exact: true }).dispatchEvent("pointerdown");
+      await page.waitForTimeout(60);
+      await page.getByRole("button", { name: "Attack", exact: true }).dispatchEvent("pointerup");
+      await page.waitForTimeout(330);
+    }
+  }
+  return true;
+}
+
+async function forestSpot(page) {
+  return page.evaluate(() => {
+    const g = window.__hfGame;
+    const m = g.map;
+    const plot = m.plots[m.my_plot];
+    const c = m.hub.center;
+    const px = plot.origin[0] + 24;
+    const py = plot.origin[1] + 24;
+    const l = Math.hypot(px - c, py - c);
+    for (let r = 188; r < 205; r++) {
+      const x = Math.round(c + ((px - c) / l) * r);
+      const y = Math.round(c + ((py - c) / l) * r);
+      if (!g.grid.solid(x, y)) return [x, y];
+    }
+    return null;
+  });
+}
+
+PHASES[4] = async (page, kind) => {
+  await signupFlow(page, kind);
+  await page.locator("canvas").first().waitFor();
+  await page.waitForFunction(() => window.__hfGame);
+  await page.waitForTimeout(2000);
+  await enterAvatar(page);
+  await shot(page, "01-explore", kind, { wait: 600 });
+  const mobile = kind === "mobile";
+  await chop(page, "tree", mobile ? { taps: 2 } : { mouse: true, ms: 420 });
+  await shot(page, "02-chopping", kind, { wait: 80 });
+  await chop(page, "tree", mobile ? { taps: 4 } : { mouse: true, ms: 1200 });
+  await shot(page, "03-loot", kind, { wait: 250 });
+  await chop(page, "rock", mobile ? { taps: 5 } : { mouse: true, ms: 1500 });
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Bag" }).click();
+  await shot(page, "04-bag", kind, { wait: 500 });
+  await page.getByRole("button", { name: "Close bag" }).click();
+  if (!mobile) {
+    const spot = await forestSpot(page);
+    if (spot) {
+      await walk(page, spot[0], spot[1]);
+      await shot(page, "05-forest", kind, { wait: 600 });
+      await chop(page, "tree", { mouse: true, ms: 900 });
+      await shot(page, "06-forest-chop", kind, { wait: 200 });
+    }
+  }
+  const door = await page.evaluate(() => window.__hfGame.avatar.client.info.home.door);
+  const home = walk(page, Math.floor(door[0]), Math.floor(door[1]) + 1);
+  await page.waitForFunction(() => (window.__hfDeposits ?? 0) > 0, null, { timeout: 120000 }).catch(() => undefined);
+  await shot(page, "07-deposit", kind, { wait: 650 });
+  await home;
+  await page.getByRole("button", { name: "Back to village" }).click();
+  await shot(page, "08-back-home", kind, { wait: 1200 });
+};
+
+// ── Phase 5: combat ──────────────────────────────────────────────────────
+async function ringSpot(page, r) {
+  return page.evaluate((radius) => {
+    const g = window.__hfGame;
+    const m = g.map;
+    const plot = m.plots[m.my_plot];
+    const c = m.hub.center;
+    const px = plot.origin[0] + 24;
+    const py = plot.origin[1] + 24;
+    const l = Math.hypot(px - c, py - c);
+    for (let k = 0; k < 40; k++) {
+      const rr = radius + (k % 2 ? k : -k) * 0.5;
+      const x = Math.round(c + ((px - c) / l) * rr);
+      const y = Math.round(c + ((py - c) / l) * rr);
+      if (!g.grid.solid(x, y)) return [x, y];
+    }
+    return null;
+  }, r);
+}
+
+async function findMonster(page, maxMs = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs) {
+    const m = await page.evaluate(() => window.__hfGame.devNearestMonster());
+    if (m && m.d < 14) return m;
+    await page.waitForTimeout(500);
+  }
+  return null;
+}
+
+PHASES[5] = async (page, kind) => {
+  await signupFlow(page, kind);
+  await page.locator("canvas").first().waitFor();
+  await page.waitForFunction(() => window.__hfGame);
+  await page.waitForTimeout(2000);
+  await enterAvatar(page);
+  const mobile = kind === "mobile";
+  // meadow between the plots and the hub: slimes (try a few spots until some are in view)
+  let m = null;
+  for (const r of [62, 52, 72, 44]) {
+    const spot = await ringSpot(page, r);
+    if (spot) await walk(page, spot[0], spot[1]);
+    m = await findMonster(page, 8000);
+    if (m) break;
+  }
+  if (m) {
+    const fight = page.evaluate(() => window.__hfGame.devFight(6000));
+    await shot(page, "01-slimes", kind, { wait: 500 });
+    await shot(page, "02-hit", kind, { wait: 250 });
+    await shot(page, "03-swing", kind, { wait: 250 });
+    await fight;
+    await shot(page, "04-loot", kind, { wait: 200 });
+  }
+  if (!mobile) {
+    const forest = await ringSpot(page, 196);
+    if (forest) await walk(page, forest[0], forest[1]);
+    m = await findMonster(page, 25000);
+    if (m) {
+      await shot(page, "05-forest-monsters", kind, { wait: 200 });
+      const fight = page.evaluate(() => window.__hfGame.devFight(7000, 9));
+      await shot(page, "06-forest-fight", kind, { wait: 1600 });
+      await shot(page, "07-forest-fight-2", kind, { wait: 1500 });
+      await fight;
+      await shot(page, "08-after", kind, { wait: 300 });
+    }
+  }
+  await page.getByRole("button", { name: "Bag" }).click();
+  await shot(page, "09-bag", kind, { wait: 600 });
+};
+
 const browser = await playwright.chromium.launch();
-for (const [kind, ctxOpts] of Object.entries(VIEWPORTS)) {
+for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);
   const page = await ctx.newPage();
   page.on("pageerror", (e) => console.error(`[${kind}] page error:`, e.message));

@@ -216,10 +216,32 @@ class Appearance(Strict):
     outfit_color: str
 
 
+class XpCurve(Strict):
+    a: float = Field(gt=0)
+    p: float = Field(gt=0)
+    b: float = Field(ge=0)
+
+
+class RegenCfg(Strict):
+    delay: Duration
+    per_second: float = Field(ge=0, le=1)
+
+
+class KoCfg(Strict):
+    respawn_delay: Duration
+    rare_loss: float = Field(ge=0, le=1)
+    drop_lifetime: Duration
+
+
 class AvatarCfg(Strict):
     base_stats: BaseStats
     per_level: PerLevel
     level_cap: int
+    xp_curve: XpCurve
+    regen: RegenCfg
+    ko: KoCfg
+    pickup_radius: float = Field(gt=0, le=4)
+    reach: float = Field(gt=0, le=4)
     creator: CreatorCfg
     default_appearance: Appearance
 
@@ -284,6 +306,12 @@ class MeadowCfg(Strict):
     tall_grass_density: float
 
 
+class ForestCfg(Strict):
+    radius: int
+    tree_density: float = Field(ge=0, le=0.4)
+    clearing_threshold: float = Field(ge=0, le=1)
+
+
 class MapgenCfg(Strict):
     version: int
     map_size: int
@@ -291,6 +319,7 @@ class MapgenCfg(Strict):
     hub_radius: int
     plot: PlotCfg
     meadow: MeadowCfg
+    forest: ForestCfg
 
 
 # ── profanity.yaml ───────────────────────────────────────────────────────────
@@ -323,3 +352,191 @@ class DebrisCfg(Strict):
     keep_clear_radius: int = Field(ge=0)
     avoid_buildings: int = Field(ge=0)
     kinds: dict[str, DebrisKind]
+
+
+# ── nodes.yaml ───────────────────────────────────────────────────────────────
+
+Biome = Literal["meadow", "forest"]
+Range = tuple[int, int]
+
+
+def _range_ok(v: Range) -> Range:
+    if v[0] < 0 or v[1] < v[0]:
+        raise ValueError("range must be [min, max] with 0 <= min <= max")
+    return v
+
+
+class NodeBonus(Strict):
+    chance: float = Field(ge=0, le=1)
+    qty: Range
+
+    @field_validator("qty")
+    @classmethod
+    def _q(cls, v: Range) -> Range:
+        return _range_ok(v)
+
+
+class NodeCfg(Strict):
+    objects: list[str] = Field(min_length=1)
+    biome: Biome | None = None  # only nodes in this biome (more specific nodes win)
+    hits: int = Field(ge=1, le=20)
+    yields: dict[str, Range]
+    bonus: dict[str, NodeBonus] = {}
+    respawn: Duration
+    xp: int = Field(ge=0)
+    sound: str
+
+    @field_validator("yields")
+    @classmethod
+    def _y(cls, v: dict[str, Range]) -> dict[str, Range]:
+        for r in v.values():
+            _range_ok(r)
+        return v
+
+
+class NodesCfg(Strict):
+    nodes: dict[str, NodeCfg]
+
+
+# ── combat.yaml ──────────────────────────────────────────────────────────────
+
+
+class Stamina(Strict):
+    regen_per_s: float = Field(gt=0)
+    regen_delay: Duration
+
+
+class Dodge(Strict):
+    stamina: float = Field(ge=0)
+    duration: Duration
+    distance: float = Field(gt=0, le=6)
+    iframes: Duration
+    cooldown: Duration
+
+
+class Knockback(Strict):
+    decay: Duration
+    player_mult: float = Field(ge=0)
+
+
+class Move(Strict):
+    """One swing. `arc` shapes use arc (degrees) + range; `line` shapes use range + width."""
+
+    dmg: float = Field(gt=0)
+    windup: Duration
+    active: Duration
+    recover: Duration
+    shape: Literal["arc", "line"]
+    range: float = Field(gt=0, le=4)
+    arc: float = Field(default=120, gt=0, le=360)
+    width: float = Field(default=0.8, gt=0, le=3)
+    knockback: float = Field(default=0.5, ge=0)
+    stamina: float = Field(default=0, ge=0)
+    dash: float = Field(default=0, ge=0, le=5)
+
+
+class Ability(Strict):
+    kind: Literal["spin", "throw"]
+    dmg: float = Field(gt=0)
+    cooldown: Duration
+    windup: Duration
+    recover: Duration
+    knockback: float = Field(default=0.5, ge=0)
+    range: float = Field(gt=0, le=12)
+    hits: int = Field(default=1, ge=1, le=10)  # spin
+    interval: Duration = 0.2  # spin
+    speed: float = Field(default=12, gt=0)  # throw
+
+
+class Weapon(Strict):
+    light: list[Move] = Field(min_length=1, max_length=5)
+    combo_window: Duration
+    heavy: Move
+    ability: Ability
+
+
+class CombatCfg(Strict):
+    crit_mult: float = Field(ge=1)
+    attack_scaling: float = Field(ge=0)
+    defence_k: float = Field(gt=0)
+    tier_mult: list[float] = Field(min_length=5, max_length=5)
+    rarity_mult: dict[Literal["common", "uncommon", "rare", "epic", "legendary"], float]
+    stamina: Stamina
+    dodge: Dodge
+    combat_lock: Duration
+    lag_comp_max: Duration
+    dodge_grace: Duration
+    knockback: Knockback
+    attack_move_slow: float = Field(gt=0, le=1)
+    weapons: dict[str, Weapon]
+
+
+# ── enemies.yaml ─────────────────────────────────────────────────────────────
+
+
+class EnemyAttack(Strict):
+    shape: Literal["circle", "line"]
+    range: float = Field(gt=0, le=6)  # circle radius around the landing point / line length
+    width: float = Field(default=0.8, gt=0, le=3)
+    trigger: float = Field(gt=0, le=8)  # start winding up when the target is this close
+    windup: Duration
+    active: Duration
+    recover: Duration
+    lunge: float = Field(default=0, ge=0, le=6)  # tiles moved during the active phase
+    knockback: float = Field(default=0.6, ge=0)
+
+
+class Poison(Strict):
+    dps: float = Field(gt=0)
+    duration: Duration
+
+
+class LootDrop(Strict):
+    item: str
+    chance: float = Field(gt=0, le=1)
+    qty: Range
+
+
+class EnemyCfg(Strict):
+    name: str
+    archetype: Literal["swarmer", "chaser", "kiter", "charger", "tank", "summoner", "ambusher"]
+    hp: float = Field(gt=0)
+    dmg: float = Field(ge=0)
+    defence: float = Field(ge=0)
+    speed: float = Field(gt=0, le=10)
+    radius: float = Field(gt=0, le=1.5)
+    group: Range
+    attack: EnemyAttack
+    poison: Poison | None = None
+    ambush_radius: float = Field(default=0, ge=0)  # ambushers hide until a player is this close
+    loot: list[LootDrop] = []
+    elite_name: str
+
+
+class EliteCfg(Strict):
+    hp: float = Field(ge=1)
+    dmg: float = Field(ge=1)
+    scale: float = Field(ge=1)
+    xp: float = Field(ge=1)
+    loot_rolls: int = Field(ge=1)
+    knockback_resist: float = Field(ge=0, le=1)
+
+
+class BiomeSpawns(Strict):
+    difficulty: int = Field(ge=1, le=6)
+    groups_per_chunk: float = Field(ge=0, le=4)
+    roster: dict[str, float]
+    elite_chance: float = Field(ge=0, le=1)
+    xp: int = Field(ge=0)
+    coins: Range
+
+
+class EnemiesCfg(Strict):
+    aggro_radius: float = Field(gt=0)
+    leash_radius: float = Field(gt=0)
+    wake_radius_chunks: int = Field(ge=1, le=4)
+    despawn_after: Duration
+    respawn: Duration
+    elite: EliteCfg
+    biomes: dict[Biome, BiomeSpawns]
+    enemies: dict[str, EnemyCfg]

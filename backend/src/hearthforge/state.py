@@ -15,6 +15,7 @@ from hearthforge.settings import Settings
 
 if TYPE_CHECKING:
     from hearthforge.realtime.hubs import VillageHub
+    from hearthforge.sim.manager import RoomManager
 
 
 @dataclass
@@ -27,3 +28,4 @@ class AppState:
     passwords: Passwords
     limiter: RateLimiter = field(default_factory=RateLimiter)
     village_hub: VillageHub | None = None
+    rooms: RoomManager | None = None

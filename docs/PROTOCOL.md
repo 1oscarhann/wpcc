@@ -47,9 +47,9 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 | `0x02` | PING | `client_ms:f64` | Every 2 s. Used for clock sync and RTT. |
 | `0x10` | SUB_VILLAGE | `owner_id:str` (UUID text, D-037) | Watch a village (yours; visiting arrives in Phase 15). The server replies with `VILLAGE_STATE`. |
 | `0x11` | UNSUB_VILLAGE | `owner_id` | |
-| `0x20` | ENTER_AVATAR | `target:u8 (0 own realm, 1 visit)`, `host_id?:uuid` | Ask to join a Realm Room. Refused during a mode-switch cooldown or when blocked. |
+| `0x20` | ENTER_AVATAR | — (v1: always your own realm; visiting adds `target, host_id` in Phase 15) | Join your realm's room. Within the 5 s reconnect grace you get your old avatar back. |
 | `0x21` | LEAVE_AVATAR | — | Refused while "in combat" (took or dealt damage in the last 5 s). |
-| `0x22` | **INPUT** | `seq:u32, client_tick:u32, view_tick:u32, mx:i8, my:i8, aim:u16, buttons:u16` | 20 Hz. `mx,my ∈ [-127,127]`, and the server rejects magnitudes above 127. |
+| `0x22` | **INPUT** | `seq:u32, client_tick:u32, view_tick:u32, mx:i8, my:i8, ax:i8, ay:i8, buttons:u16` | 20 Hz. Every value in `[-127,127]` (D-044: aim is a vector). Bad arity, ranges, replayed `seq` or more than the token bucket allows (25/s sustained, 25 burst) are strikes; 25 strikes = kick. INPUT doesn't count toward the generic 30 msgs/s limit. |
 | `0x23` | ACTION | `kind:u8, a?:any, b?:any` | Discrete actions; see the kinds table below. |
 | `0x24` | FISH_REEL | `bite_id:u32, client_tick:u32` | Fishing timing check. The server validates against the bite window with latency tolerance. |
 | `0x30` | PARTY | `kind:u8 (invite, accept, decline, leave, kick), user_id?` | Realm-scoped and in-memory. |
@@ -57,17 +57,18 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 
 **`buttons` bitfield (u16):**
 
+As built in Phase 4/5 (the numbers live in `shared/world.json → buttons`):
+
 | Bit | Button |
 |---|---|
-| 0 | light (pressed edge) |
-| 1 | heavy held |
-| 2 | heavy released (charge release) |
-| 3 | dodge |
-| 4 | ability |
-| 5 | interact |
-| 6–9 | quick-slot 1–4 |
-| 10 | block (shield) |
-| 11–15 | reserved |
+| 0 (1) | light attack / gather (held = keep swinging) |
+| 1 (2) | heavy attack (costs stamina) |
+| 2 (4) | ability (spin / throw) |
+| 3 (8) | dodge |
+| 4 (16) | quick-slot potion |
+| 5–15 | reserved (interact, more quick-slots, block arrive with their features) |
+
+Buttons are latched on the client until the next 50 ms step, so taps shorter than a step are never lost.
 
 **ACTION kinds:**
 
@@ -104,7 +105,25 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 | `0xB2` | TIMER | `kind:u8 (wave_countdown, boss_spawn, festival), ends_ms:f64, payload` |
 | `0xC0` | RESYNC | `what:u8 bitmask (wallet, inventory, village, quests, mailbox)`: tells the client to re-fetch via REST |
 
-### 3.1 SNAPSHOT
+### 3.0 Avatar Mode frames as built (Phase 4/5)
+
+```
+ROOM_JOINED [0xA0, realm_id, tick, you:eid, self, info:map, blocks:[[x,y,w,h]], claimed:[plot], depleted:[[node_id, ms_left]], roster:[[eid, user_id, name, appearance, weapon_type, level]]]
+SNAPSHOT    [0xA1, tick, ack_seq, self, ents, ev]
+ROOM_LEFT   [0xA2, reason]        # 0 left, 4 replaced (another tab), 5 shutdown
+BLOCKS      [0xA5, blocks, claimed]   # a village changed: new solid rects
+self = [x, y, st, st_max, fx, fy, st_delay, dodge, ddx, ddy, dodge_cd, atk, atk_i, atk_t, ax, ay, combo, combo_t, ab_cd, kbx, kby, hp, hp_max, flags]
+       # the first 21 values are the shared Motion state, so the client can replay unacked inputs exactly
+ents = [[id, kind, type, x*64, y*64, dx*100, dy*100, anim, anim_t, hp(0-255), flags]]
+       # every entity in the area of interest (±28×18 tiles), every tick; absent = gone
+```
+
+- `kind` / `anim` / event ids come from `shared/protocol.json` (`entity_kinds`, `anims`, `events`).
+- `type` is the enemy key for monsters, the item key for drops (`flags` = quantity), `"spear"` for projectiles and the weapon type for avatars.
+- Events used so far: HIT `[1, src, dst, dmg, crit, kind]` (kind 0 normal, 1 poison, 2 dodged, 3 heavy), TELEGRAPH `[2, mid, shape(0 circle, 1 line), x, y, dx, dy, range, width, warn_ms]`, PICKUP `[5, drop, item, qty, all]`, KO `[6, eid, lost]`, XP `[7, amount, level, xp, xp_next, levels_gained, hp_max]`, SFX `[10, name, x, y]`, NODE `[13, node, hits, total, depleted, respawn_ms, sound]`, TOAST `[17, key, args]`, DEPOSIT `[19, {item: qty}]`, DEATH `[20, mid, x, y, enemy, elite]`, SWING `[21, eid, atk, combo_i, ax*100, ay*100]`, HEAL `[22, eid, amount, quick]`, RESPAWN `[23, x, y]`, INVENTORY `[24, stacks]`, PLAYER `[25, …roster entry]`, PLAYER_LEFT `[26, eid]`, PROJECTILE_END `[27, id, x, y]`.
+- The table below is the long-term target; the delta-compressed `new/upd/gone` form is deferred (full AOI lists are ~600 B per tick).
+
+### 3.1 SNAPSHOT (target format)
 
 ```
 [0xA1,
@@ -215,7 +234,7 @@ The clock offset is estimated from `PING`/`PONG` with an RTT-filtered median of 
 | Avatar | `GET /api/avatar` · `PUT /api/avatar/appearance` · `POST /api/avatar/skills` · `POST /api/avatar/respec` | 2, 16 |
 | Village | `GET /api/village/{owner_id\|me}` · `GET /api/village/preview?b=&x=&y=&rot=` (valid, combos, mystery count) · `POST /api/village/buildings` · `PATCH /api/village/buildings/{id}` (move/rotate) · `DELETE /api/village/buildings/{id}` · `POST /api/village/buildings/{id}/upgrade` · `POST /api/village/buildings/{id}/cancel` · `POST /api/village/undo` · `POST /api/village/decorations` · `PATCH`/`DELETE /api/village/decorations/{id}` · `PUT /api/village/tiles` · `POST /api/village/expand` · `POST /api/village/villagers/{id}/assign` | 3, 14 |
 | Map | `GET /api/realms/{id}/chunks?ids=…` (immutable, cacheable) · `GET /api/realms/{id}/fog` | 3, 9 |
-| Inventory | `GET /api/inventory` (inventory, bank, equipment, mailbox) · `POST /api/inventory/move` · `POST /api/inventory/split` · `POST /api/inventory/sort` · `POST /api/inventory/equip` · `POST /api/inventory/deposit` (to storehouse/bank) · `POST /api/inventory/expand` · `POST /api/inventory/repair` · `POST /api/inventory/salvage` · `POST /api/mailbox/claim` | 4, 6, 7 |
+| Inventory | **Built in Phase 4:** `GET /api/inventory` (inventory + equipment) and `POST /api/inventory/move {src:{kind,slot}, dst:{kind,slot}}` (move, merge, swap, equip). Planned: `POST /api/inventory/split` · `POST /api/inventory/sort` · `POST /api/inventory/equip` · `POST /api/inventory/deposit` (to storehouse/bank) · `POST /api/inventory/expand` · `POST /api/inventory/repair` · `POST /api/inventory/salvage` · `POST /api/mailbox/claim` | 4, 6, 7 |
 | Crafting | `GET /api/crafting/book` (discovered combos and recipes + hints for undiscovered) · `GET /api/crafting/stations` (active combos, available recipes) · `POST /api/crafting/jobs` · `POST /api/crafting/jobs/{id}/collect` · `POST /api/crafting/jobs/{id}/cancel` | 6 |
 | Market | `GET /api/market` (prices, sparklines, trends, my soft-cap usage) · `POST /api/market/sell` · `GET /api/merchant/{merchant_id}` · `POST /api/merchant/{merchant_id}/buy` | 7 |
 | Player market | `GET /api/pmarket?item=&sort=` · `POST /api/pmarket/listings` · `POST /api/pmarket/listings/{id}/buy` · `POST /api/pmarket/listings/{id}/cancel` · `GET /api/pmarket/history/{item}` | 17 |

@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from hearthforge.config.loader import GameConfig
+from hearthforge.sim.rules import WORLD, resolve
+from hearthforge.sim.stats import xp_to_next
 
 
 def client_bundle(cfg: GameConfig) -> dict[str, Any]:
@@ -59,6 +61,26 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
             "per_level": cfg.avatar.per_level.model_dump(),
             "creator": cfg.avatar.creator.model_dump(),
             "default_appearance": cfg.avatar.default_appearance.model_dump(),
+            "pickup_radius": cfg.avatar.pickup_radius,
+            "xp_to_next": [xp_to_next(cfg, lv) for lv in range(1, cfg.avatar.level_cap + 1)],
+        },
+        # Avatar Mode: the predictor's exact tick-based rules plus the collision rules (shared/world.json)
+        "sim": resolve(cfg).bundle(),
+        "world": WORLD,
+        "nodes": {
+            k: {"objects": n.objects, "biome": n.biome, "hits": n.hits, "yields": n.yields, "sound": n.sound}
+            for k, n in cfg.nodes.nodes.items()
+        },
+        "combat": {
+            "combat_lock_s": cfg.combat.combat_lock,
+            "weapons": {
+                k: {"ability": w.ability.kind, "ability_cd_s": w.ability.cooldown}
+                for k, w in cfg.combat.weapons.items()
+            },
+        },
+        "enemies": {
+            k: {"name": e.name, "elite_name": e.elite_name, "archetype": e.archetype, "radius": e.radius}
+            for k, e in cfg.enemies.enemies.items()
         },
         "plot": {
             "frame": plot.frame,

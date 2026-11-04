@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "client_to_server": {
     "HELLO": "0x01",
     "PING": "0x02",
@@ -18,6 +18,62 @@
     "VILLAGE_STATE": "0x90",
     "VILLAGE_PATCH": "0x91",
     "NOTIFY": "0xB0",
-    "RESYNC": "0xC0"
+    "RESYNC": "0xC0",
+    "ROOM_JOINED": "0xA0",
+    "SNAPSHOT": "0xA1",
+    "ROOM_LEFT": "0xA2",
+    "BLOCKS": "0xA5"
+  },
+  "events": {
+    "HIT": 1,
+    "TELEGRAPH": 2,
+    "STATUS": 3,
+    "PICKUP": 5,
+    "KO": 6,
+    "XP": 7,
+    "SFX": 10,
+    "NODE": 13,
+    "TOAST": 17,
+    "DEPOSIT": 19,
+    "DEATH": 20,
+    "SWING": 21,
+    "HEAL": 22,
+    "RESPAWN": 23,
+    "INVENTORY": 24,
+    "PLAYER": 25,
+    "PLAYER_LEFT": 26,
+    "PROJECTILE_END": 27
+  },
+  "entity_kinds": {
+    "avatar": 0,
+    "monster": 1,
+    "projectile": 2,
+    "drop": 3
+  },
+  "anims": {
+    "idle": 0,
+    "walk": 1,
+    "attack": 2,
+    "dodge": 3,
+    "ko": 4,
+    "windup": 5,
+    "active": 6,
+    "recover": 7,
+    "hidden": 8,
+    "hurt": 9,
+    "spawn": 10
+  },
+  "self_flags": {
+    "iframes": 1,
+    "ko": 2,
+    "in_combat": 4,
+    "poisoned": 8
+  },
+  "room_left": {
+    "left": 0,
+    "idle": 1,
+    "kicked": 3,
+    "replaced": 4,
+    "shutdown": 5
   }
 }

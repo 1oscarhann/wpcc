@@ -25,6 +25,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     patchMe((m) => ({ ...m, settings: { ...m.settings, audio: next } }));
   }
 
+  const reduceMotion = Boolean((me.settings.graphics as { reduce_motion?: boolean } | undefined)?.reduce_motion);
+  async function saveGraphics(next: Record<string, unknown>) {
+    document.documentElement.dataset.reduceMotion = next.reduce_motion ? "1" : "0";
+    patchMe((m) => ({ ...m, settings: { ...m.settings, graphics: next } }));
+    await api("/api/me/settings", { method: "PUT", body: { graphics: next } });
+  }
+
   if (editingLook) {
     return (
       <div className="modal-backdrop">
@@ -59,6 +66,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           <input type="checkbox" className="toggle" checked={audio.muted}
             onChange={(e) => save({ ...audio, muted: e.target.checked })} />
           <Icon name={audio.muted ? "mute" : "sound"} /> Mute everything
+        </label>
+        <h3>Motion</h3>
+        <label className="row">
+          <input type="checkbox" className="toggle" checked={reduceMotion}
+            onChange={(e) => void saveGraphics({ ...(me.settings.graphics ?? {}), reduce_motion: e.target.checked })} />
+          Reduce screen shake and hit-stop
         </label>
         <h3>Hero</h3>
         <button className="btn secondary" onClick={() => setEditingLook(true)}>Change my look</button>

@@ -37,7 +37,7 @@ async def test_signup_creates_the_whole_world(client: AsyncClient, st: Any) -> N
     assert await count(st, VillageBuilding) == len(st.config.starter.buildings)
     assert await count(st, Resource) == len(st.config.resource_keys)
     assert await count(st, Container) == 4
-    assert await count(st, ContainerSlot) == 2
+    assert await count(st, ContainerSlot) == 3  # sword, potions, spear
     assert await count(st, Avatar) == 1
     assert await count(st, RecoveryCode) == st.config.game.auth.recovery_codes
     async with st.sessionmaker() as s:

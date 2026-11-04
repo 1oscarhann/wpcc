@@ -110,3 +110,46 @@ def test_durations(raw: object, secs: float) -> None:
 def test_bad_duration() -> None:
     with pytest.raises(ValueError):
         parse_duration("soon")
+
+
+def test_avatar_mode_config_is_wired() -> None:
+    cfg = load_config(REPO_ROOT / "config")
+    assert cfg.nodes.nodes["tree"].hits == 3
+    assert set(cfg.combat.weapons) >= {"sword", "spear"}
+    assert cfg.enemies.biomes["forest"].roster.keys() == {"wolf", "spider"}
+    assert cfg.avatar.ko.rare_loss == 0.25
+
+
+def test_node_yielding_unknown_item_fails(cfg_dir: Path) -> None:
+    edit(cfg_dir, "nodes", lambda d: d["nodes"]["tree"]["yields"].update(unobtainium=[1, 2]))
+    with pytest.raises(ConfigError, match="unobtainium"):
+        load_config(cfg_dir)
+
+
+def test_node_for_missing_map_object_fails(cfg_dir: Path) -> None:
+    edit(cfg_dir, "nodes", lambda d: d["nodes"]["rock"]["objects"].append("obj.volcano"))
+    with pytest.raises(ConfigError, match="obj.volcano"):
+        load_config(cfg_dir)
+
+
+def test_weapon_without_moveset_fails(cfg_dir: Path) -> None:
+    edit(cfg_dir, "items", lambda d: d["items"]["training_spear"].update(weapon_type="bow"))
+    with pytest.raises(ConfigError, match="bow"):
+        load_config(cfg_dir)
+
+
+def test_enemy_loot_and_roster_are_checked(cfg_dir: Path) -> None:
+    def bad(d: dict) -> None:
+        d["enemies"]["slime"]["loot"][0]["item"] = "dragon_scale"
+        d["biomes"]["meadow"]["roster"]["goblin"] = 1.0
+
+    edit(cfg_dir, "enemies", bad)
+    with pytest.raises(ConfigError) as e:
+        load_config(cfg_dir)
+    assert "dragon_scale" in str(e.value) and "goblin" in str(e.value)
+
+
+def test_bad_move_range_is_rejected(cfg_dir: Path) -> None:
+    edit(cfg_dir, "combat", lambda d: d["weapons"]["sword"]["light"][0].update(range=40))
+    with pytest.raises(ConfigError, match="range"):
+        load_config(cfg_dir)

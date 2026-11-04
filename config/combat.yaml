@@ -1,0 +1,31 @@
+# Combat constants and weapon movesets (BALANCE §5). Damage:
+#   weapon × tier_mult × (1 + attack × attack_scaling) × rarity_mult × (crit ? crit_mult : 1) × (dull ? 0.7 : 1)
+# taken = incoming × (1 − defence / (defence + defence_k))
+crit_mult: 1.75
+attack_scaling: 0.02
+defence_k: 100
+tier_mult: [1.0, 1.35, 1.8, 2.4, 3.2]
+rarity_mult: { common: 1.0, uncommon: 1.08, rare: 1.18, epic: 1.30, legendary: 1.45 }
+stamina: { regen_per_s: 30, regen_delay: 600ms }
+dodge: { stamina: 20, duration: 300ms, distance: 3.0, iframes: 250ms, cooldown: 350ms }   # 20 Hz: 6 ticks, 5 i-frame ticks
+combat_lock: 5s                  # no mode switch this long after dealing or taking damage
+lag_comp_max: 200ms              # favour the shooter (D-009)
+dodge_grace: 100ms               # favour the dodger (D-009)
+knockback: { decay: 150ms, player_mult: 0.6 }   # knockback distance is spread over `decay`
+attack_move_slow: 0.45           # move speed multiplier while swinging
+
+weapons:
+  sword:
+    light:
+      - { dmg: 10, windup: 60ms, active: 110ms, recover: 170ms, shape: arc, arc: 120, range: 1.55, knockback: 0.5 }
+      - { dmg: 10, windup: 60ms, active: 110ms, recover: 170ms, shape: arc, arc: 120, range: 1.55, knockback: 0.5 }
+      - { dmg: 16, windup: 90ms, active: 120ms, recover: 300ms, shape: arc, arc: 150, range: 1.75, knockback: 1.3 }
+    combo_window: 450ms
+    heavy: { dmg: 24, windup: 280ms, active: 130ms, recover: 300ms, stamina: 25, shape: arc, arc: 200, range: 1.9, knockback: 1.6 }
+    ability: { kind: spin, dmg: 18, hits: 3, interval: 200ms, range: 1.9, cooldown: 8s, knockback: 1.0, windup: 100ms, recover: 250ms }
+  spear:
+    light:
+      - { dmg: 14, windup: 90ms, active: 120ms, recover: 240ms, shape: line, range: 2.5, width: 0.7, knockback: 0.7 }
+    combo_window: 0ms
+    heavy: { dmg: 30, windup: 220ms, active: 230ms, recover: 260ms, stamina: 30, shape: line, range: 1.7, width: 0.9, dash: 3.0, knockback: 1.5 }
+    ability: { kind: throw, dmg: 26, speed: 14, range: 7, cooldown: 6s, knockback: 0.8, windup: 150ms, recover: 300ms }

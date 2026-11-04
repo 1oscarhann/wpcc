@@ -28,6 +28,7 @@ from hearthforge.db.models.items import (
 )
 from hearthforge.db.models.realm import Realm, RealmMember, RealmRole, RealmVisibility
 from hearthforge.db.models.village import BuildingState, Presence, Resource, Village, VillageBuilding
+from hearthforge.db.models.world import DeathDrop, NodeHarvest
 
 __all__ = [
     "AdminAuditLog",
@@ -35,6 +36,7 @@ __all__ = [
     "AvatarLocation",
     "BuildingState",
     "ConfigVersion",
+    "DeathDrop",
     "Container",
     "ContainerKind",
     "ContainerSlot",
@@ -43,6 +45,7 @@ __all__ = [
     "ItemInstance",
     "ItemOrigin",
     "LedgerAsset",
+    "NodeHarvest",
     "Notification",
     "Presence",
     "Rarity",

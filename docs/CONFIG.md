@@ -33,18 +33,18 @@ Conventions: durations use the `"45s" | "5m" | "1h"` string syntax (parsed to se
 | `decorations.yaml` | decoration catalogue, beauty points, cost, unlock | 3, 14 |
 | `combos.yaml` (**secret**) | combo definitions, hints, unlocked recipe groups | 6 |
 | `recipes.yaml` | intermediate goods plus gear recipes: inputs per tier, time, station | 6 |
-| `weapons.yaml` | weapon types, movesets, hitboxes, timings, stamina, base damage | 5, 11 |
+| `weapons.yaml` | (folded into `combat.yaml → weapons` for now, D-050) | 5, 11 |
 | `armour.yaml` | armour/offhand/trinket stats per tier | 11 |
 | `rarity.yaml` | rarity colours, multipliers, modifier slots, roll weights, luck curve | 6 |
 | `modifiers.yaml` | modifier effects and value ranges, source materials | 6 |
-| `combat.yaml` | damage formula constants, crit, defence curve, statuses, hit-stop, stamina, dodge | 5 |
-| `avatar.yaml` | base stats, per-level growth, XP curve, level cap, KO rules, regen | 4, 5 |
+| `combat.yaml` | damage formula constants, crit, defence curve, stamina, dodge, combat lock, lag-comp/dodge-grace windows, knockback, **weapon movesets** | 5 ✔ |
+| `avatar.yaml` | base stats, per-level growth, XP curve, level cap, KO rules, regen, pickup radius, reach | 4, 5 ✔ |
 | `skills.yaml` | skill tree (3 branches) | 16 |
-| `enemies.yaml` | enemy stats, AI behaviour and params, telegraphs, loot refs, night/co-op scaling | 5, 10 |
+| `enemies.yaml` | enemy stats, attack + telegraph shape, elites, per-biome spawn tables, inline loot (D-050) | 5 ✔, 10 |
 | `loot_tables.yaml` | weighted tables, nested tables, coin ranges | 5 |
 | `biomes.yaml` | ring order, difficulty, enemy spawn tables, nodes, rares, ambience, music | 4, 10 |
 | `mapgen.yaml` (POI part **secret**) | ring radii, plot layout, noise params, POI densities, node densities | 3, 9 |
-| `nodes.yaml` | gatherable node types, yields, respawn, tool requirements | 4 |
+| `nodes.yaml` | gatherable node types: which map objects, hits, yields (+ bonus rolls), per-player respawn, XP, sound | 4 ✔ |
 | `dungeons.yaml` | room templates, weights, length, puzzles, bosses, rewards, daily seed rule | 12 |
 | `waves.yaml` | wave interval, warning, composition by TH level, steal cap, rewards, report lines | 13 |
 | `bosses.yaml` | realm and world bosses: phases, attacks, HP, scaling, loot | 13, 17 |
@@ -143,7 +143,53 @@ combos:
     hint: "Fire, timber and starlight, all touching."
 ```
 
-### `weapons.yaml`
+### `combat.yaml` (as built, Phase 5)
+
+```yaml
+crit_mult: 1.75
+attack_scaling: 0.02          # damage × (1 + attack × this)
+defence_k: 100                # taken = incoming × (1 − def / (def + k))
+tier_mult: [1.0, 1.35, 1.8, 2.4, 3.2]
+dodge: { stamina: 20, duration: 300ms, distance: 3.0, iframes: 250ms, cooldown: 350ms }
+lag_comp_max: 200ms
+dodge_grace: 100ms
+weapons:
+  sword:
+    light:                     # one entry per combo swing; arc = degrees, range = tiles
+      - { dmg: 10, windup: 60ms, active: 110ms, recover: 170ms, shape: arc, arc: 120, range: 1.55, knockback: 0.5 }
+    combo_window: 450ms
+    heavy: { dmg: 24, windup: 280ms, active: 130ms, recover: 300ms, stamina: 25, shape: arc, arc: 200, range: 1.9 }
+    ability: { kind: spin, dmg: 18, hits: 3, interval: 200ms, range: 1.9, cooldown: 8s, windup: 100ms, recover: 250ms }
+  spear:                       # line shapes use range + width; `dash` lunges the avatar during the active phase
+    heavy: { dmg: 30, …, shape: line, range: 1.7, width: 0.9, dash: 3.0 }
+    ability: { kind: throw, dmg: 26, speed: 14, range: 7, cooldown: 6s, … }
+```
+
+Durations are converted to whole 50 ms ticks once on the server (`sim/rules.py`) and sent to the client as `config.sim`, so prediction uses the exact same numbers.
+
+### `nodes.yaml` / `enemies.yaml` (as built)
+
+```yaml
+nodes:
+  tree: { objects: [obj.oak, obj.pine, …], hits: 3, yields: { wood: [6, 10] }, respawn: 5m, xp: 2, sound: chop }
+  ancient_oak: { objects: [obj.big_oak], biome: forest, hits: 6, yields: { wood: [10, 12], ironbark: [1, 2] }, … }
+
+enemies:
+  wolf:
+    archetype: chaser
+    hp: 70
+    dmg: 13
+    defence: 4
+    speed: 4.6
+    group: [2, 3]
+    attack: { shape: line, range: 1.7, width: 0.9, trigger: 2.3, windup: 480ms, active: 200ms, recover: 700ms, lunge: 1.8 }
+    loot: [{ item: hide, chance: 0.45, qty: [1, 2] }, { item: wolf_fang, chance: 0.25, qty: [1, 1] }]
+    elite_name: Alpha Wolf
+biomes:
+  forest: { difficulty: 2, groups_per_chunk: 0.75, roster: { wolf: 0.55, spider: 0.45 }, elite_chance: 0.08, xp: 22, coins: [3, 6] }
+```
+
+### `weapons.yaml` (original plan, superseded by `combat.yaml → weapons`)
 
 ```yaml
 tier_mult: { copper: 1.0, iron: 1.35, steel: 1.8, mythril: 2.4, starforged: 3.2 }

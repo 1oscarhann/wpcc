@@ -30,6 +30,9 @@ FILES: dict[str, type[BaseModel]] = {
     "mapgen": s.MapgenCfg,
     "profanity": s.ProfanityCfg,
     "debris": s.DebrisCfg,
+    "nodes": s.NodesCfg,
+    "combat": s.CombatCfg,
+    "enemies": s.EnemiesCfg,
 }
 
 
@@ -87,6 +90,9 @@ class GameConfig:
     mapgen: s.MapgenCfg
     profanity: s.ProfanityCfg
     debris: s.DebrisCfg
+    nodes: s.NodesCfg
+    combat: s.CombatCfg
+    enemies: s.EnemiesCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -213,6 +219,9 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     mapgen: s.MapgenCfg = parsed["mapgen"]
     profanity: s.ProfanityCfg = parsed["profanity"]
     debris: s.DebrisCfg = parsed["debris"]
+    nodes: s.NodesCfg = parsed["nodes"]
+    combat: s.CombatCfg = parsed["combat"]
+    enemies: s.EnemiesCfg = parsed["enemies"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -353,6 +362,31 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
             if rk not in res.resources:
                 errors.append(f"debris.yaml:kinds.{dk}: yields unknown resource '{rk}'")
 
+    # ── nodes / combat / enemies ──────────────────────────────────────────────
+    from hearthforge.domain.mapgen import OBJECT_NAMES
+
+    for nk, node in nodes.nodes.items():
+        where = f"nodes.yaml:nodes.{nk}"
+        for ik in list(node.yields) + list(node.bonus):
+            if ik not in items:
+                errors.append(f"{where}: yields unknown item/resource '{ik}'")
+        for prefix in node.objects:
+            if not any(o == prefix or o.startswith(prefix + ".") for o in OBJECT_NAMES):
+                errors.append(f"{where}.objects: no map object called '{prefix}'")
+    for ik, it in items_cfg.items.items():
+        if it.category == "weapon" and it.weapon_type not in combat.weapons:
+            errors.append(f"items.yaml:items.{ik}: weapon_type '{it.weapon_type}' has no combat.yaml moveset")
+    for ek, en in enemies.enemies.items():
+        for i, drop in enumerate(en.loot):
+            if drop.item not in items:
+                errors.append(f"enemies.yaml:enemies.{ek}.loot.{i}: unknown item '{drop.item}'")
+    for bk, biome in enemies.biomes.items():
+        for ek in biome.roster:
+            if ek not in enemies.enemies:
+                errors.append(f"enemies.yaml:biomes.{bk}.roster: unknown enemy '{ek}'")
+    if not mapgen.plot.ring_radius + mapgen.plot.frame < mapgen.forest.radius < mapgen.map_size // 2:
+        errors.append("mapgen.yaml:forest.radius: must sit between the plot ring and the map edge")
+
     if mapgen.map_size % mapgen.chunk_size:
         errors.append("mapgen.yaml:map_size: must be a multiple of chunk_size")
 
@@ -373,6 +407,9 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         mapgen=mapgen,
         profanity=profanity,
         debris=debris,
+        nodes=nodes,
+        combat=combat,
+        enemies=enemies,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     argon2_profile: str = Field(default="secure", alias="HF_ARGON2_PROFILE")  # secure | fast (tests)
     db_pool_size: int = Field(default=10, alias="DB_POOL_SIZE")
     enable_listener: bool = Field(default=True, alias="HF_ENABLE_LISTENER")
+    monsters_enabled: bool = Field(default=True, alias="HF_MONSTERS")
 
     @field_validator("database_url")
     @classmethod

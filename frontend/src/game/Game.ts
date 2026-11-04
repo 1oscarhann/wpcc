@@ -6,10 +6,18 @@ import type { BuildingDef, BuildingState, VillageState } from "../api/types";
 import { serverNow, useSession } from "../state/session";
 import { onVillageChange, useVillage, type MapMeta } from "../state/village";
 import { manifest } from "../assets/manifest";
+import { ENT, leaveAvatar, roomLink, type RoomClient } from "../net/room";
+import { touchInput } from "../net/touch";
+import { BTN } from "../sim/motion";
+import { ClientGrid, gridLink } from "../sim/grid";
+import { useAvatar } from "../state/avatar";
 import { Ambient } from "./ambient";
 import { CloudShadows, groundLighting } from "./atmosphere";
+import { AvatarWorld, type WorldHost } from "./avatarWorld";
+import { CombatFx } from "./combatFx";
 import { localPlacementError, rotatedFootprint, usableBounds } from "./placement";
-import { buildingLook, loadWorldAtlas, tex } from "./sprites";
+import { sfx } from "./sfx";
+import { buildingLook, loadIconAtlas, loadWorldAtlas, tex } from "./sprites";
 
 const TREE_PREFIXES = ["obj.oak", "obj.big_oak", "obj.birch", "obj.pine", "obj.apple"];
 const DEBRIS_LEAVES = new Set(["oak", "big_oak", "birch", "pine", "apple", "bush", "weeds"]);
@@ -72,6 +80,16 @@ export class Game {
   private destroyed = false;
   private hoverTile: [number, number] | null = null;
   touchMode = matchMedia("(pointer: coarse)").matches;
+  private grid: ClientGrid | null = null;
+  private objectSprites = new Map<number, Sprite>();
+  avatar: AvatarWorld | null = null;
+  private mouse: { x: number; y: number } | null = null;
+  private mouseLight = false;
+  private camTween: gsap.core.Tween | null = null;
+  private shakeAmp = 0;
+  private shakeUntil = 0;
+  private hitStopUntil = 0;
+  private nodePrefixes: string[] = [];
 
   constructor(private host: HTMLElement) {}
 
@@ -87,9 +105,17 @@ export class Game {
     if (this.destroyed) return;
     this.host.appendChild(this.app.canvas);
     this.app.canvas.style.touchAction = "none";
-    await Promise.all([loadWorldAtlas(), document.fonts.load('16px "Pixelify Sans"').catch(() => undefined)]);
-    this.defs = useSession.getState().config!.buildings;
+    await Promise.all([loadWorldAtlas(), loadIconAtlas(), document.fonts.load('16px "Pixelify Sans"').catch(() => undefined)]);
+    const config = useSession.getState().config!;
+    const gfx = useSession.getState().me?.settings.graphics as { reduce_motion?: boolean } | undefined;
+    document.documentElement.dataset.reduceMotion = gfx?.reduce_motion ? "1" : "0";
+    this.defs = config.buildings;
+    this.nodePrefixes = Object.values(config.nodes ?? {}).flatMap((n) => n.objects);
     this.map = await useVillage.getState().fetchMap();
+    this.grid = new ClientGrid(
+      this.map.size, this.map.chunk_size, this.map.tile_names, this.map.object_names, this.map.plots.map((p) => p.origin),
+    );
+    gridLink.grid = this.grid;
     this.objects.sortableChildren = true;
     this.lighting = groundLighting(this.map.size * T);
     this.world.addChild(this.ground, this.lighting, this.below, this.objects, this.above, this.fx, this.clouds.layer, this.sky);
@@ -121,12 +147,18 @@ export class Game {
       }),
     );
     this.bindInput();
+    roomLink.listeners.add(this.onRoomClient);
+    if (roomLink.client) this.onRoomClient(roomLink.client);
     this.app.ticker.add((t) => this.tick(t.deltaMS));
     if (import.meta.env.DEV) (window as unknown as { __hfGame?: Game }).__hfGame = this; // for screenshot tests
   }
 
   destroy(): void {
     this.destroyed = true;
+    roomLink.listeners.delete(this.onRoomClient);
+    this.avatar?.destroy();
+    this.avatar = null;
+    if (gridLink.grid === this.grid) gridLink.grid = null;
     this.unsub.forEach((u) => u());
     this.unbind?.();
     try {
@@ -145,6 +177,12 @@ export class Game {
   }
 
   private clampCamera(): void {
+    if (this.avatar && this.map) {
+      const max = this.map.size * T;
+      this.cam.x = Math.max(0, Math.min(max, this.cam.x));
+      this.cam.y = Math.max(0, Math.min(max, this.cam.y));
+      return;
+    }
     const v = useVillage.getState().village;
     if (!v) return;
     const margin = 28 * T;
@@ -210,6 +248,10 @@ export class Game {
 
   // ── frame loop ────────────────────────────────────────────────────────────
   private tick(dms: number): void {
+    if (this.avatar) {
+      this.avatarTick(dms);
+      return;
+    }
     const dt = Math.min(dms, 50) / 1000;
     const speed = 420 / this.cam.zoom;
     let kx = 0;
@@ -220,7 +262,7 @@ export class Game {
     if (this.keys.has("s") || this.keys.has("arrowdown")) ky += 1;
     this.cam.x += kx * speed * dt;
     this.cam.y += ky * speed * dt;
-    if (!this.dragging) {
+    if (!this.dragging && !this.camTween) {
       // inertia after a drag
       this.cam.x += this.cam.vx * dt;
       this.cam.y += this.cam.vy * dt;
@@ -234,6 +276,206 @@ export class Game {
     this.updateTimers();
     this.ambient?.update(dms);
     this.clouds.update(dt, this.viewRect());
+  }
+
+  // ── Avatar Mode ───────────────────────────────────────────────────────────
+  private onRoomClient = (c: RoomClient | null): void => {
+    if (this.destroyed || !this.map) return;
+    if (c && this.avatar?.client === c) return;
+    this.avatar?.destroy();
+    this.avatar = null;
+    if (c) {
+      const me = useSession.getState().me!;
+      this.avatar = new AvatarWorld(this.worldHost, c, me.avatar.appearance);
+      this.avatar.extra = new CombatFx(this.worldHost, this.avatar);
+      useVillage.getState().startPlacing(null);
+      useVillage.getState().select(null);
+      this.cam.vx = this.cam.vy = 0;
+      const p = c.drawPos();
+      this.tweenCamera(p.x * T, p.y * T - 8, this.app.screen.width >= 700 ? 3 : 2, 0.7);
+      sfx("dodge");
+    } else {
+      const v = useVillage.getState().village;
+      if (!v) return;
+      const th = v.buildings.find((b) => b.key === "town_hall");
+      const cx = (this.origin[0] + (th ? th.x + 2 : v.frame / 2)) * T;
+      const cy = (this.origin[1] + (th ? th.y + 3 : v.frame / 2)) * T;
+      this.tweenCamera(cx, cy, this.app.screen.width >= 700 ? 3 : 2, 0.7);
+    }
+  };
+
+  private tweenCamera(x: number, y: number, zoom: number, duration: number): void {
+    this.camTween?.kill();
+    this.camTween = gsap.to(this.cam, {
+      x, y, zoom, duration, ease: "power3.inOut",
+      onComplete: () => {
+        this.cam.zoom = zoom;
+        this.camTween = null;
+      },
+    });
+  }
+
+  private readonly worldHost: WorldHost = {
+    under: this.below,
+    objects: this.objects,
+    fx: this.fx,
+    screen: this.screen,
+    floatText: (wx, wy, text, color, delay, size) => this.floatText(wx, wy, text, color, delay, size),
+    dust: (x, y) => this.dust(x, y),
+    sparkles: (x, y) => this.sparkles(x, y),
+    objectAt: (tx, ty) => {
+      const s = this.objectSprites.get(ty * (this.map?.size ?? 0) + tx);
+      return s && !s.destroyed ? s : undefined;
+    },
+    homeAnchor: () => {
+      const v = useVillage.getState().village;
+      const th = v?.buildings.find((b) => b.key === "town_hall");
+      return th ? { x: (this.origin[0] + th.x + 2) * T, y: (this.origin[1] + th.y + 1) * T } : { x: 0, y: 0 };
+    },
+    toScreen: (wx, wy) => ({ x: this.world.x + wx * this.cam.zoom, y: this.world.y + wy * this.cam.zoom }),
+    zoom: () => this.cam.zoom,
+    shake: (px, ms) => {
+      if (document.documentElement.dataset.reduceMotion === "1") return;
+      this.shakeAmp = Math.max(this.shakeAmp, px);
+      this.shakeUntil = Math.max(this.shakeUntil, performance.now() + ms);
+    },
+    hitStop: (ms) => {
+      if (document.documentElement.dataset.reduceMotion === "1") return;
+      this.hitStopUntil = Math.max(this.hitStopUntil, performance.now() + ms);
+    },
+    occluders: (x0, y0, x1, y1, z) => {
+      const out: Container[] = [];
+      const overlaps = (bx0: number, by0: number, bx1: number, by1: number) => bx0 < x1 && bx1 > x0 && by0 < y1 && by1 > y0;
+      const size = this.map?.size ?? 0;
+      const tx0 = Math.floor(x0 / T) - 2;
+      const tx1 = Math.floor(x1 / T) + 2;
+      const ty0 = Math.floor(y1 / T);
+      for (let ty = ty0; ty <= ty0 + 4; ty++) {
+        for (let tx = tx0; tx <= tx1; tx++) {
+          const s = this.objectSprites.get(ty * size + tx);
+          if (!s || s.destroyed || s.zIndex <= z || s.height < 20) continue;
+          if (overlaps(s.x - s.width / 2, s.y - s.height, s.x + s.width / 2, s.y)) out.push(s);
+        }
+      }
+      for (const s of this.debrisViews.values()) {
+        if (s.zIndex > z && s.height >= 20 && overlaps(s.x - s.width / 2, s.y - s.height, s.x + s.width / 2, s.y)) out.push(s);
+      }
+      for (const v of this.views.values()) {
+        const top = v.root.y - v.anchorTop;
+        if (v.root.zIndex > z && overlaps(v.root.x, top, v.root.x + v.sprite.texture.width, top + v.sprite.texture.height)) out.push(v.root);
+      }
+      return out;
+    },
+  };
+
+  private avatarTick(dms: number): void {
+    const a = this.avatar!;
+    const c = a.client;
+    this.sampleAvatarInput(c);
+    c.update(dms); // the predicted simulation never pauses (hit-stop is visual only, D-010)
+    const now = performance.now();
+    const frozen = now < this.hitStopUntil;
+    gsap.globalTimeline.timeScale(frozen ? 0.05 : 1);
+    if (!frozen) a.update(dms);
+    if (!this.camTween) {
+      const p = c.drawPos();
+      const tx = p.x * T + c.me.fx * 10;
+      const ty = p.y * T - 8 + c.me.fy * 8;
+      const k = 1 - Math.exp(-dms / 90);
+      this.cam.x += (tx - this.cam.x) * k;
+      this.cam.y += (ty - this.cam.y) * k;
+    } else if (this.camTween.progress() > 0.15) {
+      // keep the tween's end point on the (moving) avatar
+      const p = c.drawPos();
+      this.camTween.vars.x = p.x * T;
+      this.camTween.vars.y = p.y * T - 8;
+      this.camTween.invalidate();
+    }
+    this.clampCamera();
+    this.applyCamera();
+    if (now < this.shakeUntil) {
+      const amp = this.shakeAmp * ((this.shakeUntil - now) / 120);
+      this.world.x += Math.round((Math.random() - 0.5) * 2 * amp * this.cam.zoom);
+      this.world.y += Math.round((Math.random() - 0.5) * 2 * amp * this.cam.zoom);
+    } else this.shakeAmp = 0;
+    this.loadVisibleChunks();
+    this.updateTimers();
+    if (!frozen) this.ambient?.update(dms);
+    this.clouds.update(Math.min(dms, 50) / 1000, this.viewRect());
+  }
+
+  private sampleAvatarInput(c: RoomClient): void {
+    this.steerAutopilot(c);
+    let kx = 0;
+    let ky = 0;
+    if (this.keys.has("a") || this.keys.has("arrowleft")) kx -= 1;
+    if (this.keys.has("d") || this.keys.has("arrowright")) kx += 1;
+    if (this.keys.has("w") || this.keys.has("arrowup")) ky -= 1;
+    if (this.keys.has("s") || this.keys.has("arrowdown")) ky += 1;
+    if (touchInput.active) {
+      kx = touchInput.mx;
+      ky = touchInput.my;
+    }
+    const q = (v: number) => Math.max(-127, Math.min(127, Math.round(v * 127)));
+    c.input.mx = q(kx);
+    c.input.my = q(ky);
+    let ax = 0;
+    let ay = 0;
+    const p = c.drawPos();
+    if (this.mouse && !this.touchMode) {
+      const w = this.screenToWorld(this.mouse.x, this.mouse.y);
+      ax = w.x - p.x * T;
+      ay = w.y - (p.y * T - 9);
+    } else {
+      const t = this.autoAim(c);
+      if (t) [ax, ay] = t;
+    }
+    const l = Math.hypot(ax, ay);
+    c.input.ax = l > 0.01 ? q(ax / l) : 0;
+    c.input.ay = l > 0.01 ? q(ay / l) : 0;
+    if (this.steerFight(c)) {
+      // dev auto-fight already set the aim; take its movement too
+      c.input.mx = q(touchInput.mx);
+      c.input.my = q(touchInput.my);
+    }
+    c.input.held = (this.mouseLight || this.keys.has("j") ? BTN.light : 0) | touchInput.held;
+    c.input.latched |= touchInput.latched;
+    touchInput.latched = 0;
+  }
+
+  /** Touch: aim at the nearest monster, else the nearest gatherable thing in reach, else straight ahead. */
+  private autoAim(c: RoomClient): [number, number] | null {
+    const me = c.me;
+    let best: [number, number, number] | null = null;
+    const rt = c.renderTick();
+    for (const e of c.ents.values()) {
+      if (e.kind !== ENT.monster) continue;
+      const s = c.sampleAt(e, rt);
+      if (!s) continue;
+      const d = (s.x - me.x) ** 2 + (s.y - me.y) ** 2;
+      if (d < 25 && (!best || d < best[2])) best = [s.x - me.x, s.y - me.y, d];
+    }
+    if (best) return [best[0], best[1]];
+    const g = this.grid;
+    if (!g || !this.map) return null;
+    const cx = Math.floor(me.x);
+    const cy = Math.floor(me.y);
+    for (let r = 1; r <= 2; r++) {
+      for (let y = cy - r; y <= cy + r; y++) {
+        for (let x = cx - r; x <= cx + r; x++) {
+          const oid = g.objectAt(x, y);
+          if (oid === undefined) continue;
+          const name = this.map.object_names[oid];
+          if (!this.nodePrefixes.some((p) => name === p || name.startsWith(p + "."))) continue;
+          if (c.depleted.has(y * this.map.size + x)) continue;
+          const dx = x + 0.5 - me.x;
+          const dy = y + 0.5 - me.y;
+          const d = dx * dx + dy * dy;
+          if (d < 5 && (!best || d < best[2])) best = [dx, dy, d];
+        }
+      }
+    }
+    return best ? [best[0], best[1]] : null;
   }
 
   private viewRect(): { x0: number; y0: number; x1: number; y1: number } {
@@ -317,6 +559,7 @@ export class Game {
     c.cacheAsTexture(true);
     this.ground.addChild(c);
     this.chunks.set(`${ch.cx}_${ch.cy}`, c);
+    this.grid?.addChunk(ch.cx, ch.cy, ch);
     const v = useVillage.getState().village;
     const [lo, hi] = v ? usableBounds(v.frame, v.size) : [0, 0];
     for (const [lx, ly, k, flags] of ch.objects) {
@@ -330,12 +573,14 @@ export class Game {
       const fy = wty - this.origin[1];
       if (v && fx >= lo - 1 && fx < hi + 1 && fy >= lo - 1 && fy < hi + 1 && !name.startsWith("obj.lilypad")) continue;
       const s = new Sprite(tex(name));
+      s.label = name;
       s.anchor.set(0.5, 1);
       const wx = (ch.cx * cs + lx) * T + T / 2;
       const wy = (ch.cy * cs + ly) * T + T - 1;
       s.position.set(wx, wy);
       s.zIndex = name.startsWith("obj.lilypad") ? wy - 16 : wy;
       this.objects.addChild(s);
+      this.objectSprites.set(wty * m.size + wtx, s);
       if (TREE_PREFIXES.some((p) => name.startsWith(p))) this.treeSpots.push({ x: wx, y: wy - s.height * 0.6 });
       else if (name.startsWith("obj.flowers") || name.startsWith("obj.flower_bush")) this.flowerSpots.push({ x: wx, y: wy - 4 });
     }
@@ -516,10 +761,10 @@ export class Game {
     });
   }
 
-  private floatText(wx: number, wy: number, text: string, color: number, delay = 0): void {
+  private floatText(wx: number, wy: number, text: string, color: number, delay = 0, size = 17): void {
     const t = new Text({
       text,
-      style: { fontFamily: "Pixelify Sans", fontSize: 17, fill: color, stroke: { color: INK, width: 4 }, fontWeight: "700" },
+      style: { fontFamily: "Pixelify Sans", fontSize: size, fill: color, stroke: { color: INK, width: size > 14 ? 4 : 3 }, fontWeight: "700" },
     });
     t.anchor.set(0.5, 1);
     t.alpha = 0;
@@ -719,6 +964,13 @@ export class Game {
   private bindInput(): void {
     const el = this.app.canvas;
     const down = (e: PointerEvent) => {
+      if (this.avatar) {
+        if (this.touchMode && e.pointerType !== "mouse") return;
+        this.mouse = { x: e.offsetX, y: e.offsetY };
+        if (e.button === 0) this.mouseLight = true;
+        if (e.button === 2 && this.avatar) this.avatar.client.input.latched |= BTN.heavy;
+        return;
+      }
       el.setPointerCapture(e.pointerId);
       this.pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY, sx: e.offsetX, sy: e.offsetY, t: performance.now() });
       this.cam.vx = this.cam.vy = 0;
@@ -728,6 +980,8 @@ export class Game {
       }
     };
     const move = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") this.mouse = { x: e.offsetX, y: e.offsetY };
+      if (this.avatar) return;
       const p = this.pointers.get(e.pointerId);
       if (!p) {
         if (!this.touchMode) this.hover(e.offsetX, e.offsetY);
@@ -758,6 +1012,8 @@ export class Game {
       } else if (!this.touchMode) this.hover(e.offsetX, e.offsetY);
     };
     const up = (e: PointerEvent) => {
+      if (e.button === 0) this.mouseLight = false;
+      if (this.avatar) return;
       const p = this.pointers.get(e.pointerId);
       this.pointers.delete(e.pointerId);
       if (!p) return;
@@ -769,12 +1025,17 @@ export class Game {
     };
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      this.zoomBy(e.deltaY < 0 ? 1 : -1, { x: e.offsetX, y: e.offsetY });
+      if (this.avatar) this.zoomAvatar(e.deltaY < 0 ? 1 : -1);
+      else this.zoomBy(e.deltaY < 0 ? 1 : -1, { x: e.offsetX, y: e.offsetY });
     };
     const keydown = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       const k = e.key.toLowerCase();
       this.keys.add(k);
+      if (this.avatar) {
+        this.avatarKey(k, e);
+        return;
+      }
       const store = useVillage.getState();
       if (k === "r") store.rotateGhost();
       if (k === "escape") {
@@ -786,7 +1047,10 @@ export class Game {
       if (k === "-") this.zoomBy(-1);
     };
     const keyup = (e: KeyboardEvent) => this.keys.delete(e.key.toLowerCase());
-    const blur = () => this.keys.clear();
+    const blur = () => {
+      this.keys.clear();
+      this.mouseLight = false;
+    };
     const ctx = (e: MouseEvent) => {
       e.preventDefault();
       useVillage.getState().startPlacing(null);
@@ -813,6 +1077,196 @@ export class Game {
     };
   }
 
+  // ── dev helpers (screenshot runner / e2e) ───────────────────────────────
+  private autopilot: {
+    path: [number, number][];
+    goal: [number, number];
+    done: (ok: boolean) => void;
+    lastProgress: number;
+    started: number;
+  } | null = null;
+
+  /** Nearest reachable tile next to a gatherable node of this kind ("tree", "rock"…), or null. */
+  devFindNode(kind: string): { node: [number, number]; stand: [number, number] } | null {
+    const c = this.avatar?.client;
+    const cfg = useSession.getState().config;
+    if (!c || !this.grid || !this.map || !cfg) return null;
+    const prefixes = cfg.nodes[kind]?.objects ?? [];
+    const start: [number, number] = [Math.floor(c.me.x), Math.floor(c.me.y)];
+    const seen = new Set<number>([start[1] * this.map.size + start[0]]);
+    const queue: [number, number][] = [start];
+    while (queue.length && seen.size < 20000) {
+      const [x, y] = queue.shift()!;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const k = ny * this.map.size + nx;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const oid = this.grid.objectAt(nx, ny);
+        const name = oid === undefined ? "" : this.map.object_names[oid];
+        if (name && prefixes.some((p) => name === p || name.startsWith(p + ".")) && !c.depleted.has(k) && dx !== 0) {
+          return { node: [nx, ny], stand: [x, y] };
+        }
+        if (!this.grid.solid(nx, ny)) queue.push([nx, ny]);
+      }
+    }
+    return null;
+  }
+
+  private planPath(tx: number, ty: number): [number, number][] | null {
+    const c = this.avatar?.client;
+    if (!c || !this.grid || !this.map) return null;
+    const size = this.map.size;
+    const key = (x: number, y: number) => y * size + x;
+    const s0 = key(Math.floor(c.me.x), Math.floor(c.me.y));
+    const prev = new Map<number, number>([[s0, -1]]);
+    const queue = [s0];
+    const goal = key(tx, ty);
+    for (let qi = 0; qi < queue.length && !prev.has(goal) && prev.size < 60000; qi++) {
+      const k = queue[qi];
+      const x = k % size;
+      const y = Math.floor(k / size);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = key(x + dx, y + dy);
+        if (prev.has(n) || this.grid.solid(x + dx, y + dy)) continue;
+        prev.set(n, k);
+        queue.push(n);
+      }
+    }
+    if (!prev.has(goal)) return null;
+    const path: [number, number][] = [];
+    for (let k = goal; k !== -1; k = prev.get(k)!) path.unshift([k % size, Math.floor(k / size)]);
+    return path;
+  }
+
+  /** Walk the avatar to a tile centre along a BFS path (drives the same input path as the stick).
+   *  Re-plans when it stops making progress (chunks that weren't loaded yet count as open). */
+  devWalkTo(tx: number, ty: number): Promise<boolean> {
+    const path = this.planPath(tx, ty);
+    if (!path) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const now = performance.now();
+      this.autopilot = { path, goal: [tx, ty], done: resolve, lastProgress: now, started: now };
+    });
+  }
+
+  private fight: { until: number; done: () => void; heavyEvery: number; n: number } | null = null;
+
+  /** Dev: chase the nearest monster and fight it for `ms` (screenshot runner). */
+  devFight(ms: number, heavyEvery = 0): Promise<void> {
+    return new Promise((resolve) => {
+      this.fight = { until: performance.now() + ms, done: resolve, heavyEvery, n: 0 };
+    });
+  }
+
+  devNearestMonster(): { x: number; y: number; d: number; key: string } | null {
+    const c = this.avatar?.client;
+    if (!c) return null;
+    let best: { x: number; y: number; d: number; key: string } | null = null;
+    const rt = c.renderTick();
+    for (const e of c.ents.values()) {
+      if (e.kind !== ENT.monster) continue;
+      const s = c.sampleAt(e, rt);
+      if (!s || s.anim === 8) continue;
+      const d = Math.hypot(s.x - c.me.x, s.y - c.me.y);
+      if (!best || d < best.d) best = { x: s.x, y: s.y, d, key: e.type };
+    }
+    return best;
+  }
+
+  private steerFight(c: RoomClient): boolean {
+    const f = this.fight;
+    if (!f) return false;
+    if (performance.now() > f.until) {
+      this.fight = null;
+      touchInput.active = false;
+      touchInput.mx = touchInput.my = 0;
+      touchInput.held = 0;
+      f.done();
+      return false;
+    }
+    const m = this.devNearestMonster();
+    if (!m) return false;
+    const dx = m.x - c.me.x;
+    const dy = m.y - c.me.y;
+    const l = Math.hypot(dx, dy) || 1;
+    touchInput.active = true;
+    touchInput.mx = l > 1.3 ? dx / l : 0;
+    touchInput.my = l > 1.3 ? dy / l : 0;
+    c.input.ax = Math.round((dx / l) * 127);
+    c.input.ay = Math.round((dy / l) * 127);
+    touchInput.held = l < 2.0 ? BTN.light : 0;
+    if (l < 2.0 && f.heavyEvery && ++f.n % f.heavyEvery === 0) touchInput.latched |= BTN.heavy;
+    return true;
+  }
+
+  private steerAutopilot(c: RoomClient): void {
+    const ap = this.autopilot;
+    if (!ap) return;
+    const now = performance.now();
+    while (ap.path.length) {
+      const [x, y] = ap.path[0];
+      const dx = x + 0.5 - c.me.x;
+      const dy = y + 0.5 - c.me.y;
+      const next = ap.path[1];
+      const past = next && Math.hypot(next[0] + 0.5 - c.me.x, next[1] + 0.5 - c.me.y) <= 1.0;
+      if (dx * dx + dy * dy < 0.12 || past) {
+        ap.path.shift();
+        ap.lastProgress = now;
+      } else break;
+    }
+    const finish = (ok: boolean) => {
+      touchInput.active = false;
+      touchInput.mx = touchInput.my = 0;
+      this.autopilot = null;
+      ap.done(ok);
+    };
+    if (!ap.path.length) return finish(true);
+    if (now - ap.started > 120000) return finish(false);
+    if (now - ap.lastProgress > 1500) {
+      const again = this.planPath(ap.goal[0], ap.goal[1]);
+      if (!again) return finish(false);
+      ap.path = again;
+      ap.lastProgress = now;
+    }
+    const [x, y] = ap.path[0];
+    const dx = x + 0.5 - c.me.x;
+    const dy = y + 0.5 - c.me.y;
+    const l = Math.hypot(dx, dy);
+    // ease in on the last waypoint so slow frames (several sim steps each) can't overshoot it forever
+    const k = ap.path.length === 1 ? Math.min(1, Math.max(0.25, l / 0.6)) : 1;
+    touchInput.active = true;
+    touchInput.mx = (dx / l) * k;
+    touchInput.my = (dy / l) * k;
+  }
+
+  private avatarKey(k: string, e: KeyboardEvent): void {
+    const c = this.avatar!.client;
+    const av = useAvatar.getState();
+    if (k === " " || k === "shift") {
+      e.preventDefault();
+      c.input.latched |= BTN.dodge;
+    } else if (k === "q") c.input.latched |= BTN.ability;
+    else if (k === "k") c.input.latched |= BTN.heavy;
+    else if (k === "1" || k === "r") c.input.latched |= BTN.potion;
+    else if (k === "b" || k === "i" || k === "tab") {
+      e.preventDefault();
+      av.set({ bagOpen: !av.bagOpen });
+    } else if (k === "escape") av.set({ bagOpen: false });
+    else if (k === "h") leaveAvatar();
+    else if (k === "+" || k === "=") this.zoomAvatar(1);
+    else if (k === "-") this.zoomAvatar(-1);
+  }
+
+  private zoomAvatar(dir: number): void {
+    const cur = ZOOMS.indexOf(Math.round(this.cam.zoom));
+    const next = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, (cur < 0 ? 1 : cur) + dir))];
+    if (next === this.cam.zoom || this.camTween) return;
+    this.zoomTween?.kill();
+    this.zoomTween = gsap.to(this.cam, { zoom: next, duration: 0.2, ease: "power2.out" });
+  }
+
   private ghostTileFor(sx: number, sy: number): [number, number] {
     const store = useVillage.getState();
     const p = store.placing!;
@@ -823,6 +1277,7 @@ export class Game {
   }
 
   private hover(sx: number, sy: number): void {
+    if (this.avatar) return;
     const store = useVillage.getState();
     if (!store.placing) {
       const id = this.debrisAt(sx, sy);
@@ -844,6 +1299,7 @@ export class Game {
   }
 
   private tap(sx: number, sy: number): void {
+    if (this.avatar) return;
     const store = useVillage.getState();
     if (store.placing) {
       const [tx, ty] = this.ghostTileFor(sx, sy);

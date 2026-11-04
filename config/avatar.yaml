@@ -2,6 +2,11 @@
 base_stats: { hp: 100, stamina: 100, attack: 10, defence: 5, crit_chance: 0.05, move_speed: 5.0 }
 per_level:  { hp: 8, stamina: 1, attack: 1, defence: 1 }
 level_cap: 30
+xp_curve: { a: 80, p: 1.55, b: 20 }       # XP to reach the next level = round(a × level^p + b)
+regen: { delay: 5s, per_second: 0.06 }    # out of combat, fraction of max HP per second
+ko: { respawn_delay: 3s, rare_loss: 0.25, drop_lifetime: 5m }
+pickup_radius: 1.5                        # tiles; drops fly to you inside this
+reach: 1.7                                # tiles; gathering / interacting
 
 # Option keys must exist in tools/artgen (parts + colour ramps); artgen fails loudly if one is missing.
 creator:

@@ -7,7 +7,9 @@ Generated server-side only; the client fetches chunks. v1 terrain:
   client hides it once someone moves in and their own village debris takes over);
 - a meadow everywhere else with forest groves, rock outcrops, flower meadows and natural ponds with reeds
   and lily pads.
-Biome rings beyond the meadow arrive in Phase 4/10 (bump `version` in mapgen.yaml then).
+- the Whispering Forest from `forest.radius` outward (Phase 4): dark forest floor, dense old trees with
+  ferns and webs, sunny clearings, and dirt trails leading out from the meadow between the plots.
+Biome rings beyond the forest arrive in Phase 10 (bump `version` in mapgen.yaml then).
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ TILE_NAMES: list[str] = (
     + [f"tile.path.{m}" for m in BLOB_MASKS]
     + [f"tile.water.{m}" for m in BLOB_MASKS]
     + [f"tile.cobble.{m}" for m in BLOB_MASKS]
+    + [f"tile.forest.{v}" for v in range(4)]
 )
 TILE_ID = {n: i for i, n in enumerate(TILE_NAMES)}
 OBJECT_NAMES: list[str] = [
@@ -88,6 +91,9 @@ OBJECT_NAMES: list[str] = [
     "obj.lamp.0",
     "obj.signpost.0",
     "obj.well.0",
+    "obj.fern.0",
+    "obj.fern.1",
+    "obj.web.0",
 ]
 OBJECT_ID = {n: i for i, n in enumerate(OBJECT_NAMES)}
 assert len(TILE_NAMES) < 256
@@ -178,6 +184,15 @@ class Generator:
                 cfg.debris, self.tpl, _mix(seed, i, 99) & 0x7FFFFFFF, self.paths[i], 1.6
             )
             self.wild.append({(x, y): (cfg.debris.kinds[k].sprites[v], 0) for _id, k, v, x, y in items})
+        # trails into the forest leave the meadow in every other gap between plots
+        c = self.lay.center
+        r0, r1 = self.lay.hub_radius + 24, self.cfg.forest.radius + 34
+        self.trails = []
+        for i in range(max(1, self.cfg.plot.count // 2)):
+            a = -math.pi / 2 + 2 * math.pi * (2 * i + 0.5) / self.cfg.plot.count
+            self.trails.append(
+                (c + r0 * math.cos(a), c + r0 * math.sin(a), c + r1 * math.cos(a), c + r1 * math.sin(a))
+            )
         self._chunks: dict[tuple[int, int], dict] = {}
 
     # ── classification ─────────────────────────────────────────────────────
@@ -195,6 +210,24 @@ class Generator:
         ox, oy = self.lay.plot_origins[i]
         fx, fy = x - ox, y - oy
         return self.tpl.lo - pad <= fx < self.tpl.hi + pad and self.tpl.lo - pad <= fy < self.tpl.hi + pad
+
+    def trail_dist(self, x: int, y: int) -> float:
+        return min(_seg_dist(x + 0.5, y + 0.5, *t) for t in self.trails)
+
+    def forest_depth(self, x: int, y: int) -> float:
+        """Tiles past the (noise-warped) forest edge; negative = still meadow."""
+        c = self.lay.center
+        warp = (value_noise(self.seed, x, y, 14, 71) - 0.5) * 18
+        return math.hypot(x + 0.5 - c, y + 0.5 - c) + warp - self.cfg.forest.radius
+
+    def biome(self, x: int, y: int) -> str:
+        """Gameplay biome for spawns and nodes: 'hub', 'plot', 'meadow' or 'forest'."""
+        if self.plot_at(x, y, 6) is not None:
+            return "plot"
+        c = self.lay.center
+        if math.hypot(x - c, y - c) < self.lay.hub_radius + 6:
+            return "hub"
+        return "forest" if self.forest_depth(x, y) >= 0 else "meadow"
 
     def is_hub(self, x: int, y: int) -> bool:
         c = self.lay.center
@@ -220,8 +253,13 @@ class Generator:
         wiggle = (value_noise(self.seed, x, y, 9, 23) - 0.5) * 0.6
         if rd <= 1.15 + wiggle:
             return "path"
+        if self.trail_dist(x, y) <= 0.75 + wiggle * 0.5:
+            return "path"
         if self._natural_pond(x, y, rd):
             return "water"
+        depth = self.forest_depth(x, y)
+        if depth >= 0 or (depth > -5 and rand01(self.seed, x, y, 72) < (depth + 5) / 6):
+            return "forest"
         return "grass"
 
     def _natural_pond(self, x: int, y: int, rd: float) -> bool:
@@ -267,6 +305,8 @@ class Generator:
                         name = f"tile.flowers.{int(r * 3 / 0.55) % 3}"
                     else:
                         name = f"tile.grass.{int(r * 4) % 4}"
+                elif k == "forest":
+                    name = f"tile.forest.{int(rand01(self.seed, x, y, 1) * 4) % 4}"
                 else:
                     name = f"tile.{k}.{self._mask(x, y, k, kinds)}"
                 ground[ly * cs + lx] = TILE_ID[name]
@@ -292,6 +332,8 @@ class Generator:
             ):
                 return (f"obj.lilypad.{int(rand01(s, x, y, 22) * 2)}", 0)
             return None
+        if k == "forest":
+            return self._forest(x, y, kinds)
         if k != "grass":
             return None
         i = self.plot_at(x, y)
@@ -308,6 +350,8 @@ class Generator:
         if near_water and rand01(s, x, y, 23) < 0.45:
             return (f"obj.reeds.{int(rand01(s, x, y, 24) * 2)}", 0)
         rd = self.road_dist(x, y)
+        if self.trail_dist(x, y) < 1.6:
+            return None
         if 1.4 < rd < 2.3 and rand01(s, x, y, 25) < 0.035:
             return ("obj.lamp.0", 0)
         if rd < 2.5:
@@ -372,6 +416,54 @@ class Generator:
         if 0 <= r - 0.14 - md.tall_grass_density < md.rock_density:
             return (f"obj.rock.{int(rand01(s, x, y, 9) * 2)}", 0)
         if r > 0.995:
+            return ("obj.stump.0", 0)
+        return None
+
+    def _forest(self, x: int, y: int, kinds: dict[tuple[int, int], str]) -> tuple[str, int] | None:
+        s = self.seed
+        fc = self.cfg.forest
+        if self.trail_dist(x, y) < 1.7:
+            return (f"obj.fern.{int(rand01(s, x, y, 81) * 2)}", 0) if rand01(s, x, y, 82) < 0.05 else None
+        near_water = any(
+            kinds.get((x + dx, y + dy)) == "water" for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+        )
+        if near_water:
+            return (f"obj.reeds.{int(rand01(s, x, y, 24) * 2)}", 0) if rand01(s, x, y, 23) < 0.4 else None
+        clearing = value_noise(s, x, y, 10, 83) > fc.clearing_threshold
+        r = rand01(s, x, y, 84)
+        # trees never touch diagonally-adjacent trees on the same row parity, which keeps lanes open
+        lattice_ok = (x + 2 * y) % 5 != 0
+        if not clearing and lattice_ok and r < fc.tree_density:
+            pick = rand01(s, x, y, 85)
+            if pick < 0.22:
+                return (f"obj.big_oak.{int(pick * 100) % 2}", 0)
+            if pick < 0.62:
+                return (f"obj.pine.{int(pick * 100) % 2}", 0)
+            if pick < 0.82:
+                return (f"obj.oak.{int(pick * 100) % 3}", 0)
+            return (f"obj.birch.{int(pick * 100) % 2}", 0)
+        r -= fc.tree_density
+        if clearing:
+            if 0 <= r < 0.10:
+                return (f"obj.flowers.{int(rand01(s, x, y, 86) * 5)}", 0)
+            if 0.10 <= r < 0.13:
+                return (f"obj.tall_grass.{int(rand01(s, x, y, 87) * 2)}", 0)
+            if 0.13 <= r < 0.145:
+                return (f"obj.flower_bush.{int(rand01(s, x, y, 88) * 4)}", 0)
+            return None
+        if 0 <= r < 0.07:
+            return (f"obj.fern.{int(rand01(s, x, y, 89) * 2)}", 0)
+        if 0.07 <= r < 0.095:
+            return (f"obj.mushrooms.{int(rand01(s, x, y, 90) * 2)}", 0)
+        if 0.095 <= r < 0.11:
+            return (f"obj.bush.{int(rand01(s, x, y, 91) * 2)}", 0)
+        if 0.11 <= r < 0.118:
+            return ("obj.log.0", 0)
+        if 0.118 <= r < 0.124:
+            return ("obj.web.0", 0)
+        if 0.124 <= r < 0.134:
+            return (f"obj.mossy_rock.{int(rand01(s, x, y, 92) * 2)}", 0)
+        if 0.134 <= r < 0.14:
             return ("obj.stump.0", 0)
         return None
 

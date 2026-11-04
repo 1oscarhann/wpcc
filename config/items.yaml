@@ -6,6 +6,30 @@ items:
     stackable: false
     weapon_type: sword
     icon: icon.sword
+  training_spear:
+    name: Training Spear
+    category: weapon
+    stackable: false
+    weapon_type: spear
+    icon: icon.spear
+  slime_gel:
+    name: Slime Gel
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.slime_gel
+  wolf_fang:
+    name: Wolf Fang
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.wolf_fang
+  spider_silk:
+    name: Spider Silk
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.spider_silk
   small_healing_potion:
     name: Small Healing Potion
     category: consumable

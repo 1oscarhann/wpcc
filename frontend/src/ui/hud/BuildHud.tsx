@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { BuildingDef, BuildingState, VillageState } from "../../api/types";
 import { canAfford, amountAt } from "../../game/resources";
 import { PLACEMENT_TEXT, localPlacementError } from "../../game/placement";
+import { enterAvatar } from "../../net/room";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
 import { formatDuration, formatNum, Icon, Panel } from "../components/kit";
@@ -321,8 +322,8 @@ export function BuildHud({ onSettings, touch, onZoom }: {
               <button className="btn secondary small icon-only" onClick={() => onZoom(-1)} aria-label="Zoom out">−</button>
               <button className="btn secondary small icon-only" onClick={() => onZoom(1)} aria-label="Zoom in">+</button>
             </div>
-            <button className="btn secondary" disabled title="Avatar Mode arrives in Phase 4" aria-label="Adventure (coming soon)">
-              <Icon name="avatar" /> <span className="hide-narrow">Adventure</span>
+            <button className="btn gold" onClick={enterAvatar} aria-label="Explore" title="Step outside as your hero">
+              <Icon name="avatar" /> <span className="hide-narrow">Explore</span>
             </button>
           </div>
         )}

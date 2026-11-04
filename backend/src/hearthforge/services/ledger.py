@@ -24,6 +24,14 @@ BUILD_UNDO_REFUND = "build.undo_refund"
 BUILD_UNDO_REPAY = "build.undo_repay"
 ADMIN_GRANT = "admin.grant"
 DEBRIS_CLEAR = "debris.clear"
+AVATAR_GATHER = "avatar.gather"
+AVATAR_DEPOSIT = "avatar.deposit"
+LOOT_DROP = "loot.drop"
+LOOT_COINS = "loot.coins"
+ITEM_CONSUME = "item.consume"
+ITEM_MOVE = "item.move"
+KO_LOSS = "ko.loss"
+KO_RECOVER = "ko.recover"
 
 
 async def lock_wallet(session: AsyncSession, user_id: uuid.UUID) -> Wallet:

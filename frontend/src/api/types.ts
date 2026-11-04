@@ -61,6 +61,10 @@ export interface ConfigBundle {
   plot: { frame: number; start_size: number; max_size: number; pond: { x: number; y: number; w: number; h: number } };
   map: { size: number; chunk_size: number };
   debris: Record<string, { sprites: string[]; yields: Record<string, number> }>;
+  sim: unknown; // sim/rules.ts Rules
+  nodes: Record<string, { objects: string[]; biome: string | null; hits: number; yields: Record<string, [number, number]>; sound: string }>;
+  combat: { combat_lock_s: number; weapons: Record<string, { ability: string; ability_cd_s: number }> };
+  enemies: Record<string, { name: string; elite_name: string; archetype: string; radius: number }>;
 }
 
 export interface Me {

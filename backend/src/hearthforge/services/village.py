@@ -322,7 +322,7 @@ def _remember(ld: Loaded, cfg: GameConfig, now: datetime, op: str, **data: Any) 
     }
 
 
-def _touch(ld: Loaded, now: datetime) -> None:
+def touch(ld: Loaded, now: datetime) -> None:
     ld.village.version += 1
     ld.village.updated_at = now
 
@@ -409,7 +409,7 @@ async def place(
     ld.buildings.append(b)
     await _start_work(session, cfg, ld, b, now, paid, BuildingState.constructing)
     _remember(ld, cfg, now, "place", building_id=str(b.id))
-    _touch(ld, now)
+    touch(ld, now)
     return ld
 
 
@@ -442,7 +442,7 @@ async def move(
     prev = {"x": b.x, "y": b.y, "rotation": b.rotation}
     b.x, b.y, b.rotation = x, y, rotation
     _remember(ld, cfg, now, "move", building_id=building_id, prev=prev)
-    _touch(ld, now)
+    touch(ld, now)
     return ld
 
 
@@ -487,7 +487,7 @@ async def demolish(
     else:
         ld.village.last_action = None
     _apply_rates(cfg, ld)
-    _touch(ld, now)
+    touch(ld, now)
     return ld, refunded
 
 
@@ -510,7 +510,7 @@ async def upgrade(
     paid = await _pay(session, cfg, ld, bdef.level(b.level + 1).cost, ledger.BUILD_UPGRADE, str(b.id))
     await _start_work(session, cfg, ld, b, now, paid, BuildingState.upgrading)
     _remember(ld, cfg, now, "upgrade", building_id=building_id)
-    _touch(ld, now)
+    touch(ld, now)
     return ld
 
 
@@ -545,7 +545,7 @@ async def cancel(
         b.work_paid = None
     ld.village.last_action = None
     _apply_rates(cfg, ld)
-    _touch(ld, now)
+    touch(ld, now)
     return ld, refunded
 
 
@@ -653,7 +653,7 @@ async def undo(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: 
         raise GameError("nothing_to_undo", "There's nothing to undo.")
     ld.village.last_action = None
     _apply_rates(cfg, ld)
-    _touch(ld, now)
+    touch(ld, now)
     return ld
 
 
@@ -682,7 +682,7 @@ async def clear_debris(
             ref_id=str(debris_id),
         )
     ld.village.debris = [d for d in items if d[0] != debris_id]
-    _touch(ld, now)
+    touch(ld, now)
     return ld, gained
 
 

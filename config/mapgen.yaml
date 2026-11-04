@@ -1,5 +1,5 @@
 # Realm map generation (PLAN §2.6). Bump `version` whenever output would change for an existing seed.
-version: 1
+version: 2
 map_size: 768          # tiles per side
 chunk_size: 16
 hub_radius: 18
@@ -19,3 +19,7 @@ meadow:
   rock_density: 0.006
   bush_density: 0.02
   tall_grass_density: 0.03
+forest:
+  radius: 175                          # Whispering Forest starts this far from the hub (BALANCE §6)
+  tree_density: 0.16                   # per tile on the walkable lattice
+  clearing_threshold: 0.7              # noise above this = sunny clearing

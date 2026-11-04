@@ -9,7 +9,6 @@ import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from fastapi import WebSocket
 from sqlalchemy import select
 
 from hearthforge.db.models import Village
@@ -17,6 +16,7 @@ from hearthforge.realtime.protocol import encode
 from hearthforge.services import village as village_svc
 
 if TYPE_CHECKING:
+    from hearthforge.realtime.conn import Conn
     from hearthforge.state import AppState
 
 log = logging.getLogger("hearthforge.hub")
@@ -25,16 +25,16 @@ log = logging.getLogger("hearthforge.hub")
 class VillageHub:
     def __init__(self, st: AppState, poll_interval: float = 10.0) -> None:
         self.st = st
-        self.subs: dict[str, set[WebSocket]] = defaultdict(set)
+        self.subs: dict[str, set[Conn]] = defaultdict(set)
         self.versions: dict[str, int] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._dirty: set[str] = set()
         self.poll_interval = poll_interval
 
-    def subscribe(self, owner_id: str, ws: WebSocket) -> None:
+    def subscribe(self, owner_id: str, ws: Conn) -> None:
         self.subs[owner_id].add(ws)
 
-    def unsubscribe(self, owner_id: str, ws: WebSocket) -> None:
+    def unsubscribe(self, owner_id: str, ws: Conn) -> None:
         s = self.subs.get(owner_id)
         if s:
             s.discard(ws)
@@ -42,11 +42,13 @@ class VillageHub:
                 self.subs.pop(owner_id, None)
                 self.versions.pop(owner_id, None)
 
-    def unsubscribe_all(self, ws: WebSocket) -> None:
+    def unsubscribe_all(self, ws: Conn) -> None:
         for owner in list(self.subs):
             self.unsubscribe(owner, ws)
 
     async def send_state(self, owner_id: str, state: dict) -> None:
+        if self.st.rooms is not None:
+            self.st.rooms.on_village_state(owner_id, state)
         self.versions[owner_id] = state["version"]
         frame = encode("VILLAGE_STATE", owner_id, state["version"], state)
         for ws in list(self.subs.get(owner_id, ())):
@@ -58,6 +60,8 @@ class VillageHub:
     async def publish(self, owner_id: str, state: dict | None = None) -> None:
         """Push the latest (settled) state to subscribers. Coalesces bursts per village."""
         if owner_id not in self.subs:
+            if state is not None and self.st.rooms is not None:
+                self.st.rooms.on_village_state(owner_id, state)
             return
         if state is not None:
             await self.send_state(owner_id, state)

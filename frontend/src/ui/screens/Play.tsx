@@ -4,6 +4,8 @@ import { GameSocket } from "../../net/ws";
 import { useSession } from "../../state/session";
 import { toast } from "../../state/toasts";
 import { onVillageChange, useVillage } from "../../state/village";
+import { useAvatar } from "../../state/avatar";
+import { AvatarHud } from "../hud/AvatarHud";
 import { BuildHud } from "../hud/BuildHud";
 import { Panel } from "../components/kit";
 import { SettingsModal } from "./Settings";
@@ -59,6 +61,7 @@ export function PlayScreen() {
   const [settings, setSettings] = useState(false);
   const [failed, setFailed] = useState(false);
   const village = useVillage((s) => s.village);
+  const mode = useAvatar((s) => s.mode);
   useVillageSync(me.user.id);
 
   useEffect(() => {
@@ -91,8 +94,12 @@ export function PlayScreen() {
           <Panel><div className="head">Your browser couldn't start the renderer (WebGL).</div></Panel>
         </div>
       )}
-      <BuildHud onSettings={() => setSettings(true)} touch={game.current?.touchMode ?? matchMedia("(pointer: coarse)").matches}
-        onZoom={(d) => game.current?.zoomBy(d)} />
+      {mode === "build" ? (
+        <BuildHud onSettings={() => setSettings(true)} touch={game.current?.touchMode ?? matchMedia("(pointer: coarse)").matches}
+          onZoom={(d) => game.current?.zoomBy(d)} />
+      ) : (
+        <AvatarHud onSettings={() => setSettings(true)} touch={game.current?.touchMode ?? matchMedia("(pointer: coarse)").matches} />
+      )}
       {settings && <SettingsModal onClose={() => setSettings(false)} />}
     </div>
   );

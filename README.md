@@ -2,7 +2,22 @@
 
 A cozy-but-action-packed browser game. You build a village in **Build Mode**, then drop into **Avatar Mode** to explore, fight monsters and gather rare loot with friends. There's no PvP: other players can only help you.
 
-**Status:** Phases 1–3 are done (plan, foundations, Build Mode core), plus an art and atmosphere pass. Next up is Phase 4, Avatar Mode. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** Phases 1–5 are done: plan, foundations, Build Mode, **Avatar Mode** (walk the realm, chop and mine, carry it home) and **combat** (slimes, wolves, spiders, elites, sword and spear movesets, dodge, loot, XP, KO). Next up is Phase 6, combos and forging. See [docs/PLAN.md](docs/PLAN.md).
+
+### Controls (Avatar Mode)
+
+| Action | Desktop | Touch |
+|---|---|---|
+| Walk | WASD / arrows | left stick |
+| Attack / gather (hold to keep swinging) | left mouse, aims at the cursor | big sword button (auto-aims) |
+| Heavy attack (stamina) | right mouse or K | small sword button |
+| Ability (sword spin / spear throw) | Q | swirl button |
+| Dodge roll (i-frames) | Space or Shift | arrows button |
+| Potion | 1 or R | potion button |
+| Bag | B, I or Tab | bag button |
+| Back to Build Mode | H or the Village button (not mid-fight) | Village button |
+
+Walk into your own village to drop gathered resources into storage.
 
 | Doc | What's in it |
 |---|---|
@@ -62,6 +77,10 @@ cd backend && uv run python -m hearthforge.worker
 
 Without it, timers still complete the next time the village is read (lazy settle), so the game works either way.
 
+Set `HF_MONSTERS=0` to explore without monsters (handy for screenshots of Phase 4).
+
+To feel the netcode under latency, open `http://127.0.0.1:5173/play?lag=150` (dev builds only): every frame is delayed by half that in each direction, with jitter.
+
 ### 4. Frontend (on :5173)
 
 ```bash
@@ -86,6 +105,16 @@ cd frontend && npx tsc -b && npx vitest run
 
 ```bash
 cd tools/artgen && uv run python -m artgen.validate
+```
+
+```bash
+cd backend && uv run python scripts/bench_tick.py --players 10 --monsters 100
+```
+
+The shared movement code has golden vectors replayed by both test suites. If you change `sim/motion.py` (and its twin `frontend/src/sim/motion.ts`) on purpose, regenerate them:
+
+```bash
+cd backend && uv run python scripts/gen_golden.py
 ```
 
 Backend tests create and drop a throwaway database on the Postgres at `TEST_DATABASE_ADMIN_URL` (default `postgresql://hf@127.0.0.1:5433/postgres`).
@@ -116,7 +145,9 @@ cd tools/artgen && uv run python -m artgen
 With both servers running, this saves desktop and mobile shots to `docs/screenshots/phase-N/`:
 
 ```bash
-node tools/screenshots.mjs 2
+node tools/screenshots.mjs 5
 ```
+
+`ONLY=desktop` or `ONLY=mobile` limits it to one viewport. Phases 4 and 5 drive the hero with a dev-only autopilot (`window.__hfGame.devWalkTo / devFight`).
 
 The `/debug` page shows every sprite, icon, character layer, widget, rarity colour and font.

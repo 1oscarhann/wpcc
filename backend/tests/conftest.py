@@ -66,6 +66,7 @@ def settings(database_url: str) -> Settings:
             "HF_ENABLE_LISTENER": False,
             "HF_CONFIG_STRICT": True,
             "DB_POOL_SIZE": 10,
+            "HF_MONSTERS": False,
         }
     )
 

@@ -48,12 +48,15 @@ def create_app(
             passwords=Passwords(settings.argon2_profile),
         )
         st.village_hub = VillageHub(st)
+        from hearthforge.sim.manager import RoomManager
+
+        st.rooms = RoomManager(st)
         app.state.hf = st
         async with sm() as session, session.begin():
             await sync_config(session, config)
         log.info("config %s loaded (%s)", config.hash, config.summary())
 
-        tasks: list[asyncio.Task[None]] = []
+        tasks: list[asyncio.Task[None]] = [asyncio.create_task(st.rooms.reaper(), name="room-reaper")]
         if settings.enable_listener:
             tasks.append(asyncio.create_task(PgListener(st).run(), name="pg-listener"))
             tasks.append(asyncio.create_task(st.village_hub.fallback_poll(), name="village-poll"))
@@ -64,6 +67,7 @@ def create_app(
         try:
             yield
         finally:
+            await st.rooms.shutdown()
             for t in tasks:
                 t.cancel()
             for t in tasks:
@@ -95,12 +99,13 @@ def create_app(
                 )
         return await call_next(request)
 
-    from hearthforge.api import auth, me, realm, village
+    from hearthforge.api import auth, inventory, me, realm, village
     from hearthforge.realtime import gateway
 
     app.include_router(auth.router)
     app.include_router(me.router)
     app.include_router(village.router)
+    app.include_router(inventory.router)
     app.include_router(realm.router)
     app.include_router(gateway.router)
 

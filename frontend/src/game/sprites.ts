@@ -1,5 +1,5 @@
 // Atlas loading + sprite naming. All names come from the generated manifest (tools/artgen).
-import { Assets, Spritesheet, Texture, TextureStyle } from "pixi.js";
+import { Assets, Rectangle, Spritesheet, Texture, TextureStyle } from "pixi.js";
 import type { BuildingState } from "../api/types";
 import { manifest } from "../assets/manifest";
 import { rotatedFootprint } from "./placement";
@@ -16,6 +16,26 @@ export async function loadWorldAtlas(): Promise<Spritesheet> {
 export function tex(name: string): Texture {
   const t = sheet?.textures[name];
   if (!t) throw new Error(`missing sprite ${name}`);
+  return t;
+}
+
+let iconSource: Texture | null = null;
+const iconCache = new Map<string, Texture>();
+
+export async function loadIconAtlas(): Promise<void> {
+  if (!iconSource) iconSource = (await Assets.load(manifest.icons.image)) as Texture;
+}
+
+/** A 16×16 item/resource icon as a Pixi texture (icons.png grid). */
+export function iconTex(name: string): Texture {
+  const key = name.replace(/^icon\./, "");
+  const hit = iconCache.get(key);
+  if (hit) return hit;
+  if (!iconSource) throw new Error("icon atlas not loaded");
+  const { size, cols, names } = manifest.icons;
+  const i = names[key] ?? names["info"];
+  const t = new Texture({ source: iconSource.source, frame: new Rectangle((i % cols) * size, Math.floor(i / cols) * size, size, size) });
+  iconCache.set(key, t);
   return t;
 }
 

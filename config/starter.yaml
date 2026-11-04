@@ -12,5 +12,6 @@ containers:
 items:
   - { container: equipment, slot: 0, item: training_sword, tier: 1, rarity: common, durability: 120 }
   - { container: equipment, slot: 4, item: small_healing_potion, quantity: 3 }
+  - { container: inventory, slot: 0, item: training_spear, tier: 1, rarity: common, durability: 120 }
 village_name_suffix: "'s Village"
 realm_name_suffix: "'s Realm"

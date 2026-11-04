@@ -194,9 +194,9 @@ Hand-gathered resources are worth ~1 minute of L1 production per hit, so a 10-mi
 
 | Level | 1 | 2 | 5 | 10 | 15 | 20 | 25 | 29 |
 |---|---|---|---|---|---|---|---|---|
-| XP to next | 100 | 254 | 989 | 2,858 | 5,340 | 8,332 | 11,764 | 14,804 |
+| XP to next | 100 | 254 | 989 | 2,859 | 5,341 | 8,332 | 11,766 | 14,805 |
 
-The cumulative total to level 30 is about 175k XP.
+The cumulative total to level 30 is about 176k XP.
 
 **XP sources:**
 
@@ -352,6 +352,20 @@ Each rare material added guarantees its modifier, up to the item's slot count. E
 | Buff Food | Alchemist+Farm | 2 bread, 2 herbs | +10% damage or +10% defence or +8% speed for 5 min | — |
 
 ---
+
+### 5.7 As built (Phase 5)
+
+The live numbers are in `config/combat.yaml` and `config/enemies.yaml`. Changes from the tables above, all made to favour readability at 16 px and the player (D-009):
+
+| What | Plan | Built | Why |
+|---|---|---|---|
+| Sword light | arc 110°, reach 1.4 | arc 120°, reach 1.55 | Hits feel fair when the sprite overlaps by a pixel |
+| Dodge | 280 ms, i-frames 220 ms | 300 ms (6 ticks), i-frames 250 ms (5 ticks) | Whole 50 ms ticks |
+| Enemies (meadow / forest) | archetype table × biome multiplier | slime 24 HP / 5 dmg; wolf 70 / 13 / def 4; spider 60 / 15 + poison 3/s for 4 s | Biome multipliers baked in |
+| Gear drops | 1.5% per kill | not yet | Gear needs tiers, rarity and modifiers (Phase 6) |
+| Co-op HP scaling | +50% per extra player | not yet | Arrives with realms and parties (Phase 9) |
+
+Sanity check, as built: a starter sword hits a slime for 12, so slimes die in 2 hits (a test checks this).
 
 ## 6. Enemies
 

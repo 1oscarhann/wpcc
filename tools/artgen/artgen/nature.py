@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from artgen.canvas import Canvas, blob, hash2
 from artgen.palette import INK, ramp
 
@@ -494,8 +496,49 @@ def bird_frames() -> list[Canvas]:
     return out
 
 
+def fern(variant: int) -> Canvas:
+    """Forest-floor fern: arching fronds from a centre, lit from the top-left."""
+    c = Canvas(18, 13)
+    fronds = [(-7, -5), (-4, -8), (0, -9), (4, -8), (7, -5), (-6, -1), (6, -1)]
+    if variant == 1:
+        fronds = [(-6, -6), (-2, -9), (3, -9), (7, -6), (-7, -2), (7, -2)]
+    cx, cy = 9, 12
+    for i, (ex, ey) in enumerate(fronds):
+        steps = 9
+        for k in range(steps + 1):
+            t = k / steps
+            x = cx + ex * t
+            y = cy + ey * t + 3 * t * t * (1 if abs(ex) > 4 else 0.4)  # arch: tips droop
+            col = PINE[3] if ex < 0 or (ex == 0 and k > 4) else PINE[2]
+            c.put(int(x), int(y), col)
+            if 2 <= k <= steps - 1 and k % 2 == 0:  # leaflets
+                c.put(int(x) - 1, int(y), LEAF[3] if ex <= 0 else LEAF[2])
+                c.put(int(x) + 1, int(y), LEAF[2] if ex <= 0 else LEAF[1])
+        c.put(int(cx + ex), int(cy + ey + 3 * (1 if abs(ex) > 4 else 0.4)), LEAF[4] if i % 2 else LEAF[3])
+    c.outline(INK)
+    return c
+
+
+def web() -> Canvas:
+    """A spider web strung between nothing in particular (no outline: it's thread)."""
+    c = Canvas(15, 15)
+    silk = ramp("stone")[4]
+    hi = ramp("stone")[5]
+    for ex, ey in ((0, 0), (14, 0), (0, 14), (14, 14), (7, 0), (0, 7), (14, 7), (7, 14)):
+        c.line(7, 7, ex, ey, silk)
+    for r in (2.5, 4.5, 6.5):
+        for k in range(16):
+            a = k / 16 * 2 * math.pi
+            x, y = 7 + math.cos(a) * r, 7 + math.sin(a) * r
+            c.put(int(round(x)), int(round(y)), hi if k % 3 == 0 else silk)
+    return c
+
+
 def generate_extra() -> dict[str, Canvas]:
     out: dict[str, Canvas] = {}
+    for v in range(2):
+        out[f"obj.fern.{v}"] = fern(v)
+    out["obj.web.0"] = web()
     for v in range(2):
         out[f"obj.big_oak.{v}"] = big_oak(v)
         out[f"obj.birch.{v}"] = birch(v)

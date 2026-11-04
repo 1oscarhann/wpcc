@@ -39,10 +39,16 @@ def test_village_channel_pushes_state(settings: Settings, game_config: Any, data
             state = unpack(ws.receive_bytes())
             assert state[0] == S2C["VILLAGE_STATE"]
             v0 = state[2]
-            # a REST change is pushed to the socket
+            # a REST change is pushed to the socket (pick a spot the random debris left free)
+            spot = next(
+                (x, y)
+                for y in range(18, 30)
+                for x in range(26, 34)
+                if client.get(f"/api/village/preview?key=house&x={x}&y={y}").json()["valid"]
+            )
             r2 = client.post(
                 "/api/village/buildings",
-                json={"key": "house", "x": 27, "y": 21, "rotation": 0},  # inside the always-clear radius
+                json={"key": "house", "x": spot[0], "y": spot[1], "rotation": 0},
                 headers={"x-csrf-token": csrf},
             )
             assert r2.status_code == 200, r2.text

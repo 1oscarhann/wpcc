@@ -148,15 +148,19 @@
    "queue": 27,
    "rotate": 28,
    "settings": 29,
-   "sound": 30,
-   "star": 31,
-   "starstone": 32,
-   "stone": 33,
-   "sword": 34,
-   "timer": 35,
-   "undo": 36,
-   "upgrade": 37,
-   "wood": 38
+   "slime_gel": 30,
+   "sound": 31,
+   "spear": 32,
+   "spider_silk": 33,
+   "star": 34,
+   "starstone": 35,
+   "stone": 36,
+   "sword": 37,
+   "timer": 38,
+   "undo": 39,
+   "upgrade": 40,
+   "wolf_fang": 41,
+   "wood": 42
   },
   "size": 16
  },
@@ -1376,10 +1380,49 @@
   "fx.glint.3": {
    "atlas": "world"
   },
+  "fx.hit.0": {
+   "atlas": "world"
+  },
+  "fx.hit.1": {
+   "atlas": "world"
+  },
+  "fx.hit.2": {
+   "atlas": "world"
+  },
   "fx.leaf.0": {
    "atlas": "world"
   },
   "fx.leaf.1": {
+   "atlas": "world"
+  },
+  "fx.poof.0": {
+   "atlas": "world"
+  },
+  "fx.poof.1": {
+   "atlas": "world"
+  },
+  "fx.poof.2": {
+   "atlas": "world"
+  },
+  "fx.poof.3": {
+   "atlas": "world"
+  },
+  "fx.slash.0": {
+   "atlas": "world"
+  },
+  "fx.slash.1": {
+   "atlas": "world"
+  },
+  "fx.slash.2": {
+   "atlas": "world"
+  },
+  "fx.slash_wide.0": {
+   "atlas": "world"
+  },
+  "fx.slash_wide.1": {
+   "atlas": "world"
+  },
+  "fx.slash_wide.2": {
    "atlas": "world"
   },
   "fx.smoke.0": {
@@ -1407,6 +1450,78 @@
    "atlas": "world"
   },
   "fx.sparkle.3": {
+   "atlas": "world"
+  },
+  "mon.crown": {
+   "atlas": "world"
+  },
+  "mon.slime.attack.0": {
+   "atlas": "world"
+  },
+  "mon.slime.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.slime.idle.0": {
+   "atlas": "world"
+  },
+  "mon.slime.idle.1": {
+   "atlas": "world"
+  },
+  "mon.slime.move.0": {
+   "atlas": "world"
+  },
+  "mon.slime.move.1": {
+   "atlas": "world"
+  },
+  "mon.slime.windup.0": {
+   "atlas": "world"
+  },
+  "mon.spider.attack.0": {
+   "atlas": "world"
+  },
+  "mon.spider.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.spider.idle.0": {
+   "atlas": "world"
+  },
+  "mon.spider.idle.1": {
+   "atlas": "world"
+  },
+  "mon.spider.move.0": {
+   "atlas": "world"
+  },
+  "mon.spider.move.1": {
+   "atlas": "world"
+  },
+  "mon.spider.windup.0": {
+   "atlas": "world"
+  },
+  "mon.wolf.attack.0": {
+   "atlas": "world"
+  },
+  "mon.wolf.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.wolf.idle.0": {
+   "atlas": "world"
+  },
+  "mon.wolf.idle.1": {
+   "atlas": "world"
+  },
+  "mon.wolf.move.0": {
+   "atlas": "world"
+  },
+  "mon.wolf.move.1": {
+   "atlas": "world"
+  },
+  "mon.wolf.move.2": {
+   "atlas": "world"
+  },
+  "mon.wolf.move.3": {
+   "atlas": "world"
+  },
+  "mon.wolf.windup.0": {
    "atlas": "world"
   },
   "obj.apple.0": {
@@ -1446,6 +1561,12 @@
    "atlas": "world"
   },
   "obj.fence_post.0": {
+   "atlas": "world"
+  },
+  "obj.fern.0": {
+   "atlas": "world"
+  },
+  "obj.fern.1": {
    "atlas": "world"
   },
   "obj.flower_bush.0": {
@@ -1548,6 +1669,9 @@
    "atlas": "world"
   },
   "obj.tall_grass.1": {
+   "atlas": "world"
+  },
+  "obj.web.0": {
    "atlas": "world"
   },
   "obj.well.0": {
@@ -1701,6 +1825,18 @@
    "atlas": "world"
   },
   "tile.flowers.2": {
+   "atlas": "world"
+  },
+  "tile.forest.0": {
+   "atlas": "world"
+  },
+  "tile.forest.1": {
+   "atlas": "world"
+  },
+  "tile.forest.2": {
+   "atlas": "world"
+  },
+  "tile.forest.3": {
    "atlas": "world"
   },
   "tile.grass.0": {
@@ -1995,6 +2131,12 @@
    "atlas": "world"
   },
   "tile.water.95": {
+   "atlas": "world"
+  },
+  "wpn.spear": {
+   "atlas": "world"
+  },
+  "wpn.sword": {
    "atlas": "world"
   }
  },

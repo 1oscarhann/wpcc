@@ -14,6 +14,11 @@ C2S: dict[str, int] = {k: int(v, 16) for k, v in _IDS["client_to_server"].items(
 S2C: dict[str, int] = {k: int(v, 16) for k, v in _IDS["server_to_client"].items()}
 PROTOCOL_VERSION: int = _IDS["version"]
 C2S_NAME = {v: k for k, v in C2S.items()}
+EV: dict[str, int] = _IDS["events"]
+ENT: dict[str, int] = _IDS["entity_kinds"]
+ANIM: dict[str, int] = _IDS["anims"]
+SELF_FLAG: dict[str, int] = _IDS["self_flags"]
+ROOM_LEFT: dict[str, int] = _IDS["room_left"]
 
 
 def encode(op: str, *fields: Any) -> bytes:
@@ -30,4 +35,15 @@ def decode(data: bytes) -> tuple[str, list[Any]]:
     return name, msg[1:]
 
 
-__all__ = ["C2S", "PROTOCOL_VERSION", "S2C", "decode", "encode"]
+__all__ = [
+    "ANIM",
+    "C2S",
+    "ENT",
+    "EV",
+    "PROTOCOL_VERSION",
+    "ROOM_LEFT",
+    "S2C",
+    "SELF_FLAG",
+    "decode",
+    "encode",
+]

@@ -1,0 +1,56 @@
+# Monsters (BALANCE §6). Stats are the final values in their home biome (biome multipliers already applied).
+# Elites multiply hp/dmg and drop more. Every player in range gets their own loot rolls (BALANCE §6.4).
+aggro_radius: 6.5            # tiles; a monster notices you inside this
+leash_radius: 13             # tiles from home; further than this and it gives up and walks back
+wake_radius_chunks: 2        # spawn points wake when a player is this many chunks away
+despawn_after: 60s           # monsters despawn this long after nobody is near
+respawn: 75s                 # a spawn point refills this long after its group is wiped
+elite: { hp: 4.0, dmg: 1.6, scale: 1.3, xp: 5, loot_rolls: 3, knockback_resist: 0.7 }
+
+biomes:
+  meadow: { difficulty: 1, groups_per_chunk: 0.30, roster: { slime: 1.0 }, elite_chance: 0.06, xp: 8, coins: [1, 3] }
+  forest: { difficulty: 2, groups_per_chunk: 0.75, roster: { wolf: 0.55, spider: 0.45 }, elite_chance: 0.08, xp: 22, coins: [3, 6] }
+
+enemies:
+  slime:
+    name: Green Slime
+    archetype: swarmer
+    hp: 24
+    dmg: 5
+    defence: 0
+    speed: 2.6
+    radius: 0.32
+    group: [2, 4]
+    attack: { shape: circle, range: 0.85, trigger: 1.5, windup: 450ms, active: 250ms, recover: 650ms, lunge: 1.2, knockback: 0.5 }
+    loot:
+      - { item: slime_gel, chance: 0.6, qty: [1, 2] }
+    elite_name: Crowned Slime
+  wolf:
+    name: Wolf
+    archetype: chaser
+    hp: 70
+    dmg: 13
+    defence: 4
+    speed: 4.6
+    radius: 0.4
+    group: [2, 3]
+    attack: { shape: line, range: 1.7, width: 0.9, trigger: 2.3, windup: 480ms, active: 200ms, recover: 700ms, lunge: 1.8, knockback: 0.9 }
+    loot:
+      - { item: hide, chance: 0.45, qty: [1, 2] }
+      - { item: wolf_fang, chance: 0.25, qty: [1, 1] }
+    elite_name: Alpha Wolf
+  spider:
+    name: Webspinner
+    archetype: ambusher
+    hp: 60
+    dmg: 15
+    defence: 3
+    speed: 4.0
+    radius: 0.38
+    group: [1, 2]
+    attack: { shape: line, range: 3.0, width: 0.8, trigger: 3.4, windup: 420ms, active: 250ms, recover: 800ms, lunge: 3.0, knockback: 0.6 }
+    poison: { dps: 3, duration: 4s }
+    ambush_radius: 4.5
+    loot:
+      - { item: spider_silk, chance: 0.6, qty: [1, 2] }
+    elite_name: Brood Mother

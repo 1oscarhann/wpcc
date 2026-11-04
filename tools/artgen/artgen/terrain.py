@@ -226,8 +226,44 @@ def cobble_tile(mask: int) -> Canvas:
     return _blob_tile(mask, 1, 63, _cobble_inside, rim_in, rim_out)
 
 
+LEAF = ramp("leaf")
+PINE = ramp("pine")
+WOOD = ramp("wood")
+
+
+def forest_tile(variant: int) -> Canvas:
+    """Whispering Forest floor: calm, shaded moss with the odd fallen leaf or twig (darker than meadow)."""
+    c = Canvas(T, T)
+    for y in range(T):
+        for x in range(T):
+            h = hash2(x, y, 201 + variant * 13)
+            col = LEAF[1] if h < 0.82 else PINE[1] if h < 0.97 else LEAF[2]
+            c.put(x, y, col)
+    for i in range(1 + variant % 2):  # a fallen leaf or two
+        lx = int(hash2(i, variant, 202) * 12) + 2
+        ly = int(hash2(variant, i, 203) * 12) + 2
+        col = (WOOD[2], DIRT[2], WOOD[3])[(i + variant) % 3]
+        c.put(lx, ly, col)
+        c.put(lx + 1, ly, col)
+        c.put(lx + 1, ly + 1, WOOD[1])
+    if variant == 2:  # a twig
+        tx = int(hash2(variant, 7, 204) * 9) + 2
+        ty = int(hash2(7, variant, 205) * 10) + 3
+        for d in range(4):
+            c.put(tx + d, ty + (d > 1), WOOD[1])
+    for i in range(2):  # moss tufts catching the light
+        mx = int(hash2(i, variant, 206) * 12) + 2
+        my = int(hash2(variant, i, 207) * 12) + 2
+        c.put(mx, my, LEAF[2])
+        c.put(mx + 1, my - 1, LEAF[3])
+        c.put(mx + 2, my, LEAF[2])
+    return c
+
+
 def generate() -> dict[str, Canvas]:
     out: dict[str, Canvas] = {}
+    for v in range(4):
+        out[f"tile.forest.{v}"] = forest_tile(v)
     for v in range(4):
         out[f"tile.grass.{v}"] = grass_tile(v)
     for v in range(3):

@@ -33,13 +33,14 @@ It writes `frontend/src/assets/gen/*.png` (atlases), `frontend/src/assets/gen/at
 | `nature.py` | Trees (oak, pine, bushy, 2 sizes), bushes, rocks, stumps, tall grass, flowers |
 | `buildings.py` | One function per building, composed from parts (walls: planks/stone/plaster; roofs: gable/thatch/slate; door, windows, chimney, signs and props). Includes the **level overlay kit** (L2–L5 adornments), **construction scaffold** per footprint, and dust-puff frames. |
 | `characters.py` | **Layered** avatar and villager parts: 2 body types, 6 hair styles, 4 eye styles, 6 outfits. Every part is drawn in *shade-index* colours that the client recolours at runtime (skin, hair, eyes, outfit colour), so the character creator is truly layered. Frames: idle ×2 and walk ×4, for down, up and side. |
+| `creatures.py` | Monsters with squash-and-stretch frames (slime, wolf, spider: idle, move, wind-up, attack, hurt), the elite crown, held weapons (sword, spear), slash arcs, hit sparks and death poofs |
 | `icons.py` | 16×16 icons: every resource, coins, and UI actions (build, upgrade, move, rotate, demolish, undo, close, settings, sound, timer, lock) |
 | `ui.py` | 9-slice parchment panel, wood frame, buttons (normal/hover/pressed/disabled), slot, tooltip, progress bar, tab |
 | `validate.py` | Palette-only check, frame size checks, deterministic-output check (used in CI) |
 
 **Fonts** are the only non-generated visual assets: *Pixelify Sans* (headings) and *Fredoka* (body), both SIL OFL 1.1, self-hosted. They're listed in `CREDITS.md`.
 
-**Audio** is synthesized by `tools/artgen/sfx.py` (chiptune blips for UI, placement, completion), so it's original too. Music and ambience come in later phases, made the same way or composed.
+**Audio** is synthesized at runtime with WebAudio (`frontend/src/game/sfx.ts`, D-047): oscillators and filtered noise for swings, chops, pickups, hits, crits, squishes, growls and level-ups. It's original and costs nothing to download. Music and ambience come in later phases.
 
 ## 2b. Scene and atmosphere (art pass 2)
 
@@ -85,3 +86,13 @@ A hidden route showing:
 - both fonts at every size used.
 
 The Playwright screenshot runner captures it every phase.
+
+## 2c. Avatar Mode (Phases 4–5)
+
+| Piece | What |
+|---|---|
+| Whispering Forest | Dark mossy floor tiles with leaf litter, dense pines, big oaks and birches, ferns, spider webs, logs, mushrooms, sunny clearings and reed-ringed ponds, reached by dirt trails between the plots |
+| Gathering | Trees wobble and shed leaves, rocks spit chips, a small "2/3" counter shows progress; a depleted node turns into a stump or pebbles *for you only* and pops back when it regrows |
+| Loot | Drops pop out, bob with a shadow and fly into you; walking home sends icons arcing into the Town Hall with "+20 Wood" |
+| Combat readability | Red telegraph shapes fill up during a monster's wind-up, which also shivers and reddens the sprite. Hits flash white, spark and pop numbers (gold for crits). Hit-stop (40–60 ms) and a small shake are visual only. Ambushers hide as a faint shimmer |
+| Occlusion | Trees, debris and buildings in front of your hero fade to 40% so you never lose them |

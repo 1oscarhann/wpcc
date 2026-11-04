@@ -47,6 +47,14 @@ Every non-obvious technical or design decision gets a short entry here: what was
 | D-041 | Village scale: buildings are 3×3 / 4×4 tiles (were 2×2 / 3×3), the starting plot is 32×32 (was 24) | Accepted (art pass 2) |
 | D-042 | Soft (non-pixel) light layers on top of the pixel art: ground colour variation, sun patches, cloud shadows, vignette | Accepted (art pass 2) |
 | D-043 | Docs screenshots are 1× JPEG q90 (2× PNGs of the lit scenes were ~1 MB each) | Accepted |
+| D-044 | Aim is sent as a quantised vector (`ax, ay` i8), not an angle, so prediction never needs trig | Accepted (Phase 4) |
+| D-045 | Pre-launch, a mapgen version bump migrates existing realms instead of keeping the old generator | Accepted (Phase 4) |
+| D-046 | Server only steps an avatar on a real input; it never repeats moves on starved ticks | Accepted (Phase 4) |
+| D-047 | SFX are synthesized at runtime with WebAudio instead of shipped WAV files | Accepted (Phase 5) |
+| D-048 | Gathered resources auto-deposit when you walk into your own village | Accepted (Phase 4) |
+| D-049 | Villages are safe zones: monsters never step into a plot frame | Accepted (Phase 5) |
+| D-051 | Netcode verified at 150 and 300 ms of simulated latency: zero corrections. Inputs use a burst-tolerant token bucket | Accepted (Phase 5) |
+| D-050 | Weapon movesets live in `combat.yaml` and loot tables inline in `enemies.yaml` (no separate `weapons.yaml` / `loot_tables.yaml` yet) | Accepted (Phase 5) |
 
 ---
 
@@ -195,3 +203,33 @@ See PLAN §1.3 (P2, P6, P7, P1). Each one trades a little fidelity to the spec f
 
 ### D-042: light layers
 **Decision.** Above the terrain go a tiled multiply layer (lush and dry grass patches several tiles wide), an additive warm "sun" layer, drifting multiply cloud shadows, and a CSS vignette with a warm grade. They're smooth on purpose, the way light works in modern pixel-art games, and they break the tile repetition without adding tile variants.
+
+### D-044: aim as a vector
+**Context.** PROTOCOL planned `aim:u16` (an angle). Client prediction would then need `cos`/`sin`, and those aren't guaranteed to give identical results in CPython and V8.
+**Decision.** INPUT carries `ax, ay` as i8 (like the move stick). The shared step only uses + − × ÷ and `sqrt`, which are exact in both. Golden vectors (`shared/golden/movement.json`, 800 steps covering walls, dodges, combos, lunges and knockback) are replayed bit-for-bit by pytest and vitest.
+
+### D-045: mapgen bumps before launch
+**Decision.** Migration 0003 moves existing realms to mapgen v2 (the Whispering Forest). After launch, a bump keeps the old generator for old realms, as PLAN §2.6 says.
+
+### D-046: no input, no step
+**Context.** The first cut repeated the last move when a player's input queue ran dry (PLAN §2.5). The server then moved avatars the client never predicted, and every late packet caused a correction: visible rubber-banding.
+**Decision.** A tick without input doesn't step that avatar. Two inputs are consumed per tick while catching up (queue > 2). Prediction stays exact; a hidden tab simply stands still.
+
+### D-047: runtime-synthesized SFX
+**Decision.** `frontend/src/game/sfx.ts` builds every sound from oscillators and filtered noise with WebAudio (swing, chop, mine, pickup, coin, deposit, hit, crit, hurt, squish, growl, hiss, poof, KO, potion, level-up). It's original, weighs nothing to download, and is easy to tweak. `tools/artgen/sfx.py` (WAV files) stays an option if we ever want baked sounds.
+
+### D-048: deposit by walking home
+**Decision.** Hand-gathered resources sit in your bag (24 slots) until you walk into your own village square, then fly into storage by themselves (up to the storage cap; the rest stays in the bag with a toast). Rare materials stay in the bag. No button, no menu: going home *is* the deposit.
+
+### D-049: safe villages
+**Decision.** Monsters can't step into any plot frame (+2 tiles), and a chase that would cross one gives up and walks home. Meadow slimes spawn between plots, and wolves and spiders only in the forest band.
+
+### D-050: where combat numbers live
+**Decision.** `combat.yaml` holds the damage formula constants, dodge and stamina rules, and every weapon moveset (sword and spear so far). `enemies.yaml` holds monsters, elites, biome spawn tables and each monster's loot list. A separate `loot_tables.yaml` (nested, weighted) arrives with gear drops in Phase 6.
+
+### D-051: latency test and input limits
+**Context.** PLAN §6 says Phase 4 isn't done until it's been tested at 150 ms. `?lag=150` (dev builds) delays every frame by half that each way, with jitter but strictly in order, like TCP.
+**Result.** A scripted walk with dodges, checking the server state for every acked input against what the client predicted: **zero corrections and zero mismatched fields at 150 ms and at 300 ms**.
+**What the test caught on the way.**
+- The first lag simulator reordered frames (Chromium clamps nested timers), which made the server reject "old" inputs and looked like rubber-banding. WebSockets can't reorder, so the simulator was fixed, not the server.
+- A delayed clump of inputs could trip the flat 45 messages/s gateway limit and lose an input. Inputs now have their own token bucket (25/s sustained, 25 burst) in the room. The generic limit (30/s) covers everything else. The server queue holds 1 s of inputs and catches up 2–3 per tick.

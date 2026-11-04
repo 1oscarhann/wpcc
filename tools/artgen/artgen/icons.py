@@ -193,6 +193,47 @@ def i_starstone(c: Canvas) -> None:
     c.put(7, 5, GOLD[4])
 
 
+def i_spear(c: Canvas) -> None:
+    c.line(2, 14, 11, 5, WOOD[3])
+    c.line(3, 14, 11, 6, WOOD[1])
+    c.line(10, 6, 14, 2, STONE[4])
+    c.line(11, 6, 14, 3, STONE[2])
+    c.put(14, 1, STONE[5])
+    c.line(9, 5, 11, 7, GOLD[2])
+
+
+def i_slime_gel(c: Canvas) -> None:
+    g = ramp("grass")
+    c.ellipse(8, 10, 5.5, 4, g[1])
+    c.ellipse(7.5, 9.5, 4.5, 3.2, g[2])
+    c.ellipse(8, 6, 2.2, 3, g[2])
+    c.put(8, 3, g[3])
+    c.put(6, 8, g[4])
+    c.put(7, 8, g[4])
+    c.put(6, 9, g[3])
+
+
+def i_wolf_fang(c: Canvas) -> None:
+    bone = ramp("cloth_cream")
+    for i in range(10):
+        x = 5 + i * 0.55
+        y = 3 + i
+        w = max(1, 3 - i // 4)
+        c.hline(int(x), int(x) + w, y, bone[3] if i < 7 else bone[2])
+        c.put(int(x) + w, y, bone[1])
+    c.put(10, 13, bone[1])
+    c.hline(4, 9, 3, bone[2])
+
+
+def i_spider_silk(c: Canvas) -> None:
+    silk = ramp("stone")
+    c.ellipse(8, 9, 5, 4.5, silk[4])
+    c.ellipse(7, 8, 3.5, 3, silk[5])
+    for k in range(4):
+        c.line(3 + k * 2, 6 + (k % 2), 6 + k * 2, 13 - (k % 2), silk[3])
+    c.line(12, 7, 15, 2, silk[4])
+
+
 # ── UI icons ───────────────────────────────────────────────────────────────
 
 
@@ -369,7 +410,8 @@ ICONS: dict[str, Callable[[Canvas], None]] = {
     "wood": i_wood, "stone": i_stone, "ore": i_ore, "food": i_food, "herbs": i_herbs, "fish": i_fish,
     "hide": i_hide, "crystal": i_crystal, "planks": i_planks, "bricks": i_bricks, "ingots": i_ingots,
     "leather": i_leather, "bread": i_bread, "potion_base": i_potion_base, "coins": i_coins, "sword": i_sword,
-    "potion_red": i_potion_red, "ironbark": i_ironbark, "starstone": i_starstone,
+    "potion_red": i_potion_red, "ironbark": i_ironbark, "starstone": i_starstone, "spear": i_spear,
+    "slime_gel": i_slime_gel, "wolf_fang": i_wolf_fang, "spider_silk": i_spider_silk,
     "build": u_build, "upgrade": u_upgrade, "move": u_move, "rotate": u_rotate, "undo": u_undo,
     "close": u_close, "demolish": u_demolish, "settings": u_settings, "sound": u_sound, "mute": u_mute,
     "timer": u_timer, "lock": u_lock, "check": u_check, "info": u_info, "star": u_star, "home": u_home,

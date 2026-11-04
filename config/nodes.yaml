@@ -1,0 +1,41 @@
+# Hand-gathering in Avatar Mode (BALANCE §3.3). Swing your weapon at a node; after `hits` swings it gives
+# its yield and is depleted for you (only you) until `respawn`. Yields land in your inventory: bring them
+# home and deposit them at the Town Hall or Storehouse.
+nodes:
+  tree:
+    objects: [obj.oak, obj.birch, obj.pine, obj.apple, obj.big_oak]
+    hits: 3
+    yields: { wood: [6, 10] }
+    respawn: 5m
+    xp: 2
+    sound: chop
+  ancient_oak:                       # big oaks in the Whispering Forest
+    objects: [obj.big_oak]
+    biome: forest
+    hits: 6
+    yields: { wood: [10, 12], ironbark: [1, 2] }
+    respawn: 20m
+    xp: 15
+    sound: chop
+  rock:
+    objects: [obj.rock, obj.rock_big, obj.mossy_rock]
+    hits: 3
+    yields: { stone: [5, 8] }
+    bonus: { ore: { chance: 0.15, qty: [1, 2] } }
+    respawn: 5m
+    xp: 2
+    sound: mine
+  bush:
+    objects: [obj.bush, obj.flower_bush]
+    hits: 1
+    yields: { food: [2, 4] }
+    respawn: 4m
+    xp: 1
+    sound: rustle
+  herbs:
+    objects: [obj.tall_grass, obj.mushrooms]
+    hits: 1
+    yields: { herbs: [3, 5] }
+    respawn: 4m
+    xp: 1
+    sound: rustle
