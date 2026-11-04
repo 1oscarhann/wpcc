@@ -9,6 +9,7 @@ from hearthforge.db.models.accounts import (
     UserRole,
     UserSettings,
 )
+from hearthforge.db.models.crafting import CraftJob, Discovery, DiscoveryKind, JobStatus
 from hearthforge.db.models.economy import LedgerAsset, Transaction, Wallet
 from hearthforge.db.models.infra import (
     AdminAuditLog,
@@ -36,7 +37,10 @@ __all__ = [
     "AvatarLocation",
     "BuildingState",
     "ConfigVersion",
+    "CraftJob",
     "DeathDrop",
+    "Discovery",
+    "DiscoveryKind",
     "Container",
     "ContainerKind",
     "ContainerSlot",
@@ -44,6 +48,7 @@ __all__ = [
     "ItemDef",
     "ItemInstance",
     "ItemOrigin",
+    "JobStatus",
     "LedgerAsset",
     "NodeHarvest",
     "Notification",

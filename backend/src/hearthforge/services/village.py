@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -21,6 +21,10 @@ from hearthforge.core.errors import GameError, NotFound
 from hearthforge.db.base import new_id
 from hearthforge.db.models import (
     BuildingState,
+    CraftJob,
+    Discovery,
+    DiscoveryKind,
+    JobStatus,
     Notification,
     RealmMember,
     Resource,
@@ -28,6 +32,7 @@ from hearthforge.db.models import (
     VillageBuilding,
     Wallet,
 )
+from hearthforge.domain import combos as combos_dom
 from hearthforge.domain import debris as debris_gen
 from hearthforge.domain import mapgen
 from hearthforge.domain.economy import BuildingView, caps_milli, rates_milli, town_hall_level
@@ -50,6 +55,9 @@ class Loaded:
     resources: dict[str, Resource]
     wallet: Wallet | None
     plot_index: int
+    jobs: list[CraftJob] = field(default_factory=list)  # running station jobs
+    discovered: set[str] = field(default_factory=set)  # combo keys this player has found
+    new_discoveries: list[str] = field(default_factory=list)  # found during this request
 
 
 # ── loading & settling ──────────────────────────────────────────────────────
@@ -95,7 +103,26 @@ async def load_locked(
     plot_index = (
         await session.execute(select(RealmMember.plot_index).where(RealmMember.user_id == user_id))
     ).scalar_one()
-    return Loaded(village, buildings, resources, wallet, plot_index)
+    jobs = list(
+        (
+            await session.execute(
+                select(CraftJob)
+                .where(CraftJob.user_id == user_id, CraftJob.status == JobStatus.running)
+                .order_by(CraftJob.completes_at)
+                .with_for_update()
+            )
+        ).scalars()
+    )
+    discovered = set(
+        (
+            await session.execute(
+                select(Discovery.key).where(
+                    Discovery.user_id == user_id, Discovery.kind == DiscoveryKind.combo
+                )
+            )
+        ).scalars()
+    )
+    return Loaded(village, buildings, resources, wallet, plot_index, jobs, discovered)
 
 
 def _views(buildings: list[VillageBuilding]) -> list[BuildingView]:
@@ -119,20 +146,24 @@ def _apply_rates(cfg: GameConfig, ld: Loaded) -> None:
 def settle_village(
     session: AsyncSession, cfg: GameConfig, ld: Loaded, now: datetime
 ) -> list[VillageBuilding]:
-    """Complete every timer that is due (oldest first, with rates changing at each completion), then
-    bring resources up to `now`. Idempotent: a second call finds nothing due."""
-    due = sorted(
-        (
-            b
-            for b in ld.buildings
-            if b.state != BuildingState.active and b.work_completes_at and b.work_completes_at <= now
-        ),
-        key=lambda b: b.work_completes_at,  # type: ignore[arg-type,return-value]
-    )
-    for b in due:
-        at = b.work_completes_at
-        assert at is not None
+    """Complete every timer that is due, oldest first: building work (rates change at each completion)
+    and intermediate crafting jobs (their output lands in storage). Then bring resources up to `now`
+    and record any combo the village now has. Idempotent: a second call finds nothing due."""
+    due: list[tuple[datetime, int, Any]] = []
+    for b in ld.buildings:
+        if b.state != BuildingState.active and b.work_completes_at and b.work_completes_at <= now:
+            due.append((b.work_completes_at, 0, b))
+    for j in ld.jobs:
+        if j.kind == "intermediate" and j.status == JobStatus.running and j.completes_at <= now:
+            due.append((j.completes_at, 1, j))
+    due.sort(key=lambda d: (d[0], d[1]))
+    done: list[VillageBuilding] = []
+    for at, kind, obj in due:
         _settle_resources(ld.resources, at)
+        if kind == 1:
+            _finish_intermediate(session, ld, obj, at)
+            continue
+        b = obj
         b.level += 1
         b.state = BuildingState.active
         b.work_started_at = None
@@ -147,11 +178,50 @@ def settle_village(
                 payload={"building_id": str(b.id), "key": b.building_key, "level": b.level},
             )
         )
+        done.append(b)
     _settle_resources(ld.resources, now)
+    sync_combos(session, cfg, ld)
     if due:
         ld.village.version += 1
         ld.village.updated_at = now
-    return due
+    return done
+
+
+def _finish_intermediate(session: AsyncSession, ld: Loaded, j: CraftJob, at: datetime) -> None:
+    r = ld.resources[j.recipe_key]
+    r.amount_milli += j.quantity * MILLI  # crafted goods may exceed the cap: never lost
+    ledger.log_resource(
+        session,
+        ld.village.user_id,
+        ld.village.realm_id,
+        j.recipe_key,
+        j.quantity * MILLI,
+        ledger.CRAFT_OUTPUT,
+        ref_type="craft_job",
+        ref_id=str(j.id),
+    )
+    j.status = JobStatus.collected
+    j.collected_at = at
+    ld.jobs.remove(j)
+
+
+def combo_nodes(cfg: GameConfig, buildings: list[VillageBuilding]) -> list[combos_dom.Node]:
+    out = []
+    for b in buildings:
+        w, h = rotated_footprint(cfg.buildings[b.building_key].footprint, b.rotation)
+        out.append(combos_dom.Node(str(b.id), b.building_key, b.level, (b.x, b.y, w, h)))
+    return out
+
+
+def sync_combos(session: AsyncSession, cfg: GameConfig, ld: Loaded) -> list[combos_dom.ActiveCombo]:
+    """Active combos; any combo seen for the first time is written down as a discovery (the moment!)."""
+    active = combos_dom.active_combos(cfg.combos.combos, combo_nodes(cfg, ld.buildings))
+    for key in sorted({a.key for a in active} - ld.discovered):
+        session.add(Discovery(user_id=ld.village.user_id, kind=DiscoveryKind.combo, key=key, data={}))
+        ld.discovered.add(key)
+        ld.new_discoveries.append(key)
+        session.add(Notification(user_id=ld.village.user_id, kind="combo.discovered", payload={"combo": key}))
+    return active
 
 
 # ── state for the client ────────────────────────────────────────────────────
@@ -204,6 +274,33 @@ def village_state(cfg: GameConfig, ld: Loaded, now: datetime) -> dict[str, Any]:
         "debris": ld.village.debris or [],
         "gate": list(plots.gate(cfg, ld.plot_index)),
         "water": [[plot.pond.x, plot.pond.y, plot.pond.w, plot.pond.h]],
+        "combos": [
+            {
+                "key": a.key,
+                "name": cfg.combos.combos[a.key].name,
+                "buildings": list(a.building_ids),
+                "tier": a.tier,
+                "unlocks": cfg.combos.combos[a.key].unlocks,
+            }
+            for a in combos_dom.active_combos(cfg.combos.combos, combo_nodes(cfg, ld.buildings))
+        ],
+        "discovered": sorted(ld.discovered),
+        "new_discoveries": list(ld.new_discoveries),
+        "jobs": [job_view(j) for j in ld.jobs],
+    }
+
+
+def job_view(j: CraftJob) -> dict[str, Any]:
+    return {
+        "id": str(j.id),
+        "station_id": str(j.station_building_id),
+        "kind": j.kind,
+        "recipe": j.recipe_key,
+        "quantity": j.quantity,
+        "tier": j.tier,
+        "rares": list(j.rare_inputs or []),
+        "started_at_ms": to_ms(j.started_at),
+        "completes_at_ms": to_ms(j.completes_at),
     }
 
 
@@ -249,7 +346,13 @@ def _raise_placement(errors: list[str]) -> None:
 
 
 async def _pay(
-    session: AsyncSession, cfg: GameConfig, ld: Loaded, cost: dict[str, int], reason: str, ref_id: str
+    session: AsyncSession,
+    cfg: GameConfig,
+    ld: Loaded,
+    cost: dict[str, int],
+    reason: str,
+    ref_id: str,
+    ref_type: str = "building",
 ) -> dict[str, int]:
     """Check and spend a cost dict (resources + coins). Rare item costs are not wired until Phase 4."""
     missing = {}
@@ -270,7 +373,7 @@ async def _pay(
     for key, qty in cost.items():
         if key == "coins":
             assert ld.wallet is not None
-            await ledger.change_coins(session, ld.wallet, -qty, reason, ref_type="building", ref_id=ref_id)
+            await ledger.change_coins(session, ld.wallet, -qty, reason, ref_type=ref_type, ref_id=ref_id)
         else:
             ld.resources[key].amount_milli -= qty * MILLI
             ledger.log_resource(
@@ -280,14 +383,23 @@ async def _pay(
                 key,
                 -qty * MILLI,
                 reason,
-                ref_type="building",
+                ref_type=ref_type,
                 ref_id=ref_id,
             )
     return dict(cost)
 
 
+pay = _pay
+
+
 async def _refund(
-    session: AsyncSession, ld: Loaded, paid: dict[str, int], fraction: float, reason: str, ref_id: str
+    session: AsyncSession,
+    ld: Loaded,
+    paid: dict[str, int],
+    fraction: float,
+    reason: str,
+    ref_id: str,
+    ref_type: str = "building",
 ) -> dict[str, int]:
     out = {}
     for key, qty in paid.items():
@@ -297,7 +409,7 @@ async def _refund(
         out[key] = amount
         if key == "coins":
             assert ld.wallet is not None
-            await ledger.change_coins(session, ld.wallet, amount, reason, ref_type="building", ref_id=ref_id)
+            await ledger.change_coins(session, ld.wallet, amount, reason, ref_type=ref_type, ref_id=ref_id)
         elif key in ld.resources:
             ld.resources[key].amount_milli += amount * MILLI  # refunds may exceed the cap; never lost
             ledger.log_resource(
@@ -307,10 +419,13 @@ async def _refund(
                 key,
                 amount * MILLI,
                 reason,
-                ref_type="building",
+                ref_type=ref_type,
                 ref_id=ref_id,
             )
     return out
+
+
+refund = _refund
 
 
 def _remember(ld: Loaded, cfg: GameConfig, now: datetime, op: str, **data: Any) -> None:
@@ -442,6 +557,7 @@ async def move(
     prev = {"x": b.x, "y": b.y, "rotation": b.rotation}
     b.x, b.y, b.rotation = x, y, rotation
     _remember(ld, cfg, now, "move", building_id=building_id, prev=prev)
+    sync_combos(session, cfg, ld)
     touch(ld, now)
     return ld
 
@@ -453,6 +569,8 @@ async def demolish(
     settle_village(session, cfg, ld, now)
     b = _find(ld, building_id)
     bdef = cfg.buildings[b.building_key]
+    if any(j.station_building_id == b.id for j in ld.jobs):
+        raise GameError("station_busy", f"The {bdef.cfg.name} is still working on a job. Cancel it first.")
     if not bdef.cfg.demolishable:
         raise GameError("not_demolishable", f"The {bdef.cfg.name} can't be demolished.")
     if b.state != BuildingState.active:
@@ -653,6 +771,7 @@ async def undo(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: 
         raise GameError("nothing_to_undo", "There's nothing to undo.")
     ld.village.last_action = None
     _apply_rates(cfg, ld)
+    sync_combos(session, cfg, ld)
     touch(ld, now)
     return ld
 
@@ -696,7 +815,7 @@ async def preview(
     rotation: int,
     move_id: str | None,
 ) -> dict[str, Any]:
-    """Read-only placement check for the ghost (D-013). Combos join in Phase 6."""
+    """Read-only placement check for the ghost (D-013), plus the combos it would form (P17)."""
     village = (await session.execute(select(Village).where(Village.user_id == user_id))).scalar_one()
     buildings = list(
         (
@@ -718,12 +837,36 @@ async def preview(
     if move_id is None and key in cfg.buildings:
         th = town_hall_level(_views(buildings))
         errors += limit_errors(cfg, key, th, sum(1 for b in buildings if b.building_key == key))
+    combos: list[dict[str, Any]] = []
+    mystery = 0
+    if not errors and key in cfg.buildings:
+        # P17: discovered combos by name, undiscovered ones only as a count (no secrets leak)
+        before = combo_nodes(cfg, buildings)
+        w, h = rotated_footprint(cfg.buildings[key].footprint, rotation)
+        moved = next((n for n in before if n.id == move_id), None)
+        ghost = combos_dom.Node(move_id or "ghost", key, max(1, moved.level if moved else 1), (x, y, w, h))
+        after = [n for n in before if n.id != move_id] + [ghost]
+        discovered = set(
+            (
+                await session.execute(
+                    select(Discovery.key).where(
+                        Discovery.user_id == user_id, Discovery.kind == DiscoveryKind.combo
+                    )
+                )
+            ).scalars()
+        )
+        for ck in combos_dom.new_combo_keys(cfg.combos.combos, before, after):
+            if ck in discovered:
+                c = cfg.combos.combos[ck]
+                combos.append({"key": ck, "name": c.name, "unlocks": c.unlocks})
+            else:
+                mystery += 1
     return {
         "valid": not errors,
         "errors": errors,
         "reason": ERROR_TEXT.get(errors[0]) if errors else None,
-        "combos": [],
-        "mystery": 0,
+        "combos": combos,
+        "mystery": mystery,
     }
 
 
@@ -749,6 +892,11 @@ async def fast_forward(session: AsyncSession, user_id: uuid.UUID, seconds: float
             work_started_at=VillageBuilding.work_started_at - delta,
             work_completes_at=VillageBuilding.work_completes_at - delta,
         )
+    )
+    await session.execute(
+        update(CraftJob)
+        .where(CraftJob.user_id == user_id, CraftJob.status == JobStatus.running)
+        .values(started_at=CraftJob.started_at - delta, completes_at=CraftJob.completes_at - delta)
     )
     await session.execute(
         update(ScheduledEvent)

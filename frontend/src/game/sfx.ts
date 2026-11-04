@@ -117,6 +117,21 @@ const SOUNDS: Record<string, (c: AudioContext, o: AudioNode, t: number) => void>
   ko: (c, o, t) => [392, 330, 262, 196].forEach((f, i) => tone(c, o, "triangle", f, f * 0.98, t + i * 0.12, 0.2, 0.12)),
   potion: (c, o, t) => [0, 1, 2, 3].forEach((i) => tone(c, o, "sine", 400 + i * 160, 700 + i * 160, t + i * 0.06, 0.08, 0.1)),
   throw: (c, o, t) => noise(c, o, t, 0.25, 0.3, "bandpass", 2400, 900, 2),
+  clang: (c, o, t) => {
+    tone(c, o, "triangle", 1560, 1480, t, 0.22, 0.06);
+    tone(c, o, "square", 780, 760, t, 0.06, 0.04);
+    noise(c, o, t, 0.04, 0.12, "highpass", 3000, 2000);
+  },
+  saw: (c, o, t) => noise(c, o, t, 0.2, 0.12, "bandpass", 1200, 1800, 3),
+  fanfare: (c, o, t) => {
+    [523, 659, 784].forEach((f, i) => tone(c, o, "square", f, f, t + i * 0.11, 0.16, 0.07));
+    [1047, 1319, 1568].forEach((f) => tone(c, o, "triangle", f, f, t + 0.36, 0.7, 0.06));
+  },
+  reveal: (c, o, t) => {
+    noise(c, o, t, 0.5, 0.15, "bandpass", 600, 4000, 1.5);
+    [784, 988, 1175, 1568].forEach((f, i) => tone(c, o, "triangle", f, f, t + 0.25 + i * 0.07, 0.25, 0.07));
+  },
+  shimmer: (c, o, t) => [1760, 2093, 2637].forEach((f, i) => tone(c, o, "sine", f, f * 1.01, t + i * 0.05, 0.18, 0.03)),
   telegraph: (c, o, t) => tone(c, o, "triangle", 880, 700, t, 0.1, 0.05),
 };
 

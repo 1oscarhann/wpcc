@@ -47,8 +47,9 @@ def test_level_curve_derives_costs() -> None:
     assert lc.level(5).time_s == 2400
 
 
-def test_gates_convert_intermediates_and_drop_rares() -> None:
-    cfg = load_config(REPO_ROOT / "config")
+def test_gates_convert_intermediates_and_drop_rares(cfg_dir: Path) -> None:
+    edit(cfg_dir, "game", lambda d: d["gates"].update(intermediates_enabled=False, rare_costs_enabled=False))
+    cfg = load_config(cfg_dir)
     th4 = cfg.buildings["town_hall"].level(4).cost
     assert "planks" not in th4 and "ironbark" not in th4
     assert th4["wood"] == 1600 and th4["stone"] == 1400

@@ -1,24 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../../api/client";
+import { useEffect, useRef, useState } from "react";
 import { leaveAvatar } from "../../net/room";
 import { touchInput } from "../../net/touch";
 import { BTN } from "../../sim/motion";
-import { useAvatar, type InvSlot } from "../../state/avatar";
+import { useAvatar } from "../../state/avatar";
 import { useSession } from "../../state/session";
-import { toast } from "../../state/toasts";
+import { itemIcon } from "../../game/items";
 import { Icon } from "../components/kit";
+import { Bag } from "./Bag";
 
 const KO_FLAG = 2;
-
-function iconFor(key: string): string {
-  const cfg = useSession.getState().config;
-  return (cfg?.items[key]?.icon ?? cfg?.resources[key]?.icon ?? "icon.info").replace(/^icon\./, "");
-}
-
-function nameFor(key: string): string {
-  const cfg = useSession.getState().config;
-  return cfg?.items[key]?.name ?? cfg?.resources[key]?.name ?? key;
-}
 
 function Bar({ value, max, color, label, height = 14 }: { value: number; max: number; color: string; label?: string; height?: number }) {
   const pct = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
@@ -80,91 +70,12 @@ function Hotbar({ touch }: { touch: boolean }) {
   );
   return (
     <div className="hud-bar av-hotbar" role="toolbar" aria-label="Actions">
-      {slot("light", weapon.type === "spear" ? "spear" : "sword", "Attack / gather", "LMB")}
+      {slot("light", weapon.key ? itemIcon(weapon.key, weapon.tier) : weapon.type === "spear" ? "spear" : "sword", "Attack / gather", "LMB")}
       {slot("heavy", weapon.type === "spear" ? "spear" : "sword", "Heavy attack (stamina)", "RMB", <span className="av-tag">!!</span>)}
       {slot("ability", ability === "throw" ? "spear" : "rotate", ability === "throw" ? "Spear throw" : "Spin attack", "Q",
         <Cooldown left={abCd} max={abCdMax} />)}
       {slot("dodge", "move", "Dodge roll", "SPACE", <Cooldown left={dodgeCd} max={13} />)}
       {slot("potion", "potion_red", "Healing potion", "1", <span className="av-count">{potions}</span>)}
-    </div>
-  );
-}
-
-function BagPanel({ onClose }: { onClose: () => void }) {
-  const inv = useAvatar((s) => s.inv);
-  const cap = useAvatar((s) => s.invCap);
-  const [equip, setEquip] = useState<Record<number, { item: string; qty: number; rarity?: string }>>({});
-  const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => {
-    const r = await api<{ equipment: { slots: { slot: number; item: string; qty: number; rarity?: string }[] } }>("/api/inventory");
-    setEquip(Object.fromEntries(r.equipment.slots.map((s) => [s.slot, s])));
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  const config = useSession((s) => s.config)!;
-  const move = async (src: [string, number], dst: [string, number]) => {
-    setBusy(true);
-    try {
-      await api("/api/inventory/move", {
-        method: "POST",
-        body: { src: { kind: src[0], slot: src[1] }, dst: { kind: dst[0], slot: dst[1] } },
-      });
-      await load();
-    } catch (e) {
-      toast(e instanceof Error ? e.message : "That didn't work.", "bad");
-    } finally {
-      setBusy(false);
-    }
-  };
-  const bySlot = new Map<number, InvSlot>(inv.map((s) => [s[0], s]));
-  const firstFree = () => Array.from({ length: cap }, (_, i) => i).find((i) => !bySlot.has(i));
-  const clickInv = (s: InvSlot) => {
-    const cat = config.items[s[1]]?.category;
-    if (cat === "weapon") void move(["inventory", s[0]], ["equipment", 0]);
-    else if (cat === "consumable") void move(["inventory", s[0]], ["equipment", 4]);
-  };
-  const clickEquip = (slot: number) => {
-    const free = firstFree();
-    if (free === undefined) return toast("Your bag is full.", "bad");
-    void move(["equipment", slot], ["inventory", free]);
-  };
-  const resources = config.resources;
-  return (
-    <div className="panel av-bag" role="dialog" aria-label="Bag">
-      <div className="row" style={{ marginBottom: 8 }}>
-        <span className="ribbon">Bag</span>
-        <span className="grow" />
-        <button className="btn danger small icon-only" onClick={onClose} aria-label="Close bag"><Icon name="close" /></button>
-      </div>
-      <div className="row av-equip" style={{ gap: 8, marginBottom: 10 }}>
-        {[0, 4].map((slot) => {
-          const e = equip[slot];
-          return (
-            <button key={slot} className="slot av-cell equip" disabled={busy || !e} onClick={() => clickEquip(slot)}
-              title={e ? `${nameFor(e.item)} (click to unequip)` : slot === 0 ? "Weapon" : "Quick-slot"}>
-              {e ? <Icon name={iconFor(e.item)} scale={2} /> : <span className="small muted">{slot === 0 ? "Weapon" : "Potion"}</span>}
-              {e && e.qty > 1 && <span className="av-qty">{e.qty}</span>}
-            </button>
-          );
-        })}
-        <span className="small muted" style={{ maxWidth: 260 }}>
-          Click a weapon to equip it. Wood, stone and other resources go into storage when you walk home.
-        </span>
-      </div>
-      <div className="av-grid">
-        {Array.from({ length: cap }, (_, i) => {
-          const s = bySlot.get(i);
-          const isRes = s && resources[s[1]];
-          return (
-            <button key={i} className={`slot av-cell ${isRes ? "res" : ""}`} disabled={busy || !s} onClick={() => s && clickInv(s)}
-              title={s ? `${nameFor(s[1])} ×${s[2]}` : "Empty"}>
-              {s && <Icon name={iconFor(s[1])} scale={2} />}
-              {s && s[2] > 1 && <span className="av-qty">{s[2]}</span>}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -325,7 +236,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
         <Hotbar touch={touch} />
       </div>
       {touch && <TouchControls />}
-      {bagOpen && <BagPanel onClose={() => set({ bagOpen: false })} />}
+      {bagOpen && <Bag onClose={() => set({ bagOpen: false })} />}
     </div>
   );
 }

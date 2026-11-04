@@ -124,7 +124,7 @@ buildings:
 
   forge:
     name: Forge
-    description: Smelts ingots and forges weapons when placed next to the right buildings.
+    description: Smelts ingots. Placed next to the right buildings, it forges weapons and armour.
     category: crafting
     rare_group: crafting
     footprint: [3, 3]
@@ -140,3 +140,13 @@ buildings:
     footprint: [3, 3]
     max_count: [0, 1, 1, 1, 1]
     base_cost: { wood: 120, stone: 60 }
+
+  tannery:
+    name: Tannery
+    description: Cures hides into leather. Leatherworkers like a workshop next door.
+    category: crafting
+    rare_group: crafting
+    unlock_town_hall: 3
+    footprint: [3, 3]
+    max_count: [0, 0, 1, 1, 1]
+    base_cost: { wood: 100, stone: 40, hide: 20 }

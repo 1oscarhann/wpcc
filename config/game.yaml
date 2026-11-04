@@ -15,7 +15,7 @@ refunds:
 # Feature gates for systems that ship in later phases. While a gate is off the
 # loader rewrites costs so the game stays playable (see DECISIONS D-034).
 gates:
-  intermediates_enabled: false   # Phase 6: planks/bricks in costs. Off → paid as 2 wood / 2 stone each
+  intermediates_enabled: true    # planks/bricks in costs from level 3 (the Workshop makes them since Phase 6)
   rare_costs_enabled: false      # Phase 4+: rare materials in costs. Off → requirement dropped
   villagers_enabled: false       # Phase 14: staffing. Off → every building counts as fully staffed
 

@@ -33,6 +33,9 @@ FILES: dict[str, type[BaseModel]] = {
     "nodes": s.NodesCfg,
     "combat": s.CombatCfg,
     "enemies": s.EnemiesCfg,
+    "combos": s.CombosCfg,
+    "recipes": s.RecipesCfg,
+    "forging": s.ForgingCfg,
 }
 
 
@@ -93,6 +96,9 @@ class GameConfig:
     nodes: s.NodesCfg
     combat: s.CombatCfg
     enemies: s.EnemiesCfg
+    combos: s.CombosCfg
+    recipes: s.RecipesCfg
+    forging: s.ForgingCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -222,6 +228,9 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     nodes: s.NodesCfg = parsed["nodes"]
     combat: s.CombatCfg = parsed["combat"]
     enemies: s.EnemiesCfg = parsed["enemies"]
+    combos: s.CombosCfg = parsed["combos"]
+    recipes: s.RecipesCfg = parsed["recipes"]
+    forging: s.ForgingCfg = parsed["forging"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -387,6 +396,61 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if not mapgen.plot.ring_radius + mapgen.plot.frame < mapgen.forest.radius < mapgen.map_size // 2:
         errors.append("mapgen.yaml:forest.radius: must sit between the plot ring and the map edge")
 
+    # ── combos / recipes / forging ────────────────────────────────────────────
+    for ck, combo in combos.combos.items():
+        where = f"combos.yaml:combos.{ck}"
+        for bk in combo.buildings:
+            if bk not in bcfg.buildings:
+                errors.append(f"{where}.buildings: unknown building '{bk}'")
+        if len(set(combo.buildings)) != len(combo.buildings):
+            errors.append(f"{where}.buildings: a building can only appear once")
+        for gk in combo.unlocks:
+            g = recipes.gear.get(gk)
+            if g is None:
+                errors.append(f"{where}.unlocks: '{gk}' has no gear recipe in recipes.yaml")
+            elif g.station not in combo.buildings:
+                errors.append(
+                    f"{where}.unlocks: '{gk}' is forged at '{g.station}', which isn't in this combo"
+                )
+    unlocked = {gk for c in combos.combos.values() for gk in c.unlocks}
+    for gk, g in recipes.gear.items():
+        where = f"recipes.yaml:gear.{gk}"
+        if gk not in items or items[gk].stackable:
+            errors.append(f"{where}: needs a non-stackable item '{gk}' in items.yaml")
+        if g.station not in bcfg.buildings:
+            errors.append(f"{where}.station: unknown building '{g.station}'")
+        if gk not in unlocked:
+            errors.append(f"{where}: no combo unlocks it")
+        for rk in list(g.copper) + list(g.base):
+            if rk not in res.resources:
+                errors.append(f"{where}: unknown resource '{rk}'")
+        if items.get(gk) is not None and items[gk].category == "armour" and gk not in forging.armour:
+            errors.append(f"forging.yaml:armour: missing defence table for '{gk}'")
+    for ik, rec in recipes.intermediates.items():
+        where = f"recipes.yaml:intermediates.{ik}"
+        if ik not in res.resources:
+            errors.append(f"{where}: output must be a resource")
+        if rec.station not in bcfg.buildings:
+            errors.append(f"{where}.station: unknown building '{rec.station}'")
+        for rk in rec.inputs:
+            if rk not in res.resources:
+                errors.append(f"{where}.inputs: unknown resource '{rk}'")
+    for sk, slots in recipes.job_slots.items():
+        if sk != "default" and sk not in bcfg.buildings:
+            errors.append(f"recipes.yaml:job_slots.{sk}: unknown building")
+        if len(slots) != 5:
+            errors.append(f"recipes.yaml:job_slots.{sk}: needs 5 entries")
+    if [r.key for r in forging.rarities] != ["common", "uncommon", "rare", "epic", "legendary"]:
+        errors.append("forging.yaml:rarities: must be common, uncommon, rare, epic, legendary in that order")
+    for mk, mod in forging.modifiers.items():
+        if mk not in items or items[mk].category != "rare_material":
+            errors.append(f"forging.yaml:modifiers.{mk}: must be a rare_material item")
+        if not 0 <= mod.range[0] <= mod.range[1]:
+            errors.append(f"forging.yaml:modifiers.{mk}.range: must be [low, high]")
+    for ak, table in forging.armour.items():
+        if len(table) != 5:
+            errors.append(f"forging.yaml:armour.{ak}: needs 5 entries")
+
     if mapgen.map_size % mapgen.chunk_size:
         errors.append("mapgen.yaml:map_size: must be a multiple of chunk_size")
 
@@ -410,6 +474,9 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         nodes=nodes,
         combat=combat,
         enemies=enemies,
+        combos=combos,
+        recipes=recipes,
+        forging=forging,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

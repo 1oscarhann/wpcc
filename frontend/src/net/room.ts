@@ -67,6 +67,7 @@ const TOASTS: Record<string, string> = {
   bag_full: "Your bag is full! Head home to drop things off.",
   storage_full: "Storage is full. Upgrade your Storehouse!",
   no_potions: "No potions left.",
+  weapon_dull: "Your weapon has gone dull (−30% damage). Repair it at your Forge.",
 };
 
 export class RoomClient {

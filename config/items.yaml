@@ -12,6 +12,28 @@ items:
     stackable: false
     weapon_type: spear
     icon: icon.spear
+  spear:
+    name: Spear
+    category: weapon
+    stackable: false
+    weapon_type: spear
+    icon: icon.spear
+  sword:
+    name: Sword
+    category: weapon
+    stackable: false
+    weapon_type: sword
+    icon: icon.sword
+  leather_armour:
+    name: Leather Armour
+    category: armour
+    stackable: false
+    icon: icon.leather_armour
+  plate_armour:
+    name: Plate Armour
+    category: armour
+    stackable: false
+    icon: icon.plate_armour
   slime_gel:
     name: Slime Gel
     category: material

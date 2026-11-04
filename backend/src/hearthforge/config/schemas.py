@@ -540,3 +540,85 @@ class EnemiesCfg(Strict):
     elite: EliteCfg
     biomes: dict[Biome, BiomeSpawns]
     enemies: dict[str, EnemyCfg]
+
+
+# ── combos.yaml (secret) ─────────────────────────────────────────────────────
+
+
+class ComboCfg(Strict):
+    name: str
+    buildings: list[str] = Field(min_length=2, max_length=3)
+    unlocks: list[str] = Field(min_length=1)
+    legendary_eligible: bool = False
+    hint: str
+
+
+class CombosCfg(Strict):
+    combos: dict[str, ComboCfg]
+
+
+# ── recipes.yaml ─────────────────────────────────────────────────────────────
+
+
+class IntermediateRecipe(Strict):
+    station: str
+    inputs: dict[str, int]
+    time: Duration  # per unit
+    max_batch: int = Field(ge=1, le=100)
+
+
+class GearRecipe(Strict):
+    station: str
+    copper: dict[str, int]
+    base: dict[str, int]
+
+
+class RecipesCfg(Strict):
+    intermediates: dict[str, IntermediateRecipe]
+    job_slots: dict[str, list[int]]
+    gear: dict[str, GearRecipe]
+
+
+# ── forging.yaml ─────────────────────────────────────────────────────────────
+
+
+class TierCfg(Strict):
+    name: str
+    material_mult: float = Field(ge=0)
+    coins: int = Field(ge=0)
+    crystal: int = Field(ge=0)
+    time: Duration
+    durability: int = Field(ge=1)
+    repair_coins: float = Field(ge=0)
+
+
+class RarityCfg(Strict):
+    key: Literal["common", "uncommon", "rare", "epic", "legendary"]
+    weight: float = Field(gt=0)
+    slots: int = Field(ge=0, le=4)
+    value_floor: float = Field(ge=0, le=1)
+
+
+class ModifierCfg(Strict):
+    key: str
+    name: str
+    effect: Literal["knockback", "crit"]
+    range: tuple[float, float]
+
+
+class SalvageCfg(Strict):
+    fraction: float = Field(ge=0, le=1)
+    rare_return: float = Field(ge=0, le=1)
+
+
+class ForgingCfg(Strict):
+    tiers: list[TierCfg] = Field(min_length=5, max_length=5)
+    rarities: list[RarityCfg] = Field(min_length=5, max_length=5)
+    luck_k: float = Field(ge=0)
+    max_rare_inputs: int = Field(ge=0, le=5)
+    modifiers: dict[str, ModifierCfg]
+    polished: float = Field(ge=0, le=0.5)
+    dull_damage: float = Field(gt=0, le=1)
+    repair_ingots_per: int = Field(ge=1)
+    salvage: SalvageCfg
+    armour: dict[str, list[int]]

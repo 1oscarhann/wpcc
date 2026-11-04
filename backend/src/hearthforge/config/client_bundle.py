@@ -78,6 +78,26 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
                 for k, w in cfg.combat.weapons.items()
             },
         },
+        # Phase 6 (public parts only: combos.yaml is secret, P17)
+        "recipes": {
+            "intermediates": {
+                k: {
+                    "station": r.station,
+                    "inputs": r.inputs,
+                    "seconds_per_unit": r.time,
+                    "max_batch": r.max_batch,
+                }
+                for k, r in cfg.recipes.intermediates.items()
+            },
+            "gear": {k: {"station": g.station} for k, g in cfg.recipes.gear.items()},
+        },
+        "forging": {
+            "tiers": [{"name": t.name, "durability": t.durability} for t in cfg.forging.tiers],
+            "rarities": [r.key for r in cfg.forging.rarities],
+            "modifiers": {k: {"name": m.name, "effect": m.effect} for k, m in cfg.forging.modifiers.items()},
+            "max_rare_inputs": cfg.forging.max_rare_inputs,
+            "armour": cfg.forging.armour,
+        },
         "enemies": {
             k: {"name": e.name, "elite_name": e.elite_name, "archetype": e.archetype, "radius": e.radius}
             for k, e in cfg.enemies.enemies.items()

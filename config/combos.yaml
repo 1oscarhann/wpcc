@@ -1,0 +1,26 @@
+# Building combos (BALANCE §5.4, P17). SECRET: never sent in the client bundle. Players learn them by
+# discovery (or the recipe book's hints). Buildings must touch edge to edge (orthogonal adjacency, not
+# corners); a 3-building combo must be one connected group. Gear tier = the lowest level among the
+# combo's buildings. Two-building combos cap at Epic unless `legendary_eligible` (P8).
+combos:
+  forge_lumber:
+    name: Spearwright
+    buildings: [forge, lumber_camp]
+    unlocks: [spear]
+    hint: Something that burns, beside something that grows tall.
+  forge_mine:
+    name: Bladesmith
+    buildings: [forge, mine]
+    unlocks: [sword]
+    hint: Fire, right beside the dark where metal sleeps.
+  tannery_workshop:
+    name: Leatherworks
+    buildings: [tannery, workshop]
+    unlocks: [leather_armour]
+    hint: Cured hides want a sturdy bench next door.
+  forge_mine_tannery:
+    name: Armoury
+    buildings: [forge, mine, tannery]
+    unlocks: [plate_armour]
+    legendary_eligible: true
+    hint: Fire, ore and leather, all touching.

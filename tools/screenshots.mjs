@@ -1,6 +1,7 @@
 // Playwright screenshot runner: `node tools/screenshots.mjs <phase> [baseUrl]`
 // Saves desktop (1440×900) and mobile (390×844) shots to docs/screenshots/phase-N/.
 // Needs the API + Vite dev server running (see README).
+import { execSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -273,11 +274,113 @@ PHASES[5] = async (page, kind) => {
   await shot(page, "09-bag", kind, { wait: 600 });
 };
 
+// ── Phase 6: combos & forging ────────────────────────────────────────────
+function hf(args) {
+  execSync(`uv run hf ${args}`, { cwd: join(ROOT, "backend"), env: { ...process.env, UV_SYSTEM_CERTS: "1" }, stdio: "ignore" });
+}
+
+const refresh = (page) => page.evaluate(() => window.__hfVillage.getState().fetch());
+
+async function apiPost(page, path, body) {
+  return page.evaluate(
+    async ([p, b]) => {
+      const csrf = document.cookie.split("; ").find((c) => c.startsWith("hf_csrf="))?.split("=")[1];
+      const r = await fetch(p, { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": csrf }, body: JSON.stringify(b) });
+      return r.json();
+    },
+    [path, body],
+  );
+}
+
+async function tapTile(page, tx, ty) {
+  const box = await page.locator("canvas").first().boundingBox();
+  const p = await page.evaluate(([x, y]) => window.__hfGame.frameTileToScreen(x, y), [tx, ty]);
+  return { x: box.x + p.x, y: box.y + p.y };
+}
+
+PHASES[6] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  const name = await signupFlow(page, kind);
+  hf(`test-account ${name}`);
+  hf(`grant ${name} --coins 3000 --res wood=1200 --res stone=1200 --res ore=300 --item ironbark=2`);
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(1500);
+  // a free spot for a forge with room for a lumber camp right beside it
+  const spot = await page.evaluate(async () => {
+    const ok = async (k, x, y) => (await (await fetch(`/api/village/preview?key=${k}&x=${x}&y=${y}`)).json()).valid;
+    for (let y = 25; y <= 33; y++) {
+      for (let x = 10; x <= 27; x++) {
+        if ((await ok("forge", x, y)) && (await ok("lumber_camp", x + 3, y))) return [x, y];
+      }
+    }
+    return null;
+  });
+  if (!spot) throw new Error("no spot for the forge");
+  const [fx, fy] = spot;
+  await apiPost(page, "/api/village/buildings", { key: "forge", x: fx, y: fy, rotation: 0 });
+  hf(`fast-forward ${name} 30s`);
+  await refresh(page);
+  await page.evaluate(([x, y]) => window.__hfGame.devFocusTile?.(x, y), [fx + 3, fy + 1]);
+  await page.waitForTimeout(800);
+
+  // the ghost of a lumber camp beside the forge resonates
+  await page.getByRole("button", { name: /^Build/ }).click();
+  await page.getByRole("button", { name: /Lumber Camp/ }).click();
+  const at = await tapTile(page, fx + 4.5, fy + 1.5);
+  if (mobile) await page.mouse.click(at.x, at.y);
+  else await page.mouse.move(at.x, at.y);
+  await page.waitForTimeout(700);
+  await shot(page, "01-resonance", kind, { wait: 300 });
+  if (mobile) await page.getByRole("button", { name: "Place here" }).click();
+  else await page.mouse.click(at.x, at.y);
+  await page.waitForTimeout(500);
+  hf(`fast-forward ${name} 30s`);
+  await refresh(page);
+  await shot(page, "02-discovery", kind, { wait: 950 });
+  await page.getByText("Combo discovered!").first().waitFor({ timeout: 8000 });
+  await shot(page, "03-discovery-card", kind, { wait: 700 });
+  await page.getByRole("button", { name: "Amazing!" }).click();
+
+  await page.getByRole("button", { name: "Recipe Book" }).click();
+  await page.getByText(/Found \d of \d combos/).waitFor();
+  await shot(page, "04-recipe-book", kind, { wait: 600 });
+  await page.keyboard.press("Escape");
+
+  // the forge: combo chip, craft panel, forge with an ironbark
+  const fc = await tapTile(page, fx + 1.5, fy + 1.2);
+  await page.mouse.click(fc.x, fc.y);
+  await shot(page, "05-forge-selected", kind, { wait: 600 });
+  await page.getByRole("button", { name: /^Craft/ }).click();
+  await page.getByText("Forge gear").waitFor();
+  await page.getByRole("button", { name: /Heavy/ }).first().click();
+  await shot(page, "06-craft-panel", kind, { wait: 500 });
+  await page.getByRole("button", { name: /Forge!/ }).click();
+  await page.waitForTimeout(500);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await shot(page, "07-forging", kind, { wait: 1500 });
+  hf(`fast-forward ${name} 20s`);
+  await refresh(page);
+  await shot(page, "08-ready", kind, { wait: 1200 });
+  await page.mouse.click(fc.x, fc.y);
+  await page.getByRole("button", { name: /^Craft/ }).click();
+  await page.getByRole("button", { name: /Collect/ }).click();
+  await page.getByText("Fresh from the forge").waitFor();
+  await shot(page, "09-reveal", kind, { wait: 900 });
+  await page.getByRole("button", { name: "Nice!" }).click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Bag", exact: true }).click();
+  await page.locator('button[title^="Copper Spear"]').first().click();
+  await shot(page, "10-bag-gear", kind, { wait: 500 });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);
   const page = await ctx.newPage();
-  page.on("pageerror", (e) => console.error(`[${kind}] page error:`, e.message));
+  page.on("pageerror", (e) => console.error(`[${kind}] page error:`, e.message, process.env.STACK ? e.stack : ""));
   page.on("console", (m) => m.type() === "error" && console.error(`[${kind}] console:`, m.text()));
   try {
     await PHASES[phase](page, kind);

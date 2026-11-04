@@ -164,6 +164,7 @@ class RoomManager:
             inv_cap=loadout["inv_capacity"],
             home_rect=(ox + lo, oy + lo, size, size),
             home_door=door,
+            armour=int(loadout.get("armour", 0)),
         )
 
     async def leave(self, user_id: uuid.UUID, conn: Conn | None = None) -> None:
@@ -194,7 +195,12 @@ class RoomManager:
         room, p = found
         async with self.st.sessionmaker() as s:
             lo = await inventory.loadout(s, self.st.config, user_id)
+        if p.pending.durability and lo["weapon"].get("instance_id") == p.weapon.get("instance_id"):
+            lo["weapon"]["durability"] = p.weapon.get(
+                "durability", lo["weapon"]["durability"]
+            )  # unflushed wear
         p.weapon = lo["weapon"]
+        p.armour = int(lo.get("armour", 0))
         p.quick = {int(k): v for k, v in lo["quick"].items()}
         p.inv = lo["inv"]
         p.inv_cap = lo["inv_capacity"]

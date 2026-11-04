@@ -28,7 +28,17 @@ export interface Placing {
 
 type Listener = (prev: VillageState | null, next: VillageState) => void;
 
+export interface PreviewInfo {
+  key: string;
+  x: number;
+  y: number;
+  rotation: number;
+  combos: { key: string; name: string; unlocks: string[] }[];
+  mystery: number;
+}
+
 interface VillageStore {
+  previewInfo: PreviewInfo | null;
   village: VillageState | null;
   map: MapMeta | null;
   selectedId: string | null;
@@ -61,7 +71,33 @@ function errorToast(e: unknown) {
   toast(e instanceof ApiError ? e.message : "Something went wrong.", "bad");
 }
 
+let previewTimer: number | null = null;
+
 export const useVillage = create<VillageStore>((set, get) => {
+  /** Ask the server which combos the ghost would form (debounced; P17 keeps secrets server-side). */
+  function schedulePreview(): void {
+    if (previewTimer) window.clearTimeout(previewTimer);
+    const p = get().placing;
+    if (!p || p.x === undefined || p.y === undefined) {
+      if (get().previewInfo) set({ previewInfo: null });
+      return;
+    }
+    const { key, x, y, rotation, moveId } = p;
+    previewTimer = window.setTimeout(async () => {
+      try {
+        const q = new URLSearchParams({ key, x: String(x), y: String(y), rotation: String(rotation) });
+        if (moveId) q.set("move_id", moveId);
+        const r = await api<{ combos: PreviewInfo["combos"]; mystery: number }>(`/api/village/preview?${q}`);
+        const now = get().placing;
+        if (now && now.x === x && now.y === y && now.rotation === rotation && now.key === key) {
+          set({ previewInfo: { key, x, y, rotation, combos: r.combos, mystery: r.mystery } });
+        }
+      } catch {
+        /* the ghost still works without combo hints */
+      }
+    }, 220);
+  }
+
   async function mutate(path: string, method: string, body?: unknown, okText?: string): Promise<boolean> {
     set({ busy: true });
     try {
@@ -78,6 +114,7 @@ export const useVillage = create<VillageStore>((set, get) => {
   }
 
   return {
+    previewInfo: null,
     village: null,
     map: null,
     selectedId: null,
@@ -112,17 +149,24 @@ export const useVillage = create<VillageStore>((set, get) => {
     },
 
     startPlacing(p) {
-      set({ placing: p, selectedId: null });
+      set({ placing: p, selectedId: null, previewInfo: null });
+      schedulePreview();
     },
 
     setGhost(x, y) {
       const p = get().placing;
-      if (p && (p.x !== x || p.y !== y)) set({ placing: { ...p, x, y } });
+      if (p && (p.x !== x || p.y !== y)) {
+        set({ placing: { ...p, x, y } });
+        schedulePreview();
+      }
     },
 
     rotateGhost() {
       const p = get().placing;
-      if (p) set({ placing: { ...p, rotation: (p.rotation + 1) % 4 } });
+      if (p) {
+        set({ placing: { ...p, rotation: (p.rotation + 1) % 4 } });
+        schedulePreview();
+      }
     },
 
     async confirmPlacement() {

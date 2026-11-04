@@ -1,0 +1,19 @@
+# What stations make (BALANCE §3.1, §5.5).
+#
+# Intermediates go straight into storage when the job finishes. Gear is forged at the station named
+# here, but only while that station is part of a combo that unlocks it; collect it from the station.
+intermediates:
+  ingots:  { station: forge,    inputs: { ore: 3 },   time: 4s, max_batch: 30 }
+  planks:  { station: workshop, inputs: { wood: 2 },  time: 2s, max_batch: 30 }
+  bricks:  { station: workshop, inputs: { stone: 2 }, time: 2s, max_batch: 30 }
+  leather: { station: tannery,  inputs: { hide: 2 },  time: 4s, max_batch: 30 }
+
+job_slots:                     # parallel jobs per station, by the station's level 1..5
+  default: [1, 1, 1, 1, 1]
+  workshop: [1, 1, 2, 2, 2]
+
+gear:                          # copper uses raw resources; iron+ uses `base` × the tier's multiplier
+  spear:          { station: forge,   copper: { wood: 20, ore: 10 }, base: { planks: 4, ingots: 3 } }
+  sword:          { station: forge,   copper: { wood: 10, ore: 20 }, base: { planks: 2, ingots: 5 } }
+  leather_armour: { station: tannery, copper: { hide: 15 },          base: { leather: 6 } }
+  plate_armour:   { station: forge,   copper: { ore: 30, hide: 10 }, base: { ingots: 8, leather: 3 } }

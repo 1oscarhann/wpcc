@@ -104,9 +104,12 @@ def fast_forward(
 
 @app.command("grant")
 def grant(
-    username: str, coins: int = typer.Option(0), res: list[str] = typer.Option([], help="wood=100")
+    username: str,
+    coins: int = typer.Option(0),
+    res: list[str] = typer.Option([], help="wood=100"),
+    item: list[str] = typer.Option([], help="ironbark=2 (into the bag)"),
 ) -> None:
-    """Give coins and/or village resources (logged in the ledger as admin.grant)."""
+    """Give coins, village resources and/or bag items (logged in the ledger as admin.grant)."""
     from sqlalchemy import select
 
     from hearthforge.db.models import AdminAuditLog, Resource, Village
@@ -118,8 +121,8 @@ def grant(
             wallet = await ledger.lock_wallet(session, user.id)
             await ledger.change_coins(session, wallet, coins, ledger.ADMIN_GRANT, actor="admin")
         village = (await session.execute(select(Village).where(Village.user_id == user.id))).scalar_one()
-        for item in res:
-            key, _, qty = item.partition("=")
+        for entry in res:
+            key, _, qty = entry.partition("=")
             row = (
                 await session.execute(
                     select(Resource)
@@ -131,7 +134,21 @@ def grant(
             ledger.log_resource(
                 session, user.id, village.realm_id, key, int(qty) * 1000, ledger.ADMIN_GRANT, actor="admin"
             )
-        session.add(AdminAuditLog(action="grant", target=str(user.id), payload={"coins": coins, "res": res}))
+        if item:
+            from hearthforge.config.loader import load_config
+            from hearthforge.services import inventory
+            from hearthforge.settings import get_settings
+
+            cfg = load_config(get_settings().config_dir)
+            want = {k: int(q) for k, _, q in (i.partition("=") for i in item)}
+            left = await inventory.grant(session, cfg, user.id, want, ledger.ADMIN_GRANT)
+            if left:
+                typer.echo(f"bag full, not granted: {left}")
+        session.add(
+            AdminAuditLog(
+                action="grant", target=str(user.id), payload={"coins": coins, "res": res, "item": item}
+            )
+        )
 
     run(_with_db(go))
     typer.echo(f"granted to {username}")

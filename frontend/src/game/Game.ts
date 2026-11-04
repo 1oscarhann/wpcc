@@ -15,7 +15,9 @@ import { Ambient } from "./ambient";
 import { CloudShadows, groundLighting } from "./atmosphere";
 import { AvatarWorld, type WorldHost } from "./avatarWorld";
 import { CombatFx } from "./combatFx";
+import { ComboFx } from "./comboFx";
 import { localPlacementError, rotatedFootprint, usableBounds } from "./placement";
+import { safeDestroy } from "./safe";
 import { sfx } from "./sfx";
 import { buildingLook, loadIconAtlas, loadWorldAtlas, tex } from "./sprites";
 
@@ -90,6 +92,9 @@ export class Game {
   private shakeUntil = 0;
   private hitStopUntil = 0;
   private nodePrefixes: string[] = [];
+  private comboFx: ComboFx | null = null;
+  private resonanceCd = 0;
+  private resonanceKey = "";
 
   constructor(private host: HTMLElement) {}
 
@@ -136,6 +141,33 @@ export class Game {
       this.sky,
     );
     this.app.stage.addChild(this.world, this.screen);
+    this.comboFx = new ComboFx({
+      fx: this.fx,
+      objects: this.objects,
+      screen: this.screen,
+      origin: () => this.origin,
+      defs: () => this.defs,
+      toScreen: (wx, wy) => ({ x: this.world.x + wx * this.cam.zoom, y: this.world.y + wy * this.cam.zoom }),
+      zoom: () => this.cam.zoom,
+      view: (id) => {
+        const v = this.views.get(id);
+        if (!v) return undefined;
+        const def = this.defs[v.key];
+        const [, h] = rotatedFootprint(def.footprint, v.rotation);
+        return { top: v.root.y - v.anchorTop + 6, x: v.root.x, y: v.root.y + h * T - 4, w: v.sprite.texture.width };
+      },
+      sparkles: (x, y) => this.sparkles(x, y),
+      floatText: (wx, wy, text, color, delay, size) => this.floatText(wx, wy, text, color, delay, size),
+      focus: (wx, wy) => {
+        if (this.avatar) return;
+        this.cam.vx = this.cam.vy = 0;
+        this.tweenCamera(wx, wy, Math.max(3, Math.round(this.cam.zoom)), 0.6);
+      },
+      inView: (wx, wy) => {
+        const r = this.viewRect();
+        return wx > r.x0 - 20 && wx < r.x1 + 20 && wy > r.y0 - 20 && wy < r.y1 + 40;
+      },
+    });
 
     const v = useVillage.getState().village;
     if (v) this.onVillage(null, v, true);
@@ -150,7 +182,12 @@ export class Game {
     roomLink.listeners.add(this.onRoomClient);
     if (roomLink.client) this.onRoomClient(roomLink.client);
     this.app.ticker.add((t) => this.tick(t.deltaMS));
-    if (import.meta.env.DEV) (window as unknown as { __hfGame?: Game }).__hfGame = this; // for screenshot tests
+    if (import.meta.env.DEV) {
+      // for screenshot tests
+      const w = window as unknown as { __hfGame?: Game; __hfVillage?: typeof useVillage };
+      w.__hfGame = this;
+      w.__hfVillage = useVillage;
+    }
   }
 
   destroy(): void {
@@ -158,6 +195,7 @@ export class Game {
     roomLink.listeners.delete(this.onRoomClient);
     this.avatar?.destroy();
     this.avatar = null;
+    this.comboFx?.destroy();
     if (gridLink.grid === this.grid) gridLink.grid = null;
     this.unsub.forEach((u) => u());
     this.unbind?.();
@@ -275,7 +313,41 @@ export class Game {
     this.loadVisibleChunks();
     this.updateTimers();
     this.ambient?.update(dms);
+    this.comboFx?.update(dms);
+    this.ghostResonance(dms);
     this.clouds.update(dt, this.viewRect());
+  }
+
+  /** P17: when the ghost would form a combo, it shimmers (named if discovered, a mystery if not). */
+  private ghostResonance(dms: number): void {
+    const { placing, previewInfo } = useVillage.getState();
+    const live =
+      placing && previewInfo && previewInfo.key === placing.key && previewInfo.x === placing.x &&
+      previewInfo.y === placing.y && previewInfo.rotation === placing.rotation &&
+      (previewInfo.mystery > 0 || previewInfo.combos.length > 0);
+    const key = live ? `${previewInfo!.key}:${previewInfo!.x}:${previewInfo!.y}` : "";
+    if (key && key !== this.resonanceKey) sfx("shimmer");
+    this.resonanceKey = key;
+    if (!live || !placing || placing.x === undefined || placing.y === undefined) return;
+    this.resonanceCd -= dms;
+    if (this.resonanceCd > 0) return;
+    this.resonanceCd = 90;
+    const [w, h] = rotatedFootprint(this.defs[placing.key].footprint, placing.rotation);
+    const x = (this.origin[0] + placing.x) * T;
+    const y = (this.origin[1] + placing.y) * T;
+    const t = Math.random() * 2 * (w + h);
+    const px = t < w ? x + t * T : t < w + h ? x + w * T : t < 2 * w + h ? x + (2 * w + h - t) * T : x;
+    const py = t < w ? y : t < w + h ? y + (t - w) * T : t < 2 * w + h ? y + h * T : y + (2 * (w + h) - t) * T;
+    const s = new AnimatedSprite([0, 1, 2, 3, 2, 1].map((k) => tex(`fx.sparkle.${k}`)));
+    s.anchor.set(0.5);
+    s.position.set(px, py);
+    s.animationSpeed = 0.35;
+    s.loop = false;
+    s.onComplete = () => safeDestroy(s);
+    s.zIndex = 1e6;
+    this.fx.addChild(s);
+    s.play();
+    gsap.to(s, { y: py - 10, duration: 0.45 });
   }
 
   // ── Avatar Mode ───────────────────────────────────────────────────────────
@@ -401,6 +473,7 @@ export class Game {
     this.loadVisibleChunks();
     this.updateTimers();
     if (!frozen) this.ambient?.update(dms);
+    this.comboFx?.update(dms);
     this.clouds.update(Math.min(dms, 50) / 1000, this.viewRect());
   }
 
@@ -630,6 +703,14 @@ export class Game {
     }
     this.syncSelection();
     this.syncGhost();
+    this.comboFx?.sync(next);
+    if (prev && !first) {
+      const had = new Set(prev.discovered ?? []);
+      for (const key of next.discovered ?? []) {
+        const c = next.combos?.find((x) => x.key === key);
+        if (!had.has(key) && c) this.comboFx?.celebrate(c, next);
+      }
+    }
   }
 
   /** A wooden fence just outside the buildable square, open at the gate (2 tiles, matching the path). */
@@ -1085,6 +1166,13 @@ export class Game {
     lastProgress: number;
     started: number;
   } | null = null;
+
+  /** Dev: centre the camera on a frame tile (screenshot runner). */
+  devFocusTile(tx: number, ty: number): void {
+    this.cam.x = (this.origin[0] + tx) * T;
+    this.cam.y = (this.origin[1] + ty) * T;
+    this.cam.vx = this.cam.vy = 0;
+  }
 
   /** Nearest reachable tile next to a gatherable node of this kind ("tree", "rock"…), or null. */
   devFindNode(kind: string): { node: [number, number]; stand: [number, number] } | null {

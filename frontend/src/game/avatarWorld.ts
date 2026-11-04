@@ -9,6 +9,7 @@ import { ATK_ABILITY, ATK_HEAVY, ATK_NONE, moveLength, type MoveRule } from "../
 import { useSession } from "../state/session";
 import { appearanceKey, composeAvatar, frameFor } from "./avatarComposer";
 import { safeDestroy } from "./safe";
+import { weaponSprite } from "./items";
 import { sfx } from "./sfx";
 import { iconTex, tex } from "./sprites";
 
@@ -175,7 +176,8 @@ export class AvatarWorld {
     const w = v.weapon;
     v.swing?.kill();
     w.visible = true;
-    w.texture = tex(`wpn.${weaponType === "spear" ? "spear" : "sword"}`);
+    const wi = local ? this.client.info.weapon : null;
+    w.texture = tex(wi ? weaponSprite(weaponType, wi.key, wi.tier) : `wpn.${weaponType === "spear" ? "spear" : "sword"}`);
     w.position.set(0, -9);
     w.alpha = 1;
     const tl = gsap.timeline({ onComplete: () => void (w.visible = false) });

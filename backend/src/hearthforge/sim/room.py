@@ -78,6 +78,7 @@ class Pending:
     removed: Counter[str] = field(default_factory=Counter)  # KO losses
     deposit: bool = False
     save_pos: bool = False
+    durability: bool = False  # the equipped weapon wore down
     recovered: Counter[str] = field(default_factory=Counter)  # items picked back up from a KO marker
     death_drops: list[tuple[uuid.UUID, float, float, dict[str, int], float]] = field(default_factory=list)
     recovered_ids: set[uuid.UUID] = field(default_factory=set)
@@ -85,6 +86,7 @@ class Pending:
     def empty(self) -> bool:
         return not (
             self.recovered
+            or self.durability
             or self.death_drops
             or self.recovered_ids
             or self.grants
@@ -109,6 +111,7 @@ class Pending:
         self.recovered.update(o.recovered)
         self.death_drops = o.death_drops + self.death_drops
         self.recovered_ids |= o.recovered_ids
+        self.durability |= o.durability
 
 
 @dataclass
@@ -153,6 +156,7 @@ class Player:
     dirty: asyncio.Event = field(default_factory=asyncio.Event)
     writer: asyncio.Task[None] | None = None
     deposit_wait: int = 0
+    armour: int = 0  # defence from equipped armour
     linkdead: int = 0  # ticks left of the reconnect grace (frozen + invulnerable)
     starved: int = 0  # ticks in a row with no input
     last_save: float = field(default_factory=time.monotonic)
@@ -345,7 +349,7 @@ class RealmRoom:
             "xp_next": xp_to_next(self.cfg, p.level),
             "hp_max": p.stats.hp_max,
             "attack": p.stats.attack,
-            "defence": p.stats.defence,
+            "defence": p.stats.defence + p.armour,
             "weapon": p.weapon,
             "quick": {str(k): v for k, v in p.quick.items()},
             "inv": p.inv,

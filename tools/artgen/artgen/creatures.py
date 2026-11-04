@@ -206,31 +206,34 @@ def spider_frames() -> dict[str, Canvas]:
 
 
 # ── weapons (pointing right; the client rotates them) ─────────────────────
-def sword() -> Canvas:
+def sword(blade: list | None = None, guard: list | None = None) -> Canvas:  # noqa: ANN001
+    b = blade or [STONE[2], STONE[3], STONE[4], STONE[5]]
+    g = guard or [GOLD[1], GOLD[2]]
     c = Canvas(18, 7)
     for x in range(5, 17):
-        c.put(x, 2, STONE[5] if x < 15 else STONE[4])
-        c.put(x, 3, STONE[4])
-        c.put(x, 4, STONE[2])
-    c.put(17, 3, STONE[3])
-    c.vline(4, 0, 6, GOLD[2])
-    c.vline(3, 1, 5, GOLD[1])
+        c.put(x, 2, b[3] if x < 15 else b[2])
+        c.put(x, 3, b[2])
+        c.put(x, 4, b[0])
+    c.put(17, 3, b[1])
+    c.vline(4, 0, 6, g[1])
+    c.vline(3, 1, 5, g[0])
     c.hline(0, 2, 3, WOOD[2])
     c.put(0, 2, WOOD[3])
     c.outline(INK)
     return c
 
 
-def spear() -> Canvas:
+def spear(blade: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    b = blade or [STONE[2], STONE[3], STONE[4], STONE[5]]
     c = Canvas(28, 7)
     c.hline(0, 20, 3, WOOD[3])
     c.hline(0, 20, 4, WOOD[1])
     for x in range(21, 27):
         w = 2 - abs(x - 23) // 2 if x < 25 else 0
         for y in range(3 - w, 4 + w + (x < 25)):
-            c.put(x, y, STONE[4] if y <= 3 else STONE[2])
-    c.put(27, 3, STONE[5])
-    c.vline(20, 2, 5, GOLD[2])
+            c.put(x, y, b[2] if y <= 3 else b[0])
+    c.put(27, 3, b[3])
+    c.vline(20, 2, 5, trim or GOLD[2])
     c.outline(INK)
     return c
 
@@ -297,6 +300,11 @@ def generate() -> dict[str, Canvas]:
     out["mon.crown"] = crown()
     out["wpn.sword"] = sword()
     out["wpn.spear"] = spear()
+    from artgen.icons import TIER_RAMPS, TIER_TRIM
+
+    for t in range(5):
+        out[f"wpn.sword.t{t + 1}"] = sword(TIER_RAMPS[t], [WOOD[2], TIER_TRIM[t]])
+        out[f"wpn.spear.t{t + 1}"] = spear(TIER_RAMPS[t], TIER_TRIM[t])
     for i in range(3):
         out[f"fx.slash.{i}"] = slash(i)
         out[f"fx.slash_wide.{i}"] = slash(i, wide=True)

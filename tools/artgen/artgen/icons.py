@@ -234,6 +234,87 @@ def i_spider_silk(c: Canvas) -> None:
     c.line(12, 7, 15, 2, silk[4])
 
 
+# Tier ramps (P7): dark → light blade/metal colours for copper, iron, steel, mythril, starforged.
+TIER_RAMPS = [
+    ramp("pumpkin"),
+    [STONE[0], STONE[1], STONE[2], STONE[3]],
+    [STONE[2], STONE[3], STONE[4], STONE[5]],
+    [TEAL[0], TEAL[1], TEAL[2], TEAL[3]],
+    [PURPLE[0], PURPLE[1], PURPLE[2], GOLD[4]],
+]
+TIER_TRIM = [WOOD[3], GOLD[1], GOLD[2], GOLD[3], GOLD[4]]
+
+
+def sword_icon(r: list, trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.line(4, 12, 12, 4, r[3])
+        c.line(5, 12, 12, 5, r[1])
+        c.line(5, 11, 11, 5, r[2])
+        c.put(12, 3, r[3])
+        c.put(13, 3, r[2])
+        c.line(3, 9, 7, 13, trim)
+        c.line(2, 14, 4, 12, WOOD[2])
+
+    return draw
+
+
+def spear_icon(r: list, trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.line(2, 14, 10, 6, WOOD[3])
+        c.line(3, 14, 10, 7, WOOD[1])
+        c.line(10, 6, 14, 2, r[3])
+        c.line(11, 6, 14, 3, r[1])
+        c.put(12, 4, r[2])
+        c.put(14, 1, r[3])
+        c.line(9, 5, 11, 7, trim)
+
+    return draw
+
+
+def armour_icon(r: list, trim, leather: bool) -> Callable[[Canvas], None]:  # noqa: ANN001
+    body = DIRT if leather else None
+
+    def draw(c: Canvas) -> None:
+        pts = [(3, 3), (6, 2), (8, 4), (10, 2), (13, 3), (14, 8), (12, 9), (12, 14), (4, 14), (4, 9), (2, 8)]
+        if body is not None:
+            c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: body[3] if x < 8 else body[2])
+            c.vline(8, 5, 13, body[1])
+            for y in (7, 10):
+                c.put(6, y, trim)
+                c.put(10, y, trim)
+        else:
+            c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: r[3] if x < 7 else r[2] if x < 11 else r[1])
+            c.hline(5, 11, 9, r[1])
+            c.vline(8, 4, 13, r[1])
+            c.put(5, 5, r[3])
+        c.hline(4, 12, 14, trim)
+
+    return draw
+
+
+def u_book(c: Canvas) -> None:
+    c.rect(2, 3, 12, 11, RED[2])
+    c.rect(3, 3, 1, 11, RED[1])
+    c.rect(5, 4, 8, 9, PAPER[4])
+    c.hline(6, 11, 6, PAPER[2])
+    c.hline(6, 11, 8, PAPER[2])
+    c.hline(6, 10, 10, PAPER[2])
+    c.put(12, 2, GOLD[3])
+    c.rect(11, 13, 2, 2, GOLD[2])
+
+
+def u_anvil(c: Canvas) -> None:
+    c.rect(3, 5, 10, 3, STONE[2])
+    c.hline(3, 12, 5, STONE[4])
+    c.rect(1, 5, 2, 2, STONE[3])
+    c.rect(6, 8, 4, 3, STONE[1])
+    c.rect(4, 11, 8, 2, STONE[2])
+    c.hline(4, 11, 13, STONE[1])
+    c.put(12, 3, FIRE[3])
+    c.put(13, 2, FIRE[4])
+    c.put(10, 2, FIRE[3])
+
+
 # ── UI icons ───────────────────────────────────────────────────────────────
 
 
@@ -415,8 +496,15 @@ ICONS: dict[str, Callable[[Canvas], None]] = {
     "build": u_build, "upgrade": u_upgrade, "move": u_move, "rotate": u_rotate, "undo": u_undo,
     "close": u_close, "demolish": u_demolish, "settings": u_settings, "sound": u_sound, "mute": u_mute,
     "timer": u_timer, "lock": u_lock, "check": u_check, "info": u_info, "star": u_star, "home": u_home,
-    "avatar": u_avatar, "queue": u_queue, "plus": u_plus, "map": u_map,
+    "avatar": u_avatar, "queue": u_queue, "plus": u_plus, "map": u_map, "book": u_book, "anvil": u_anvil,
+    "leather_armour": armour_icon(TIER_RAMPS[0], TIER_TRIM[0], True),
+    "plate_armour": armour_icon(TIER_RAMPS[1], TIER_TRIM[1], False),
 }
+for _t in range(5):
+    ICONS[f"sword_{_t + 1}"] = sword_icon(TIER_RAMPS[_t], TIER_TRIM[_t])
+    ICONS[f"spear_{_t + 1}"] = spear_icon(TIER_RAMPS[_t], TIER_TRIM[_t])
+    ICONS[f"leather_armour_{_t + 1}"] = armour_icon(TIER_RAMPS[_t], TIER_TRIM[_t], True)
+    ICONS[f"plate_armour_{_t + 1}"] = armour_icon(TIER_RAMPS[_t], TIER_TRIM[_t], False)
 
 
 def generate() -> dict[str, Canvas]:

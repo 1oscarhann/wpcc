@@ -31,8 +31,9 @@ Conventions: durations use the `"45s" | "5m" | "1h"` string syntax (parsed to se
 | `items.yaml` | every non-gear item (materials, rares, consumables, trophies, blueprints, fish) | 4 |
 | `buildings.yaml` | footprint, category, unlocks, per-level cost, time, production, cap, effects, count limits | 3 |
 | `decorations.yaml` | decoration catalogue, beauty points, cost, unlock | 3, 14 |
-| `combos.yaml` (**secret**) | combo definitions, hints, unlocked recipe groups | 6 |
-| `recipes.yaml` | intermediate goods plus gear recipes: inputs per tier, time, station | 6 |
+| `combos.yaml` (**secret**) | combo definitions: buildings (2–3, touching), name, unlocked gear, hint, legendary eligibility | 6 ✔ |
+| `recipes.yaml` | intermediates (station, inputs, time per unit, max batch), job slots per station level, gear (station, copper bill, iron+ base bill) | 6 ✔ |
+| `forging.yaml` | tiers (material multiplier, coins, crystal, time, durability, repair rate), rarities (weight, slots, value floor), luck, modifiers from rare materials, Dull, repair, salvage, armour defence | 6 ✔ |
 | `weapons.yaml` | (folded into `combat.yaml → weapons` for now, D-050) | 5, 11 |
 | `armour.yaml` | armour/offhand/trinket stats per tier | 11 |
 | `rarity.yaml` | rarity colours, multipliers, modifier slots, roll weights, luck curve | 6 |
@@ -126,22 +127,41 @@ buildings:
       # …
 ```
 
-### `combos.yaml` (secret: never sent to the client)
+### `combos.yaml` (secret: never sent to the client) — as built
 
 ```yaml
 combos:
   forge_lumber:
-    buildings: [forge, lumber_camp]        # orthogonal edge adjacency; 3-combos must form a connected chain/cluster
-    unlocks: [spear, bow]
-    legendary_eligible: false              # P8: 2-combos cap at epic unless a boss trophy is added
-    hint: "Something that burns, beside something that grows tall."
-    discovery_fx: combo_burst_orange
-  forge_lumber_wizard:
-    buildings: [forge, lumber_camp, wizard_tower]
-    unlocks: [arcane_bow]
-    legendary_eligible: true
-    hint: "Fire, timber and starlight, all touching."
+    name: Spearwright
+    buildings: [forge, lumber_camp]        # edge adjacency; a 3-combo must be one connected group
+    unlocks: [spear]                       # each must have a gear recipe forged at a building in the combo
+    hint: Something that burns, beside something that grows tall.
+  forge_mine_tannery:
+    name: Armoury
+    buildings: [forge, mine, tannery]
+    unlocks: [plate_armour]
+    legendary_eligible: true               # P8: 2-combos cap at epic
+    hint: Fire, ore and leather, all touching.
 ```
+
+### `recipes.yaml` / `forging.yaml` (as built)
+
+```yaml
+intermediates:
+  ingots: { station: forge, inputs: { ore: 3 }, time: 4s, max_batch: 30 }   # time is per unit
+job_slots: { default: [1, 1, 1, 1, 1], workshop: [1, 1, 2, 2, 2] }
+gear:
+  spear: { station: forge, copper: { wood: 20, ore: 10 }, base: { planks: 4, ingots: 3 } }
+```
+
+```yaml
+tiers:     [{ name: Copper, material_mult: 0, coins: 0, crystal: 0, time: 5s, durability: 120, repair_coins: 0.3 }, …]
+rarities:  [{ key: common, weight: 60, slots: 0, value_floor: 0 }, …]   # must be common → legendary
+luck_k: 0.1
+modifiers: { ironbark: { key: heavy, name: Heavy, effect: knockback, range: [0.4, 0.8] } }
+```
+
+The loader checks that every combo building exists, every unlocked item has a gear recipe forged inside that combo, every gear item is unlocked by some combo, and every modifier comes from a rare material.
 
 ### `combat.yaml` (as built, Phase 5)
 

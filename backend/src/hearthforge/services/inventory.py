@@ -79,7 +79,10 @@ async def read(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> di
             row: dict[str, Any] = {"slot": s.slot, "item": s.item_key, "qty": s.quantity}
             inst = insts.get(s.instance_id) if s.instance_id else None
             if inst is not None:
+                from hearthforge.domain.forging import item_name
+
                 row.update(
+                    name=item_name(cfg, inst.item_key, inst.tier),
                     tier=inst.tier,
                     rarity=inst.rarity.value,
                     durability=inst.durability,
@@ -288,7 +291,100 @@ async def loadout(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) ->
             "type": (it.weapon_type if it else None) or "sword",
             "tier": inst.tier if inst else 1,
             "rarity": inst.rarity.value if inst else "common",
+            "instance_id": str(inst.id) if inst else None,
+            "durability": inst.durability if inst else 0,
+            "max_durability": inst.max_durability if inst else 0,
+            "modifiers": inst.modifiers if inst else [],
         }
+    armour = 0
+    a = eq.slots.get(2)
+    if a is not None and a.instance_id and a.item_key in cfg.forging.armour:
+        ainst = await session.get(ItemInstance, a.instance_id)
+        if ainst is not None:
+            armour = cfg.forging.armour[a.item_key][ainst.tier - 1]
     quick = {s.slot: [s.item_key, s.quantity] for s in eq.slots.values() if 4 <= s.slot < 8}
     stacks = [[s.slot, s.item_key, s.quantity, s.instance_id is not None] for s in inv.slots.values()]
-    return {"weapon": weapon, "quick": quick, "inv": stacks, "inv_capacity": inv.c.capacity}
+    return {"weapon": weapon, "armour": armour, "quick": quick, "inv": stacks, "inv_capacity": inv.c.capacity}
+
+
+# ── gear upkeep (Phase 6) ────────────────────────────────────────────────────
+
+
+async def _instance_slot(session: AsyncSession, bag: Bag, slot: int) -> tuple[ContainerSlot, ItemInstance]:
+    s = bag.slots.get(slot)
+    if s is None or s.instance_id is None:
+        raise GameError("not_gear", "There's no gear in that slot.")
+    inst = await session.get(ItemInstance, s.instance_id, with_for_update=True)
+    assert inst is not None
+    return s, inst
+
+
+async def repair(
+    session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: datetime, kind: str, slot: int
+) -> tuple[Any, dict[str, int]]:
+    """Back to full durability for coins + ingots (BALANCE §5.2). Needs a Forge in the village."""
+    from hearthforge.domain import forging
+    from hearthforge.services import village as village_svc
+
+    ld = await village_svc.load_locked(session, user_id=user_id, with_wallet=True)
+    village_svc.settle_village(session, cfg, ld, now)
+    if not any(b.building_key == "forge" and b.level >= 1 for b in ld.buildings):
+        raise GameError("needs_forge", "You need a Forge to repair gear.")
+    bag = (await bags(session, user_id, (kind,)))[kind]
+    _s, inst = await _instance_slot(session, bag, slot)
+    missing = inst.max_durability - inst.durability
+    if missing <= 0:
+        raise GameError("not_damaged", "It's already in perfect shape.")
+    cost = forging.repair_cost(cfg, inst.tier, missing)
+    paid = await village_svc.pay(session, cfg, ld, cost, ledger.GEAR_REPAIR, str(inst.id), "item")
+    inst.durability = inst.max_durability
+    village_svc.touch(ld, now)
+    await session.flush()
+    return ld, paid
+
+
+async def salvage(
+    session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: datetime, slot: int
+) -> tuple[Any, dict[str, int], list[str]]:
+    """Break forged gear down: 40% of its inputs back into storage, each rare material back at 30%."""
+    from hearthforge.db.models import CraftJob
+    from hearthforge.domain import forging
+    from hearthforge.services import village as village_svc
+
+    ld = await village_svc.load_locked(session, user_id=user_id, with_wallet=True)
+    village_svc.settle_village(session, cfg, ld, now)
+    bag = (await bags(session, user_id, ("inventory",)))["inventory"]
+    s, inst = await _instance_slot(session, bag, slot)
+    job = (
+        await session.execute(select(CraftJob).where(CraftJob.result_instance_id == inst.id))
+    ).scalar_one_or_none()
+    if job is None:
+        raise GameError("cant_salvage", "Only forged gear can be salvaged.")
+    back, rare_back = forging.salvage_returns(cfg, job.inputs, list(job.rare_inputs or []), inst.roll_seed)
+    key = s.item_key
+    await session.delete(s)
+    del bag.slots[slot]
+    ledger.log_item(
+        session, user_id, key, -1, ledger.GEAR_SALVAGE, container_id=bag.c.id, instance_id=inst.id
+    )
+    await session.flush()
+    for rk, qty in back.items():
+        ld.resources[rk].amount_milli += qty * MILLI
+        ledger.log_resource(
+            session,
+            user_id,
+            ld.village.realm_id,
+            rk,
+            qty * MILLI,
+            ledger.GEAR_SALVAGE,
+            ref_type="item",
+            ref_id=str(inst.id),
+        )
+    if rare_back:
+        counts: dict[str, int] = {}
+        for r in rare_back:
+            counts[r] = counts.get(r, 0) + 1
+        await grant(session, cfg, user_id, counts, ledger.GEAR_SALVAGE, bag=bag)
+    village_svc.touch(ld, now)
+    await session.flush()
+    return ld, back, rare_back

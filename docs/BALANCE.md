@@ -269,6 +269,8 @@ Luck sources:
 | 6 | 35.9% | 28.3% | 19.8% | 12.7% | 3.3% |
 | 9 | 23.5% | 25.1% | 23.7% | 20.4% | 7.2% |
 
+**As built (Phase 6):** adding any rare material lifts the floor to Uncommon so its modifier always lands (D-052). Gear tier = the lowest building level in the combo that unlocks it.
+
 **Durability** drops by 1 per hit landed. At 0 the weapon is **Dull** (P2): −30% damage and modifiers off, but it never breaks. Repair costs `missing × coin rate` coins plus `ceil(missing / 40)` ingots.
 
 **Salvage** returns 40% of non-coin inputs (rounded down), plus a 30% chance per rare material used to get it back.

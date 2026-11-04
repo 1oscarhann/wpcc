@@ -1,0 +1,30 @@
+# Tiers, rarity, modifiers, durability, repair and salvage (BALANCE §5.2–5.5). Damage multipliers per
+# tier and rarity live in combat.yaml.
+tiers:                         # tier 1..5; a combo at level n forges tier n
+  - { name: Copper,     material_mult: 0,   coins: 0,    crystal: 0,  time: 5s,  durability: 120, repair_coins: 0.3 }
+  - { name: Iron,       material_mult: 1,   coins: 30,   crystal: 0,  time: 10s, durability: 160, repair_coins: 0.6 }
+  - { name: Steel,      material_mult: 2,   coins: 120,  crystal: 0,  time: 20s, durability: 220, repair_coins: 1.2 }
+  - { name: Mythril,    material_mult: 3.5, coins: 400,  crystal: 10, time: 40s, durability: 300, repair_coins: 2.0 }
+  - { name: Starforged, material_mult: 6,   coins: 1200, crystal: 30, time: 60s, durability: 400, repair_coins: 3.5 }
+
+rarities:                      # order matters: common → legendary
+  - { key: common,    weight: 60,  slots: 0, value_floor: 0.0 }
+  - { key: uncommon,  weight: 26,  slots: 1, value_floor: 0.0 }
+  - { key: rare,      weight: 10,  slots: 1, value_floor: 0.2 }
+  - { key: epic,      weight: 3.5, slots: 2, value_floor: 0.4 }
+  - { key: legendary, weight: 0.5, slots: 3, value_floor: 0.6 }
+luck_k: 0.1                    # weight_i × exp(luck_k × luck × i)
+max_rare_inputs: 3             # each adds +1 luck and guarantees its modifier (up to the slot count)
+
+modifiers:                     # rare material → modifier it guarantees
+  ironbark:  { key: heavy, name: Heavy, effect: knockback, range: [0.4, 0.8] }
+  starstone: { key: keen,  name: Keen,  effect: crit,      range: [0.04, 0.10] }
+polished: 0.03                 # an empty modifier slot: +3% damage
+
+dull_damage: 0.7               # at 0 durability (P2): −30% damage, modifiers off, never breaks
+repair_ingots_per: 40          # plus ceil(missing / this) ingots
+salvage: { fraction: 0.4, rare_return: 0.3 }
+
+armour:                        # defence by tier 1..5
+  leather_armour: [8, 12, 18, 26, 36]
+  plate_armour:   [15, 22, 32, 45, 60]

@@ -909,6 +909,55 @@ def workshop(lv: int) -> Art:
     return Art(c, top)
 
 
+def hide_frame(c: Canvas, x: int, y: int, w: int, h: int, shade: int) -> None:
+    """A hide stretched on a wooden drying frame."""
+    for dx in (0, w - 1):
+        c.vline(x + dx, y, y + h + 4, WOOD[1])
+    c.hline(x, x + w - 1, y, WOOD[2])
+    c.hline(x, x + w - 1, y + h, WOOD[1])
+    # the hide itself: a pale, irregular pelt laced to the frame
+    for yy in range(y + 2, y + h - 1):
+        t = (yy - y) / h
+        inset = 2 if t < 0.2 or t > 0.85 else 1
+        for xx in range(x + 1 + inset, x + w - 1 - inset):
+            lit = xx - x < w // 2 + 1 and yy - y < h // 2 + 1
+            c.put(xx, yy, CLOTH[2] if lit else DIRT[shade + 2])
+    for yy in range(y + 2, y + h - 1, 2):  # lacing
+        c.put(x + 1, yy, WOOD[0])
+        c.put(x + w - 2, yy, WOOD[0])
+    c.put(x + w // 2, y + h // 2, DIRT[shade + 1])
+
+
+def tannery(lv: int) -> Art:
+    c, top = new(3, 3, 60)
+    B = c.h - 3
+    ground_shadow(c, 3, B - 24, 44, B)
+    wall_planks(c, 4, B - 22, 26, 22, WOOD)
+    roof_plane(c, 2, B - 42, 32, B - 20, THATCH, "thatch", curve=3)
+    window(c, 8, B - 17, 7, 6)
+    door(c, 23, B, w=8, h=13)
+    # open-sided drying shed with a hide on its frame
+    for px in (31, 45):
+        c.vline(px, B - 31, B, WOOD[1])
+    c.rect(30, B - 33, 17, 3, WOOD[3])
+    c.hline(30, 46, B - 33, WOOD[5])
+    c.hline(30, 46, B - 31, WOOD[1])
+    hide_frame(c, 33, B - 27, 11, 13, 1)
+    # tanning vats
+    for vx, liquid in ((30, DIRT[1]), (38, PUMPKIN[1])):
+        c.rect(vx, B - 7, 8, 7, WOOD[2])
+        c.hline(vx, vx + 7, B - 7, WOOD[4])
+        c.rect(vx + 1, B - 6, 6, 2, liquid)
+        c.hline(vx, vx + 7, B - 3, WOOD[1])
+    hide_frame(c, 6, B - 6, 9, 5, 1) if lv >= 2 else crate(c, 6, B - 9)
+    adorn(c, lv, pennant_at=(17, B - 42), boxes=[], banners=[(4, B - 22)], lanterns=[(30, B - 18)],
+          trim=(2, 32, B - 21), color=PUMPKIN)
+    if lv >= 3:
+        plinth(c, 4, B - 3, 26)
+    c.outline(INK)
+    return Art(c, top)
+
+
 def scaffold(fw: int, fh: int) -> Art:
     """A building going up: dug foundation, stone course, timber skeleton, scaffolding, ladder, materials."""
     W, H = fw * T, fh * T
@@ -977,6 +1026,7 @@ BUILDINGS: dict[str, BuildingArt] = {
     "herb_garden": BuildingArt(herb_garden, (3, 3)),
     "forge": BuildingArt(forge, (3, 3)),
     "workshop": BuildingArt(workshop, (3, 3)),
+    "tannery": BuildingArt(tannery, (3, 3)),
 }
 
 

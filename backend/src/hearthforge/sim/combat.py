@@ -14,6 +14,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from hearthforge.domain import forging
 from hearthforge.domain.mapgen import _mix, rand01
 from hearthforge.realtime.protocol import ANIM, ENT, EV
 from hearthforge.sim import motion as mo
@@ -436,7 +437,8 @@ class Combat:
         self.pending = keep
 
     def damage_player(self, p: Player, raw: float, src: int, kind: int) -> None:
-        taken = raw * (1 - p.stats.defence / (p.stats.defence + self.cb.defence_k))
+        defence = p.stats.defence + p.armour
+        taken = raw * (1 - defence / (defence + self.cb.defence_k))
         taken = max(1, round(taken))
         p.hp -= taken
         p.last_combat = self.room.tick_no
@@ -511,16 +513,38 @@ class Combat:
                 return hx, hy
         return (m.history[0][1], m.history[0][2]) if m.history else (m.x, m.y)
 
+    @staticmethod
+    def is_dull(p: Player) -> bool:
+        w = p.weapon
+        return bool(w.get("instance_id")) and int(w.get("durability", 1)) <= 0
+
+    def effects(self, p: Player) -> dict[str, float]:
+        return forging.weapon_effects(p.weapon.get("modifiers") or [], self.is_dull(p))
+
     def damage_out(self, p: Player, mv: MoveRule, m: Monster) -> tuple[int, bool]:
         c = self.cb
         tier = max(1, min(5, int(p.weapon.get("tier", 1))))
         rarity = c.rarity_mult.get(p.weapon.get("rarity", "common"), 1.0)  # type: ignore[call-overload]
-        crit = self.room.rng.random() < p.stats.crit
+        eff = self.effects(p)
+        crit = self.room.rng.random() < p.stats.crit + eff["crit"]
         dmg = mv.dmg * c.tier_mult[tier - 1] * (1 + p.stats.attack * c.attack_scaling) * rarity
+        dmg *= 1 + eff["damage"]
+        if self.is_dull(p):
+            dmg *= self.cfg.forging.dull_damage  # P2: dull, never broken
         if crit:
             dmg *= c.crit_mult
         dmg *= 1 - m.defence / (m.defence + c.defence_k)
         return max(1, round(dmg)), crit
+
+    def wear(self, p: Player) -> None:
+        """A landed hit costs the weapon 1 durability; at 0 it goes Dull (P2)."""
+        w = p.weapon
+        if not w.get("instance_id") or int(w.get("durability", 0)) <= 0:
+            return
+        w["durability"] = int(w["durability"]) - 1
+        p.pending.durability = True
+        if w["durability"] == 0:
+            self.room.toast(p, "weapon_dull")
 
     def hit_monster(self, p: Player, m: Monster, mv: MoveRule, fx: float, fy: float) -> None:
         dmg, crit = self.damage_out(p, mv, m)
@@ -538,7 +562,8 @@ class Combat:
         dx, dy = m.x - p.m.x, m.y - p.m.y
         d = math.hypot(dx, dy) or 1.0
         resist = self.en.elite.knockback_resist if m.elite else 0.0
-        imp = mv.knockback * (1 - resist) * (1 - self.decay)
+        imp = mv.knockback * (1 + self.effects(p)["knockback"]) * (1 - resist) * (1 - self.decay)
+        self.wear(p)
         m.kbx += dx / d * imp
         m.kby += dy / d * imp
         self._broadcast(m.x, m.y, [EV["HIT"], p.eid, m.id, dmg, 1 if crit else 0, 3 if heavy else 0])

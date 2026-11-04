@@ -23,4 +23,6 @@ async def building_complete(session: AsyncSession, st: AppState, ev: ScheduledEv
 
 HANDLERS: dict[str, Handler] = {
     "building.complete": building_complete,
+    # a finished job only needs the village settled (intermediates land in storage) and a push
+    "craft.complete": building_complete,
 }

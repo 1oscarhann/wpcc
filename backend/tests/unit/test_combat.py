@@ -306,3 +306,59 @@ def test_swings_out_of_reach_hit_nothing(game_config) -> None:  # noqa: ANN001
     for _ in range(40):
         press(room, p, 1, ax=127, b=BTN_LIGHT)
     assert m.hp == m.hp_max
+
+
+def test_weapons_wear_go_dull_and_never_break(game_config) -> None:  # noqa: ANN001
+    room = make_room(game_config)
+    quiet(room)
+    x, y = open_area(room)
+    p = add_player(room, x, y)
+    p.weapon = {
+        "key": "sword",
+        "type": "sword",
+        "tier": 1,
+        "rarity": "common",
+        "instance_id": "x",
+        "durability": 2,
+        "max_durability": 120,
+        "modifiers": [{"key": "polished", "effect": "damage", "value": 0.03}],
+    }
+    mv = room.rules.weapons["sword"].light[0]
+    m = spawn(room, "wolf", x + 1, y, biome="forest")
+    m.hp = m.hp_max = 10_000
+    sharp, _ = room.combat.damage_out(p, mv, m)
+    room.combat.hit_monster(p, m, mv, m.x, m.y)
+    room.combat.hit_monster(p, m, mv, m.x, m.y)
+    assert p.weapon["durability"] == 0 and p.pending.durability
+    assert any(e[0] == 17 and e[1] == "weapon_dull" for e in p.ev)
+    dull, _ = room.combat.damage_out(p, mv, m)
+    assert dull < sharp and dull == round(sharp / 1.03 * 0.7) or abs(dull - sharp / 1.03 * 0.7) <= 1
+    room.combat.hit_monster(p, m, mv, m.x, m.y)
+    assert p.weapon["durability"] == 0  # stays at 0, never breaks
+
+
+def test_keen_and_armour(game_config) -> None:  # noqa: ANN001
+    room = make_room(game_config)
+    quiet(room)
+    x, y = open_area(room)
+    p = add_player(room, x, y)
+    p.weapon = {
+        "key": "sword",
+        "type": "sword",
+        "tier": 1,
+        "rarity": "common",
+        "instance_id": "x",
+        "durability": 50,
+        "max_durability": 120,
+        "modifiers": [{"key": "keen", "effect": "crit", "value": 1.0}],
+    }
+    m = spawn(room, "slime", x + 1, y)
+    _, crit = room.combat.damage_out(p, room.rules.weapons["sword"].light[0], m)
+    assert crit  # +100% crit chance from a (very) keen blade
+    hp0 = p.hp
+    room.combat.damage_player(p, 50, 0, kind=0)
+    unarmoured = hp0 - p.hp
+    p.hp = hp0
+    p.armour = 60
+    room.combat.damage_player(p, 50, 0, kind=0)
+    assert hp0 - p.hp < unarmoured

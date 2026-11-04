@@ -2,7 +2,7 @@
 
 A cozy-but-action-packed browser game. You build a village in **Build Mode**, then drop into **Avatar Mode** to explore, fight monsters and gather rare loot with friends. There's no PvP: other players can only help you.
 
-**Status:** Phases 1–5 are done: plan, foundations, Build Mode, **Avatar Mode** (walk the realm, chop and mine, carry it home) and **combat** (slimes, wolves, spiders, elites, sword and spear movesets, dodge, loot, XP, KO). Next up is Phase 6, combos and forging. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** Phases 1–6 are done: plan, foundations, Build Mode, **Avatar Mode** (walk the realm, chop and mine, carry it home), **combat** (slimes, wolves, spiders, elites, sword and spear movesets, dodge, loot, XP, KO) and **combos and forging** (buildings that touch unlock gear, discovery moments, a recipe book, station jobs, tiers, rarity, modifiers, durability, repair and salvage). Next up is Phase 7, the economy. See [docs/PLAN.md](docs/PLAN.md).
 
 ### Controls (Avatar Mode)
 
@@ -130,7 +130,7 @@ cd backend && uv run hf --help
 | `hf config check` | Validate `/config` |
 | `hf test-account NAME` | Allow fast-forward on an account |
 | `hf fast-forward NAME 2h` | Move timers and production forward |
-| `hf grant NAME --coins 500 --res wood=1000` | Give coins and resources (written to the ledger) |
+| `hf grant NAME --coins 500 --res wood=1000 --item ironbark=2` | Give coins, resources and bag items (written to the ledger) |
 
 ## Art
 
@@ -145,7 +145,7 @@ cd tools/artgen && uv run python -m artgen
 With both servers running, this saves desktop and mobile shots to `docs/screenshots/phase-N/`:
 
 ```bash
-node tools/screenshots.mjs 5
+node tools/screenshots.mjs 6
 ```
 
 `ONLY=desktop` or `ONLY=mobile` limits it to one viewport. Phases 4 and 5 drive the hero with a dev-only autopilot (`window.__hfGame.devWalkTo / devFight`).

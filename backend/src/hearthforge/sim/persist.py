@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -10,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 
-from hearthforge.db.models import Avatar, AvatarLocation, DeathDrop, NodeHarvest
+from hearthforge.db.models import Avatar, AvatarLocation, DeathDrop, ItemInstance, NodeHarvest
 from hearthforge.realtime.protocol import EV
 from hearthforge.services import inventory, ledger
 from hearthforge.services import village as village_svc
@@ -85,6 +86,12 @@ async def flush_player(room: RealmRoom, p: Player, ops: Pending) -> FlushResult:
             )
             if moved:
                 res.village_state = village_svc.village_state(cfg, ld, now)
+        if ops.durability and p.weapon.get("instance_id"):
+            await s.execute(
+                update(ItemInstance)
+                .where(ItemInstance.id == uuid.UUID(p.weapon["instance_id"]))
+                .values(durability=max(0, int(p.weapon.get("durability", 0))))
+            )
         if ops.xp or ops.save_pos:
             av = (
                 await s.execute(select(Avatar).where(Avatar.user_id == p.user_id).with_for_update())

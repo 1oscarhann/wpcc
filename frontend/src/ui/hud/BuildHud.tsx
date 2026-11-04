@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { BuildingDef, BuildingState, VillageState } from "../../api/types";
 import { canAfford, amountAt } from "../../game/resources";
 import { PLACEMENT_TEXT, localPlacementError } from "../../game/placement";
+import { itemName, STATION_KEYS } from "../../game/items";
 import { enterAvatar } from "../../net/room";
+import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
 import { formatDuration, formatNum, Icon, Panel } from "../components/kit";
@@ -176,6 +178,11 @@ function SelectionPanel({ v, b, now }: { v: VillageState; b: BuildingState; now:
             {working && b.completes_at_ms ? ` · ${formatDuration((b.completes_at_ms - now) / 1000)} left` : ""}
           </span>
           <span className="small muted">{describeLevel(d, b.level, config) || d.description}</span>
+          {v.combos.filter((c) => c.buildings.includes(b.id)).map((c) => (
+            <span key={c.key + c.buildings.join()} className="small combo-chip" title={`Tier ${c.tier}: the lowest level in the combo`}>
+              ✦ {c.name} · forges {c.unlocks.map((u) => itemName(u, c.tier)).join(", ")}
+            </span>
+          ))}
         </div>
       </div>
       {!working && next && (
@@ -200,6 +207,12 @@ function SelectionPanel({ v, b, now }: { v: VillageState; b: BuildingState; now:
         ) : (
           <span className="small head">Max level!</span>
         )}
+        {STATION_KEYS.has(b.key) && b.level >= 1 && (
+          <button className="btn gold small" onClick={() => useCrafting.getState().set({ stationId: b.id })}>
+            <Icon name="anvil" scale={1.5} /> Craft
+            {v.jobs.some((j) => j.station_id === b.id && j.kind === "gear" && j.completes_at_ms <= now) && " (ready!)"}
+          </button>
+        )}
         <button className="btn secondary small" onClick={() => startPlacing({ key: b.key, rotation: b.rotation, moveId: b.id })}>
           <Icon name="move" scale={1.5} /> Move
         </button>
@@ -214,6 +227,23 @@ function SelectionPanel({ v, b, now }: { v: VillageState; b: BuildingState; now:
         )}
       </div>
     </Panel>
+  );
+}
+
+function ComboHint() {
+  const placing = useVillage((s) => s.placing);
+  const p = useVillage((s) => s.previewInfo);
+  if (!placing || !p || p.x !== placing.x || p.y !== placing.y || p.rotation !== placing.rotation || p.key !== placing.key) {
+    return null;
+  }
+  if (!p.combos.length && !p.mystery) return null;
+  return (
+    <div className="row combo-hint" style={{ gap: 6, flexWrap: "wrap" }}>
+      {p.combos.map((c) => (
+        <span key={c.key} className="combo-chip">✦ Forms {c.name}: {c.unlocks.map((u) => itemName(u)).join(", ")}</span>
+      ))}
+      {p.mystery > 0 && <span className="combo-chip mystery">✨ Something resonates here…</span>}
+    </div>
   );
 }
 
@@ -240,6 +270,7 @@ function PlacementBar({ v, touch }: { v: VillageState; touch: boolean }) {
             </span>
           )}
         </div>
+        <ComboHint />
         <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
           <button className="btn secondary small" onClick={rotateGhost}><Icon name="rotate" scale={1.5} /> Rotate</button>
           <button className="btn danger small" onClick={() => startPlacing(null)}>Cancel</button>
@@ -311,6 +342,12 @@ export function BuildHud({ onSettings, touch, onZoom }: {
           <div className="row hud-actions">
             <button className="btn gold" onClick={() => setMenu(true)} aria-label="Build">
               <Icon name="build" /> Build
+            </button>
+            <button className="btn secondary" onClick={() => useCrafting.getState().set({ bookOpen: true })} aria-label="Recipe Book" title="Recipe Book">
+              <Icon name="book" /> <span className="hide-narrow">Recipes</span>
+            </button>
+            <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag" title="Bag">
+              <Icon name="queue" />
             </button>
             {undoLeft > 0 && (
               <button className="btn secondary" onClick={undo} aria-label="Undo">

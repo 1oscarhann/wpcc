@@ -65,6 +65,17 @@ export interface ConfigBundle {
   nodes: Record<string, { objects: string[]; biome: string | null; hits: number; yields: Record<string, [number, number]>; sound: string }>;
   combat: { combat_lock_s: number; weapons: Record<string, { ability: string; ability_cd_s: number }> };
   enemies: Record<string, { name: string; elite_name: string; archetype: string; radius: number }>;
+  recipes: {
+    intermediates: Record<string, { station: string; inputs: Record<string, number>; seconds_per_unit: number; max_batch: number }>;
+    gear: Record<string, { station: string }>;
+  };
+  forging: {
+    tiers: { name: string; durability: number }[];
+    rarities: string[];
+    modifiers: Record<string, { name: string; effect: string }>;
+    max_rare_inputs: number;
+    armour: Record<string, number[]>;
+  };
 }
 
 export interface Me {
@@ -130,4 +141,64 @@ export interface VillageState {
   /** [id, kind, variant, x, y] wild growth still covering the plot */
   debris: [number, string, number, number, number][];
   gate: [number, number, "N" | "S" | "E" | "W"];
+  /** Phase 6: active combos (only ever discovered ones) and station jobs */
+  combos: ActiveCombo[];
+  discovered: string[];
+  new_discoveries: string[];
+  jobs: CraftJobView[];
+}
+
+export interface ActiveCombo {
+  key: string;
+  name: string;
+  buildings: string[];
+  tier: number;
+  unlocks: string[];
+}
+
+export interface CraftJobView {
+  id: string;
+  station_id: string;
+  kind: "intermediate" | "gear";
+  recipe: string;
+  quantity: number;
+  tier: number | null;
+  rares: string[];
+  started_at_ms: number;
+  completes_at_ms: number;
+}
+
+export interface Modifier {
+  key: string;
+  name: string;
+  effect: string;
+  value: number;
+}
+
+export interface ForgedItem {
+  instance_id: string;
+  item: string;
+  name: string;
+  tier: number;
+  rarity: string;
+  modifiers: Modifier[];
+  durability: number;
+  max_durability: number;
+}
+
+export interface InvSlotView {
+  slot: number;
+  item: string;
+  qty: number;
+  name?: string;
+  tier?: number;
+  rarity?: string;
+  durability?: number;
+  max_durability?: number;
+  modifiers?: Modifier[];
+}
+
+export interface InventoryView {
+  inventory: { capacity: number; slots: InvSlotView[] };
+  equipment: { capacity: number; slots: InvSlotView[] };
 }

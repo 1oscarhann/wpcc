@@ -96,3 +96,15 @@ The Playwright screenshot runner captures it every phase.
 | Loot | Drops pop out, bob with a shadow and fly into you; walking home sends icons arcing into the Town Hall with "+20 Wood" |
 | Combat readability | Red telegraph shapes fill up during a monster's wind-up, which also shivers and reddens the sprite. Hits flash white, spark and pop numbers (gold for crits). Hit-stop (40–60 ms) and a small shake are visual only. Ambushers hide as a faint shimmer |
 | Occlusion | Trees, debris and buildings in front of your hero fade to 40% so you never lose them |
+
+## 2d. Combos and forging (Phase 6)
+
+| Piece | What |
+|---|---|
+| Tannery | Thatched workshop with an open drying shed, a pelt laced to a frame, and tanning vats |
+| Tier palettes (P7) | Every forged weapon and armour has five tints: copper, iron, steel, mythril and starforged (`icon.sword_1…5`, `wpn.spear.t1…5`, …). Training gear keeps its plain look |
+| Combos | Golden motes rise where combo buildings touch, with a floating "✦ Spearwright" label |
+| Discovery | Camera swoop, an expanding ring of light, rays, a fanfare, then the discovery card |
+| Placement | A ghost that would form a combo sparkles along its edges ("✨ something resonates…" for undiscovered ones) |
+| Stations | An orange progress bar, anvil sparks and a clang while working; finished gear bobs above the station until collected |
+| Forge reveal | A card with spinning rays and a glow in the item's rarity colour |

@@ -5,7 +5,10 @@ import { useSession } from "../../state/session";
 import { toast } from "../../state/toasts";
 import { onVillageChange, useVillage } from "../../state/village";
 import { useAvatar } from "../../state/avatar";
+import { useCrafting } from "../../state/crafting";
 import { AvatarHud } from "../hud/AvatarHud";
+import { Bag } from "../hud/Bag";
+import { CraftPanel, DiscoveryCard, RecipeBook, RevealCard } from "../hud/Crafting";
 import { BuildHud } from "../hud/BuildHud";
 import { Panel } from "../components/kit";
 import { SettingsModal } from "./Settings";
@@ -62,6 +65,7 @@ export function PlayScreen() {
   const [failed, setFailed] = useState(false);
   const village = useVillage((s) => s.village);
   const mode = useAvatar((s) => s.mode);
+  const crafting = useCrafting();
   useVillageSync(me.user.id);
 
   useEffect(() => {
@@ -100,6 +104,11 @@ export function PlayScreen() {
       ) : (
         <AvatarHud onSettings={() => setSettings(true)} touch={game.current?.touchMode ?? matchMedia("(pointer: coarse)").matches} />
       )}
+      {mode === "build" && crafting.bagOpen && <Bag onClose={() => crafting.set({ bagOpen: false })} />}
+      {crafting.bookOpen && <RecipeBook onClose={() => crafting.set({ bookOpen: false })} />}
+      {crafting.stationId && <CraftPanel stationId={crafting.stationId} onClose={() => crafting.set({ stationId: null })} />}
+      <DiscoveryCard />
+      <RevealCard />
       {settings && <SettingsModal onClose={() => setSettings(false)} />}
     </div>
   );

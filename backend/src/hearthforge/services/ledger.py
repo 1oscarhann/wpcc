@@ -32,6 +32,12 @@ ITEM_CONSUME = "item.consume"
 ITEM_MOVE = "item.move"
 KO_LOSS = "ko.loss"
 KO_RECOVER = "ko.recover"
+CRAFT_START = "craft.start"
+CRAFT_OUTPUT = "craft.output"
+CRAFT_CANCEL_REFUND = "craft.cancel_refund"
+CRAFT_COLLECT = "craft.collect"
+GEAR_REPAIR = "gear.repair"
+GEAR_SALVAGE = "gear.salvage"
 
 
 async def lock_wallet(session: AsyncSession, user_id: uuid.UUID) -> Wallet:

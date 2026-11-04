@@ -54,6 +54,10 @@ Every non-obvious technical or design decision gets a short entry here: what was
 | D-048 | Gathered resources auto-deposit when you walk into your own village | Accepted (Phase 4) |
 | D-049 | Villages are safe zones: monsters never step into a plot frame | Accepted (Phase 5) |
 | D-051 | Netcode verified at 150 and 300 ms of simulated latency: zero corrections. Inputs use a burst-tolerant token bucket | Accepted (Phase 5) |
+| D-052 | Adding any rare material at the forge guarantees at least Uncommon, so its modifier always lands | Accepted (Phase 6) |
+| D-053 | Phase 6 combos use what exists now: Spearwright, Bladesmith, Leatherworks and the 3-building Armoury (+ the Tannery) | Accepted (Phase 6) |
+| D-054 | Station jobs: intermediates drop into storage by themselves; gear waits at the station to be collected | Accepted (Phase 6) |
+| D-055 | Intermediates gate switched on: building levels 3+ cost planks and bricks again | Accepted (Phase 6) |
 | D-050 | Weapon movesets live in `combat.yaml` and loot tables inline in `enemies.yaml` (no separate `weapons.yaml` / `loot_tables.yaml` yet) | Accepted (Phase 5) |
 
 ---
@@ -233,3 +237,22 @@ See PLAN §1.3 (P2, P6, P7, P1). Each one trades a little fidelity to the spec f
 **What the test caught on the way.**
 - The first lag simulator reordered frames (Chromium clamps nested timers), which made the server reject "old" inputs and looked like rubber-banding. WebSockets can't reorder, so the simulator was fixed, not the server.
 - A delayed clump of inputs could trip the flat 45 messages/s gateway limit and lose an input. Inputs now have their own token bucket (25/s sustained, 25 burst) in the room. The generic limit (30/s) covers everything else. The server queue holds 1 s of inputs and catches up 2–3 per tick.
+
+### D-052: rare materials never go to waste
+**Context.** BALANCE §5.3 says each rare material "guarantees its modifier, up to the item's slot count". A Common roll has no slots, so the screenshot run spent an Ironbark and got nothing back. That feels like being robbed.
+**Decision.** If you add any rare material, Common's odds fold into Uncommon: the item gets at least one slot and the first rare's modifier always lands. Extra rares still add luck. The odds bar in the forge panel shows this.
+
+### D-053: Phase 6 combo set
+**Decision.** Four combos, all forging things that already work in combat:
+- Forge + Lumber Camp → spear (Spearwright)
+- Forge + Mine → sword (Bladesmith)
+- Tannery + Workshop → leather armour (Leatherworks)
+- Forge + Mine + Tannery → plate armour (Armoury, the first 3-building combo, legendary-eligible)
+
+The Tannery joins as a TH3 building. Bows, hammers and staffs wait for their movesets (Phase 11). Armour adds defence in Avatar Mode. Plate's −5% move speed is deferred, because a speed modifier would have to enter the shared step and its golden vectors.
+
+### D-054: how station jobs finish
+**Decision.** Ingots, planks, bricks and leather land in storage the moment the job is due. They're settled by the same lazy and worker paths as buildings, and may exceed the cap like refunds. Forged gear waits at the station, with a bobbing icon in the world, until you press Collect, because the reveal is the fun part. One job per station (two for a level 3+ Workshop). A busy station can't be demolished.
+
+### D-055: intermediates on
+**Decision.** `gates.intermediates_enabled` is now true (D-034's Phase 6 switch). Level 3+ upgrades cost planks and bricks, which the Workshop (TH2) makes. Rare costs stay gated until starstone is obtainable (Phase 10).
