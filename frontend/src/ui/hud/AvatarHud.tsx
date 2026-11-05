@@ -7,6 +7,7 @@ import { useSession } from "../../state/session";
 import { itemIcon } from "../../game/items";
 import { Icon } from "../components/kit";
 import { Bag } from "./Bag";
+import { TradePrompt } from "./Market";
 
 const KO_FLAG = 2;
 
@@ -233,6 +234,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
         <div className="av-ko center"><div className="panel head" style={{ fontSize: 24 }}>Knocked out! Waking up at home…</div></div>
       )}
       <div className="hud-bottom">
+        <TradePrompt touch={touch} />
         <Hotbar touch={touch} />
       </div>
       {touch && <TouchControls />}

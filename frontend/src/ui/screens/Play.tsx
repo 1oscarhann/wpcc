@@ -10,6 +10,8 @@ import { AvatarHud } from "../hud/AvatarHud";
 import { Bag } from "../hud/Bag";
 import { CraftPanel, DiscoveryCard, RecipeBook, RevealCard } from "../hud/Crafting";
 import { BuildHud } from "../hud/BuildHud";
+import { MarketPanel, MerchantPanel } from "../hud/Market";
+import { useMarket } from "../../state/market";
 import { Panel } from "../components/kit";
 import { SettingsModal } from "./Settings";
 
@@ -66,6 +68,7 @@ export function PlayScreen() {
   const village = useVillage((s) => s.village);
   const mode = useAvatar((s) => s.mode);
   const crafting = useCrafting();
+  const market = useMarket();
   useVillageSync(me.user.id);
 
   useEffect(() => {
@@ -107,6 +110,8 @@ export function PlayScreen() {
       {mode === "build" && crafting.bagOpen && <Bag onClose={() => crafting.set({ bagOpen: false })} />}
       {crafting.bookOpen && <RecipeBook onClose={() => crafting.set({ bookOpen: false })} />}
       {crafting.stationId && <CraftPanel stationId={crafting.stationId} onClose={() => crafting.set({ stationId: null })} />}
+      {mode === "build" && market.marketOpen && <MarketPanel onClose={() => market.set({ marketOpen: false })} />}
+      {mode === "avatar" && market.merchantOpen && <MerchantPanel onClose={() => market.set({ merchantOpen: false })} />}
       <DiscoveryCard />
       <RevealCard />
       {settings && <SettingsModal onClose={() => setSettings(false)} />}

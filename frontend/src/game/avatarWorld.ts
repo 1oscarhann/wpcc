@@ -88,7 +88,8 @@ export class AvatarWorld {
   private time = 0;
   private nodeTimer = 0;
   private faded = new Map<Container, number>(); // occluder → its own alpha
-  extra: { update(dms: number): void; onEvent(ev: RoomEvent): void; destroy(): void } | null = null;
+  /** Add-ons that ride the avatar world's lifecycle (combat juice, the merchant cart, …). */
+  extras: { update(dms: number): void; onEvent(ev: RoomEvent): void; destroy(): void }[] = [];
 
   constructor(
     private host: WorldHost,
@@ -103,7 +104,7 @@ export class AvatarWorld {
   destroy(): void {
     for (const [o, a] of this.faded) if (!o.destroyed) o.alpha = a;
     this.unsub();
-    this.extra?.destroy();
+    for (const x of this.extras) x.destroy();
     for (const v of [this.local, ...this.others.values()]) this.destroyAvatar(v);
     for (const d of this.drops.values()) safeDestroy(d.root);
     for (const [nid] of this.swapped) this.restoreNode(nid, false);
@@ -299,7 +300,7 @@ export class AvatarWorld {
       if (ent.kind === ENT.avatar) this.updateOther(ent, rt, dms);
       else if (ent.kind === ENT.drop) this.updateDrop(ent, rt, dms);
     }
-    this.extra?.update(dms);
+    for (const x of this.extras) x.update(dms);
     this.fadeOccluders();
     if ((this.nodeTimer -= dms) <= 0) {
       this.nodeTimer = 1000;
@@ -444,7 +445,7 @@ export class AvatarWorld {
       const [, x, y] = ev as number[];
       window.setTimeout(() => this.host.sparkles(x * T, y * T - 10), 50);
     }
-    this.extra?.onEvent(ev);
+    for (const x of this.extras) x.onEvent(ev);
   }
 
   private pickup(id: number, key: string, qty: number): void {

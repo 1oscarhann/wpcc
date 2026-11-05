@@ -14,6 +14,8 @@ import { useAvatar } from "../state/avatar";
 import { Ambient } from "./ambient";
 import { CloudShadows, groundLighting } from "./atmosphere";
 import { AvatarWorld, type WorldHost } from "./avatarWorld";
+import { MerchantCart } from "./merchantFx";
+import { useMarket } from "../state/market";
 import { CombatFx } from "./combatFx";
 import { ComboFx } from "./comboFx";
 import { localPlacementError, rotatedFootprint, usableBounds } from "./placement";
@@ -359,7 +361,7 @@ export class Game {
     if (c) {
       const me = useSession.getState().me!;
       this.avatar = new AvatarWorld(this.worldHost, c, me.avatar.appearance);
-      this.avatar.extra = new CombatFx(this.worldHost, this.avatar);
+      this.avatar.extras.push(new CombatFx(this.worldHost, this.avatar), new MerchantCart(this.worldHost, this.avatar));
       useVillage.getState().startPlacing(null);
       useVillage.getState().select(null);
       this.cam.vx = this.cam.vy = 0;
@@ -1341,8 +1343,13 @@ export class Game {
     else if (k === "b" || k === "i" || k === "tab") {
       e.preventDefault();
       av.set({ bagOpen: !av.bagOpen });
-    } else if (k === "escape") av.set({ bagOpen: false });
-    else if (k === "h") leaveAvatar();
+    } else if (k === "escape") {
+      av.set({ bagOpen: false });
+      useMarket.getState().set({ merchantOpen: false });
+    } else if (k === "e" || k === "f") {
+      const m = useMarket.getState();
+      if (m.near) m.set({ merchantOpen: !m.merchantOpen });
+    } else if (k === "h") leaveAvatar();
     else if (k === "+" || k === "=") this.zoomAvatar(1);
     else if (k === "-") this.zoomAvatar(-1);
   }

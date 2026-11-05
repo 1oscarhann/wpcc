@@ -17,7 +17,8 @@ const EQUIP = [
   { slot: 4, label: "Potion" },
 ];
 
-type Sel = { kind: "inventory" | "equipment"; s: InvSlotView } | null;
+type Kind = "inventory" | "equipment" | "bank";
+type Sel = { kind: Kind; s: InvSlotView } | null;
 
 function Cell({ s, onClick, active, label }: { s?: InvSlotView; onClick: () => void; active: boolean; label?: string }) {
   const color = s?.rarity ? RARITY_COLOR[s.rarity] : undefined;
@@ -40,6 +41,9 @@ export function Bag({ onClose }: { onClose: () => void }) {
   const [sel, setSel] = useState<Sel>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [tab, setTab] = useState<"inventory" | "bank">("inventory");
+  const mode = useAvatar((s) => s.mode);
+  const home = mode === "build";
   const roomInv = useAvatar((s) => s.inv);
   const version = useVillage((s) => s.village?.version);
   const config = useSession((s) => s.config)!;
@@ -57,8 +61,36 @@ export function Bag({ onClose }: { onClose: () => void }) {
 
   const eq = new Map((inv?.equipment.slots ?? []).map((s) => [s.slot, s]));
   const bag = new Map((inv?.inventory.slots ?? []).map((s) => [s.slot, s]));
+  const bank = new Map((inv?.bank?.slots ?? []).map((s) => [s.slot, s]));
   const cap = inv?.inventory.capacity ?? 24;
+  const bankCap = inv?.bank?.capacity ?? 0;
   const firstFree = () => Array.from({ length: cap }, (_, i) => i).find((i) => !bag.has(i));
+  const firstFreeBank = () => Array.from({ length: bankCap }, (_, i) => i).find((i) => !bank.has(i));
+  const showing: "inventory" | "bank" = home ? tab : "inventory";
+  const grid = showing === "bank" ? bank : bag;
+  const gridCap = showing === "bank" ? bankCap : cap;
+  const exp = showing === "bank" ? inv?.bank?.expand : inv?.inventory.expand;
+  const stash = (s: InvSlotView) => {
+    const free = firstFreeBank();
+    if (free === undefined) return toast("Your bank is full.", "bad");
+    void act("/api/inventory/move", { src: { kind: "inventory", slot: s.slot }, dst: { kind: "bank", slot: free } }, () => {
+      sfx("deposit");
+      return null;
+    });
+  };
+  const takeOut = (s: InvSlotView) => {
+    const free = firstFree();
+    if (free === undefined) return toast("Your bag is full.", "bad");
+    void act("/api/inventory/move", { src: { kind: "bank", slot: s.slot }, dst: { kind: "inventory", slot: free } }, () => {
+      sfx("pickup");
+      return null;
+    });
+  };
+  const expand = () =>
+    act("/api/inventory/expand", { kind: showing }, (r) => {
+      sfx("levelup");
+      return `${showing === "bank" ? "Bank" : "Bag"} now holds ${r.capacity as number} slots!`;
+    });
 
   const act = async (path: string, body: unknown, ok?: (r: Record<string, unknown>) => string | null) => {
     setBusy(true);
@@ -102,9 +134,19 @@ export function Bag({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="panel av-bag" role="dialog" aria-label="Bag">
-      <div className="row" style={{ marginBottom: 8 }}>
-        <span className="ribbon">Bag</span>
+      <div className="row" style={{ marginBottom: 8, gap: 6 }}>
+        <span className="ribbon">{showing === "bank" ? "Bank" : "Bag"}</span>
         <span className="grow" />
+        {home && (
+          <span className="row" role="tablist" style={{ gap: 4 }}>
+            <button role="tab" aria-selected={tab === "inventory"} className={`btn small ${tab === "inventory" ? "" : "secondary"}`} onClick={() => { setTab("inventory"); setSel(null); }}>
+              <Icon name="queue" scale={1.5} /> Bag
+            </button>
+            <button role="tab" aria-selected={tab === "bank"} className={`btn small ${tab === "bank" ? "" : "secondary"}`} onClick={() => { setTab("bank"); setSel(null); }}>
+              <Icon name="chest" scale={1.5} /> Bank
+            </button>
+          </span>
+        )}
         <button className="btn danger small icon-only" onClick={onClose} aria-label="Close bag"><Icon name="close" /></button>
       </div>
       <div className="row av-equip" style={{ gap: 8, marginBottom: 10 }}>
@@ -142,6 +184,12 @@ export function Bag({ onClose }: { onClose: () => void }) {
               <button className="btn small" disabled={busy} onClick={() => equip(detail)}>Equip</button>
             )}
             {sel!.kind === "equipment" && <button className="btn secondary small" disabled={busy} onClick={() => unequip(detail)}>Unequip</button>}
+            {home && sel!.kind === "inventory" && (
+              <button className="btn secondary small" disabled={busy} onClick={() => stash(detail)}><Icon name="chest" scale={1.5} /> To bank</button>
+            )}
+            {sel!.kind === "bank" && (
+              <button className="btn small" disabled={busy} onClick={() => takeOut(detail)}><Icon name="queue" scale={1.5} /> To bag</button>
+            )}
             {damaged && (
               <button className="btn small" disabled={busy}
                 onClick={() => act("/api/inventory/repair", { kind: sel!.kind, slot: detail.slot }, (r) => {
@@ -170,12 +218,23 @@ export function Bag({ onClose }: { onClose: () => void }) {
         </div>
       )}
       <div className="av-grid">
-        {Array.from({ length: cap }, (_, i) => (
-          <Cell key={i} s={bag.get(i)} active={sel?.kind === "inventory" && sel.s.slot === i}
-            onClick={() => { const s = bag.get(i); if (s) setSel({ kind: "inventory", s }); }} />
+        {Array.from({ length: gridCap }, (_, i) => (
+          <Cell key={`${showing}${i}`} s={grid.get(i)} active={sel?.kind === showing && sel.s.slot === i}
+            onClick={() => { const s = grid.get(i); if (s) setSel({ kind: showing, s }); }} />
         ))}
       </div>
-      <p className="small muted" style={{ margin: "8px 0 0" }}>Wood, stone and other resources go into storage when you walk home.</p>
+      <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <span className="small muted grow">
+          {grid.size}/{gridCap} slots ·{" "}
+          {showing === "bank" ? "Safe at home: nothing in the bank can be lost when you're knocked out." : "Resources go into storage when you walk home."}
+        </span>
+        {home && exp && exp.next_cost !== null && (
+          <button className="btn small gold" disabled={busy} onClick={() => void expand()}
+            title={`Up to ${exp.max} slots`}>
+            <Icon name="plus" scale={1.5} /> +{exp.step} slots · {exp.next_cost.toLocaleString()} <Icon name="coins" scale={1} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

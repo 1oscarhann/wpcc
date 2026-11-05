@@ -4,6 +4,7 @@ import { canAfford, amountAt } from "../../game/resources";
 import { PLACEMENT_TEXT, localPlacementError } from "../../game/placement";
 import { itemName, STATION_KEYS } from "../../game/items";
 import { enterAvatar } from "../../net/room";
+import { useMarket } from "../../state/market";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
@@ -207,6 +208,11 @@ function SelectionPanel({ v, b, now }: { v: VillageState; b: BuildingState; now:
         ) : (
           <span className="small head">Max level!</span>
         )}
+        {b.key === "market" && b.level >= 1 && (
+          <button className="btn gold small" onClick={() => useMarket.getState().set({ marketOpen: true })}>
+            <Icon name="market" scale={1.5} /> Trade
+          </button>
+        )}
         {STATION_KEYS.has(b.key) && b.level >= 1 && (
           <button className="btn gold small" onClick={() => useCrafting.getState().set({ stationId: b.id })}>
             <Icon name="anvil" scale={1.5} /> Craft
@@ -346,7 +352,10 @@ export function BuildHud({ onSettings, touch, onZoom }: {
             <button className="btn secondary" onClick={() => useCrafting.getState().set({ bookOpen: true })} aria-label="Recipe Book" title="Recipe Book">
               <Icon name="book" /> <span className="hide-narrow">Recipes</span>
             </button>
-            <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag" title="Bag">
+            <button className="btn secondary" onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant">
+              <Icon name="market" /> <span className="hide-narrow">Market</span>
+            </button>
+            <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag and bank" title="Bag and bank">
               <Icon name="queue" />
             </button>
             {undoLeft > 0 && (
