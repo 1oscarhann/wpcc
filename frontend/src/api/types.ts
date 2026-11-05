@@ -198,7 +198,87 @@ export interface InvSlotView {
   modifiers?: Modifier[];
 }
 
+export interface ContainerView {
+  capacity: number;
+  slots: InvSlotView[];
+  expand?: { step: number; next_cost: number | null; max: number };
+}
+
 export interface InventoryView {
-  inventory: { capacity: number; slots: InvSlotView[] };
-  equipment: { capacity: number; slots: InvSlotView[] };
+  inventory: ContainerView;
+  equipment: ContainerView;
+  bank?: ContainerView;
+}
+
+// ── Phase 7: market and merchant ─────────────────────────────────────────────
+
+export interface MarketItem {
+  key: string;
+  name: string;
+  icon: string;
+  source: "storage" | "bag";
+  have: number;
+  base: number;
+  raw_price: number;
+  price: number; // with your Market bonus
+  over_price: number; // past your daily soft cap
+  trend: -1 | 0 | 1;
+  change: number;
+  spark: number[];
+  units_24h: number;
+  baseline: number;
+  sold_today: number;
+  soft_cap: number;
+}
+
+export interface MarketView {
+  has_market: boolean;
+  market_level: number;
+  bonus: number;
+  coins: number;
+  population: number;
+  active_players: number;
+  next_recalc_ms: number;
+  max_sell: number;
+  items: MarketItem[];
+}
+
+export interface SaleResult {
+  item: string;
+  sold: number;
+  coins: number;
+  unit_price: number;
+  over_cap_units: number;
+  sold_today: number;
+  soft_cap: number;
+  balance: number;
+}
+
+export interface MerchantSlot {
+  slot: number;
+  key: string;
+  kind: "item" | "resource" | "hint";
+  item: string | null;
+  qty: number;
+  name: string;
+  blurb: string | null;
+  icon: string;
+  price: number;
+  list_price: number;
+  deal: boolean;
+  limit: number;
+  bought: number;
+  sold_out: boolean;
+}
+
+export interface MerchantView {
+  merchant_id: string;
+  name: string;
+  greeting: string;
+  rotation: number;
+  ends_at_ms: number;
+  pos: [number, number];
+  radius: number;
+  near: boolean;
+  slots: MerchantSlot[];
 }

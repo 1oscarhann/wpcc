@@ -45,6 +45,7 @@ interface BookCombo {
   hint: string;
   size?: number;
   legendary_eligible?: boolean;
+  revealed?: string[]; // bought from the merchant: which buildings, not what they make
 }
 
 export function RecipeBook({ onClose }: { onClose: () => void }) {
@@ -91,11 +92,20 @@ export function RecipeBook({ onClose }: { onClose: () => void }) {
                     {Array.from({ length: c.size ?? 2 }, (_, i) => (
                       <span key={i} className="row" style={{ gap: 6 }}>
                         {i > 0 && <span className="head">+</span>}
-                        <span className="book-q head">?</span>
+                        {c.revealed ? (
+                          <SpriteThumb name={`building.${c.revealed[i]}.a.l1`} box={44} maxScale={1} />
+                        ) : (
+                          <span className="book-q head">?</span>
+                        )}
                       </span>
                     ))}
                   </div>
                   <span className="head" style={{ fontSize: 18 }}>???</span>
+                  {c.revealed && (
+                    <span className="small row" style={{ gap: 4, justifyContent: "center" }}>
+                      <Icon name="scroll" scale={1.5} /> {c.revealed.map((b) => config.buildings[b]?.name ?? b).join(" + ")}
+                    </span>
+                  )}
                   <span className="small" style={{ fontStyle: "italic" }}>“{c.hint}”</span>
                 </div>
               ),

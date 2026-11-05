@@ -296,15 +296,15 @@ async def collect(
 
 async def book(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> dict[str, Any]:
     """The recipe book: discovered combos in full, undiscovered ones as '???' with their hint (P17)."""
-    discovered = set(
-        (
-            await session.execute(
-                select(Discovery.key).where(
-                    Discovery.user_id == user_id, Discovery.kind == DiscoveryKind.combo
-                )
+    rows = (
+        await session.execute(
+            select(Discovery.kind, Discovery.key).where(
+                Discovery.user_id == user_id, Discovery.kind.in_([DiscoveryKind.combo, DiscoveryKind.hint])
             )
-        ).scalars()
-    )
+        )
+    ).all()
+    discovered = {k for kind, k in rows if kind == DiscoveryKind.combo}
+    hinted = {k for kind, k in rows if kind == DiscoveryKind.hint}  # bought from the merchant (Phase 7)
     combos = []
     for i, (ck, c) in enumerate(cfg.combos.combos.items()):
         if ck in discovered:
@@ -320,9 +320,15 @@ async def book(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> di
                 }
             )
         else:
-            combos.append(
-                {"id": f"secret-{i}", "discovered": False, "size": len(c.buildings), "hint": c.hint}
-            )
+            entry: dict[str, Any] = {
+                "id": f"secret-{i}",
+                "discovered": False,
+                "size": len(c.buildings),
+                "hint": c.hint,
+            }
+            if ck in hinted:
+                entry["revealed"] = c.buildings  # which buildings, but still not what they make
+            combos.append(entry)
     return {
         "combos": combos,
         "found": len(discovered & set(cfg.combos.combos)),

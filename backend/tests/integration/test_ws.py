@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 import msgpack
@@ -49,7 +50,7 @@ def test_village_channel_pushes_state(settings: Settings, game_config: Any, data
             r2 = client.post(
                 "/api/village/buildings",
                 json={"key": "house", "x": spot[0], "y": spot[1], "rotation": 0},
-                headers={"x-csrf-token": csrf},
+                headers={"x-csrf-token": csrf, "idempotency-key": str(uuid.uuid4())},
             )
             assert r2.status_code == 200, r2.text
             pushed = unpack(ws.receive_bytes())

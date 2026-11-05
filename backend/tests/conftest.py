@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import os
 import secrets
+import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -117,9 +118,19 @@ def reset_state(request: pytest.FixtureRequest, clock: FrozenClock) -> None:
         app.state.hf.limiter.reset()
 
 
+async def _idempotency_key(request: Any) -> None:
+    """Like the real client: every mutation carries a fresh Idempotency-Key unless the test set one."""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE") and "idempotency-key" not in request.headers:
+        request.headers["idempotency-key"] = str(uuid.uuid4())
+
+
 @pytest.fixture
 async def client(app: Any) -> AsyncIterator[AsyncClient]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="https://testserver") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="https://testserver",
+        event_hooks={"request": [_idempotency_key]},
+    ) as c:
         yield c
 
 

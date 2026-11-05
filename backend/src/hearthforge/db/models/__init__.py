@@ -27,6 +27,15 @@ from hearthforge.db.models.items import (
     ItemOrigin,
     Rarity,
 )
+from hearthforge.db.models.market import (
+    EconomySample,
+    IdempotencyKey,
+    MarketPlayerDaily,
+    MarketPrice,
+    MarketPriceHistory,
+    MarketSalesBucket,
+    MerchantPurchase,
+)
 from hearthforge.db.models.realm import Realm, RealmMember, RealmRole, RealmVisibility
 from hearthforge.db.models.village import BuildingState, Presence, Resource, Village, VillageBuilding
 from hearthforge.db.models.world import DeathDrop, NodeHarvest
@@ -41,6 +50,13 @@ __all__ = [
     "DeathDrop",
     "Discovery",
     "DiscoveryKind",
+    "EconomySample",
+    "IdempotencyKey",
+    "MarketPlayerDaily",
+    "MarketPrice",
+    "MarketPriceHistory",
+    "MarketSalesBucket",
+    "MerchantPurchase",
     "Container",
     "ContainerKind",
     "ContainerSlot",

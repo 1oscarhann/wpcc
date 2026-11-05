@@ -71,3 +71,11 @@ def rate_limit(bucket: str, per_minute_attr: str):  # noqa: ANN201
             raise TooManyRequests("rate_limited", "Slow down a little!")
 
     return dep
+
+
+async def admin_user(auth: Auth = Depends(current_user)) -> Auth:
+    from hearthforge.db.models import UserRole
+
+    if auth.user.role != UserRole.admin:
+        raise Forbidden("admin_only", "Admins only.")
+    return auth

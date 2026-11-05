@@ -1,4 +1,7 @@
 // Tiny fetch wrapper: same-origin cookies, CSRF header on mutations, typed JSON errors.
+// Every mutation carries an Idempotency-Key (PROTOCOL §5). If the network drops mid-request we retry
+// once with the SAME key: the server either replays the stored answer or runs it for the first time,
+// so a lost response can never charge, sell or buy twice.
 
 export class ApiError extends Error {
   constructor(
@@ -22,25 +25,42 @@ function readCookie(name: string): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export function newKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export async function api<T>(path: string, init: { method?: string; body?: unknown; key?: string } = {}): Promise<T> {
   const method = init.method ?? "GET";
   const headers: Record<string, string> = {};
   if (init.body !== undefined) headers["content-type"] = "application/json";
-  if (method !== "GET") {
+  const mutation = method !== "GET";
+  if (mutation) {
     const token = csrfToken ?? readCookie("hf_csrf");
     if (token) headers["x-csrf-token"] = token;
+    headers["idempotency-key"] = init.key ?? newKey();
   }
-  let res: Response;
-  try {
-    res = await fetch(path, {
-      method,
-      headers,
-      credentials: "same-origin",
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    });
-  } catch {
-    throw new ApiError(0, "network", "Can't reach the server. Check your connection.");
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < (mutation ? 2 : 1) && !res; attempt++) {
+    try {
+      res = await fetch(path, {
+        method,
+        headers,
+        credentials: "same-origin",
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      });
+    } catch {
+      if (attempt === 0 && mutation) await sleep(700);
+    }
   }
+  if (!res) throw new ApiError(0, "network", "Can't reach the server. Check your connection.");
   if (res.status === 304) return undefined as T;
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;

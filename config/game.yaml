@@ -31,3 +31,8 @@ rate_limits:
   auth_per_username_per_min: 8
   actions_per_min: 120
   preview_per_min: 600
+
+# Bag and bank expansions (BALANCE §8.2): coins per step, in order. Start sizes are in starter.yaml.
+containers:
+  inventory: { step: 6,  costs: [300, 800, 1800, 3500] }               # 24 → 48
+  bank:      { step: 20, costs: [400, 900, 1600, 2600, 4000, 6000, 9000] }   # 60 → 200

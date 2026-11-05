@@ -54,11 +54,12 @@ buildings:
 
   market:
     name: Market
-    description: Sell goods for coins. (Trading opens in a later update.)
+    description: Sell goods for coins. Prices move with what everyone sells; each level pays a little more.
     category: core
     footprint: [4, 3]
     max_count: [1, 1, 1, 1, 1]
     base_cost: { wood: 120, stone: 80 }
+    sell_bonus: [0, 0.02, 0.04, 0.06, 0.08]
 
   lumber_camp:
     name: Lumber Camp

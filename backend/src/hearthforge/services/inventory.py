@@ -27,6 +27,7 @@ EQUIP_ACCEPTS: dict[int, set[str]] = {
     **{i: {"consumable"} for i in range(4, 8)},
 }
 KINDS = ("inventory", "equipment")
+MOVE_KINDS = ("inventory", "equipment", "bank")  # the bank only while you're home (checked by the route)
 
 
 class Bag:
@@ -62,7 +63,7 @@ async def bags(
 
 
 async def read(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> dict[str, Any]:
-    bs = await bags(session, user_id, lock=False)
+    bs = await bags(session, user_id, MOVE_KINDS, lock=False)
     inst_ids = [s.instance_id for b in bs.values() for s in b.slots.values() if s.instance_id]
     insts: dict[uuid.UUID, ItemInstance] = {}
     if inst_ids:
@@ -91,6 +92,8 @@ async def read(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> di
                 )
             slots.append(row)
         out[kind] = {"capacity": b.c.capacity, "slots": slots}
+        if kind in cfg.game.containers:
+            out[kind]["expand"] = expansion_info(cfg, kind, b.c.capacity)
     return out
 
 
@@ -214,10 +217,10 @@ async def move(
     src: tuple[str, int],
     dst: tuple[str, int],
 ) -> None:
-    """Move, merge or swap between inventory and equipment slots (equipping is just a move)."""
-    if src[0] not in KINDS or dst[0] not in KINDS:
+    """Move, merge or swap between inventory, equipment and bank slots (equipping is just a move)."""
+    if src[0] not in MOVE_KINDS or dst[0] not in MOVE_KINDS:
         raise GameError("bad_container", "You can't move items there.")
-    bs = await bags(session, user_id)
+    bs = await bags(session, user_id, tuple(sorted({src[0], dst[0]})))
     sb, db = bs[src[0]], bs[dst[0]]
     for bag, slot in ((sb, src[1]), (db, dst[1])):
         if not 0 <= slot < bag.c.capacity:
@@ -275,6 +278,43 @@ async def move(
                 session, user_id, key, qty, ledger.ITEM_MOVE, container_id=bag.c.id, instance_id=inst
             )
     await session.flush()
+
+
+async def expand(
+    session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: datetime, kind: str
+) -> tuple[Any, int, int]:
+    """Buy the next bag/bank size step (BALANCE §8.2). Returns (village, new capacity, coins paid)."""
+    from hearthforge.services import village as village_svc
+
+    exp = cfg.game.containers.get(kind)  # type: ignore[call-overload]
+    if exp is None:
+        raise GameError("bad_container", "That can't be expanded.")
+    ld = await village_svc.load_locked(session, user_id=user_id, with_wallet=True)
+    village_svc.settle_village(session, cfg, ld, now)
+    assert ld.wallet is not None
+    bag = (await bags(session, user_id, (kind,)))[kind]
+    step = (bag.c.capacity - cfg.starter.containers[kind]) // exp.step  # type: ignore[index]
+    if step >= len(exp.costs):
+        raise GameError("max_size", "That's as big as it gets.")
+    cost = exp.costs[step]
+    await ledger.change_coins(
+        session, ld.wallet, -cost, ledger.CONTAINER_EXPAND, ref_type="container", ref_id=f"{kind}:{step + 1}"
+    )
+    bag.c.capacity += exp.step
+    village_svc.touch(ld, now)
+    await session.flush()
+    return ld, bag.c.capacity, cost
+
+
+def expansion_info(cfg: GameConfig, kind: str, capacity: int) -> dict[str, Any]:
+    exp = cfg.game.containers[kind]  # type: ignore[index]
+    step = (capacity - cfg.starter.containers[kind]) // exp.step  # type: ignore[index]
+    nxt = exp.costs[step] if step < len(exp.costs) else None
+    return {
+        "step": exp.step,
+        "next_cost": nxt,
+        "max": cfg.starter.containers[kind] + exp.step * len(exp.costs),  # type: ignore[index]
+    }
 
 
 async def loadout(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> dict[str, Any]:

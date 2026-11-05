@@ -534,6 +534,75 @@ def web() -> Canvas:
     return c
 
 
+def merchant_cart() -> Canvas:
+    """The wandering merchant's wagon: striped canopy, crates, a barrel, potions and a lantern."""
+    red, cloth, gold = ramp("roof_red"), ramp("cloth_cream"), ramp("gold")
+    c = Canvas(56, 48)
+    c.drop_shadow(27, 42, 24, 4, alpha=80)
+    # shafts out front (to the right)
+    c.line(44, 31, 55, 34, WOOD[1])
+    c.line(44, 34, 55, 37, WOOD[2])
+    # wagon bed: top planks then the front face
+    c.rect(6, 22, 39, 4, WOOD[4])
+    for x in range(8, 44, 6):
+        c.vline(x, 22, 25, WOOD[3])
+    c.rect(6, 26, 39, 10, WOOD[2])
+    c.hline(6, 44, 26, WOOD[3])
+    c.hline(6, 44, 35, WOOD[1])
+    for x in range(6, 45, 9):
+        c.vline(x, 26, 35, WOOD[1])
+    # sign board with a coin
+    c.rect(20, 28, 12, 6, WOOD[5])
+    c.ellipse(26, 31, 2.2, 2.0, gold[2])
+    c.put(25, 30, gold[4])
+    # goods on the bed
+    c.rect(9, 14, 8, 8, WOOD[3])  # crate
+    c.hline(9, 16, 14, WOOD[5])
+    c.line(9, 14, 16, 21, WOOD[1])
+    c.ellipse(22, 17, 3.5, 5, WOOD[2])  # barrel
+    c.hline(19, 25, 15, STONE[1])
+    c.hline(19, 25, 19, STONE[1])
+    c.ellipse(22, 12.5, 3.2, 1.2, WOOD[4])
+    c.ellipse(31, 19, 4.5, 3.5, cloth[1])  # sack
+    c.ellipse(30, 18, 3, 2.2, cloth[2])
+    c.put(31, 15, cloth[0])
+    for i, col in enumerate((ramp("flower_red")[1], ramp("water")[3], LEAF[3])):  # potions
+        x = 37 + i * 3
+        c.rect(x, 17, 2, 4, col)
+        c.put(x, 16, STONE[4])
+        c.put(x, 17, (255, 255, 255, 255) if i == 1 else col)
+    # posts and the striped canopy
+    c.rect(7, 9, 2, 14, WOOD[1])
+    c.rect(42, 9, 2, 14, WOOD[1])
+    for y in range(2, 12):
+        sag = int(1.5 * math.sin(math.pi * (y - 2) / 9))
+        x0, x1 = 4 + sag, 47 - sag
+        for x in range(x0, x1):
+            stripe = ((x - 4) // 5) % 2
+            shade = 3 if y < 6 else 2
+            c.put(x, y, red[shade] if stripe else cloth[shade])
+    for x in range(4, 47):  # scalloped edge
+        if x % 5 in (1, 2, 3):
+            stripe = ((x - 4) // 5) % 2
+            c.put(x, 12, red[1] if stripe else cloth[1])
+    c.hline(5, 45, 2, red[4])
+    # lantern on the left post
+    c.vline(5, 12, 14, STONE[1])
+    c.rect(4, 15, 3, 4, FIRE_R[3])
+    c.put(5, 16, FIRE_R[4])
+    # wheels
+    for wx in (13, 38):
+        c.ellipse(wx, 37, 6, 6, WOOD[1])
+        c.ellipse(wx, 37, 4.4, 4.4, WOOD[3])
+        c.ellipse(wx, 37, 3.2, 3.2, WOOD[1])
+        for a in range(0, 360, 60):
+            r = math.radians(a)
+            c.line(wx, 37, round(wx + 4 * math.cos(r)), round(37 + 4 * math.sin(r)), WOOD[4])
+        c.ellipse(wx, 37, 1.2, 1.2, STONE[3])
+    c.outline(INK)
+    return c
+
+
 def generate_extra() -> dict[str, Canvas]:
     out: dict[str, Canvas] = {}
     for v in range(2):
@@ -555,6 +624,7 @@ def generate_extra() -> dict[str, Canvas]:
     out["obj.log.0"] = log()
     out["obj.lamp.0"] = lamp_post()
     out["obj.signpost.0"] = signpost()
+    out["npc.merchant_cart"] = merchant_cart()  # placed by the client (not a map object)
     for k in ("h", "v", "post", "gate"):
         out[f"obj.fence.{k}"] = fence(k)
     for name, frames in (("duck", duck_frames()), ("smoke", smoke_frames()), ("glint", glint_frames()),

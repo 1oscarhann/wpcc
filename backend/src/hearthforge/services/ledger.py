@@ -38,6 +38,9 @@ CRAFT_CANCEL_REFUND = "craft.cancel_refund"
 CRAFT_COLLECT = "craft.collect"
 GEAR_REPAIR = "gear.repair"
 GEAR_SALVAGE = "gear.salvage"
+MARKET_SELL = "market.sell"
+MERCHANT_BUY = "merchant.buy"
+CONTAINER_EXPAND = "container.expand"
 
 
 async def lock_wallet(session: AsyncSession, user_id: uuid.UUID) -> Wallet:

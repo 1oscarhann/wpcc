@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -7,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hearthforge.api.deps import Auth, current_user, get_db, get_state, rate_limit
+from hearthforge.services import idempotency
 from hearthforge.services import village as svc
 from hearthforge.state import AppState
 
@@ -57,18 +59,29 @@ async def preview(
     return await svc.preview(db, st.config, auth.user.id, key, x, y, rotation, move_id)
 
 
+async def _publish(st: AppState, out: dict[str, Any]) -> dict[str, Any]:
+    if st.village_hub is not None:
+        await st.village_hub.publish(out["village"]["owner_id"], out["village"])
+    return out
+
+
 @router.post("/buildings", dependencies=[Depends(act)])
 async def place(
     body: PlaceIn,
+    key: uuid.UUID = Depends(idempotency.require_key),
     auth: Auth = Depends(current_user),
     st: AppState = Depends(get_state),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    now = st.clock.now()
     async with db.begin():
-        ld = await svc.place(
-            db, st.config, auth.user.id, st.clock.now(), body.key, body.x, body.y, body.rotation
-        )
-    return await _respond(st, ld)
+        replay = await idempotency.claim(db, auth.user.id, key, "village.place", body.model_dump(), now)
+        if replay is not None:
+            return replay
+        ld = await svc.place(db, st.config, auth.user.id, now, body.key, body.x, body.y, body.rotation)
+        out = {"village": svc.village_state(st.config, ld, now)}
+        await idempotency.store(db, auth.user.id, key, out)
+    return await _publish(st, out)
 
 
 @router.patch("/buildings/{building_id}", dependencies=[Depends(act)])
@@ -101,13 +114,20 @@ async def demolish(
 @router.post("/buildings/{building_id}/upgrade", dependencies=[Depends(act)])
 async def upgrade(
     building_id: str,
+    key: uuid.UUID = Depends(idempotency.require_key),
     auth: Auth = Depends(current_user),
     st: AppState = Depends(get_state),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    now = st.clock.now()
     async with db.begin():
-        ld = await svc.upgrade(db, st.config, auth.user.id, st.clock.now(), building_id)
-    return await _respond(st, ld)
+        replay = await idempotency.claim(db, auth.user.id, key, "village.upgrade", {"id": building_id}, now)
+        if replay is not None:
+            return replay
+        ld = await svc.upgrade(db, st.config, auth.user.id, now, building_id)
+        out = {"village": svc.village_state(st.config, ld, now)}
+        await idempotency.store(db, auth.user.id, key, out)
+    return await _publish(st, out)
 
 
 @router.post("/buildings/{building_id}/cancel", dependencies=[Depends(act)])

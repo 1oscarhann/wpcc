@@ -36,6 +36,8 @@ FILES: dict[str, type[BaseModel]] = {
     "combos": s.CombosCfg,
     "recipes": s.RecipesCfg,
     "forging": s.ForgingCfg,
+    "market": s.MarketCfg,
+    "merchant": s.MerchantCfg,
 }
 
 
@@ -99,6 +101,8 @@ class GameConfig:
     combos: s.CombosCfg
     recipes: s.RecipesCfg
     forging: s.ForgingCfg
+    market: s.MarketCfg
+    merchant: s.MerchantCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -231,6 +235,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     combos: s.CombosCfg = parsed["combos"]
     recipes: s.RecipesCfg = parsed["recipes"]
     forging: s.ForgingCfg = parsed["forging"]
+    market: s.MarketCfg = parsed["market"]
+    merchant: s.MerchantCfg = parsed["merchant"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -290,7 +296,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
                 errors.append(f"{where}.produces.{rk}: unknown resource")
             if len(rates) != b.max_level:
                 errors.append(f"{where}.produces.{rk}: needs {b.max_level} entries")
-        for arr in ("storage_base", "storage_bonus", "housing"):
+        for arr in ("storage_base", "storage_bonus", "housing", "sell_bonus"):
             v = getattr(b, arr)
             if v is not None and len(v) != b.max_level:
                 errors.append(f"{where}.{arr}: needs {b.max_level} entries")
@@ -454,6 +460,57 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if mapgen.map_size % mapgen.chunk_size:
         errors.append("mapgen.yaml:map_size: must be a multiple of chunk_size")
 
+    # ── containers / market / merchant (Phase 7) ──────────────────────────────
+    for ckind, exp in game.containers.items():
+        start = starter.containers.get(ckind, 0)
+        if start + exp.step * len(exp.costs) > 255:
+            errors.append(f"game.yaml:containers.{ckind}: fully expanded size must stay under 256")
+        if any(b <= a for a, b in zip(exp.costs, exp.costs[1:], strict=False)):
+            warnings.append(f"game.yaml:containers.{ckind}.costs: should increase every step")
+    lo_c, hi_c = market.defaults.clamp
+    if not 0 < lo_c < 1 < hi_c:
+        errors.append("market.yaml:defaults.clamp: needs 0 < low < 1 < high")
+    if market.window % market.recalc_interval or market.window / market.recalc_interval > 1000:
+        errors.append("market.yaml:window: must be a whole number (≤ 1000) of recalc intervals")
+    if market.sparkline.span > market.history_retention:
+        errors.append("market.yaml:sparkline.span: longer than history_retention")
+    for mk in market.items:
+        if mk not in items:
+            errors.append(f"market.yaml:items.{mk}: unknown item or resource")
+        elif not items[mk].stackable:
+            errors.append(f"market.yaml:items.{mk}: only stackable goods can be sold to the market")
+    best_bonus = max((max(b.sell_bonus) for b in bcfg.buildings.values() if b.sell_bonus), default=0.0)
+    hub_room = mapgen.hub_radius - 2
+    for i, (dx, dy) in enumerate(merchant.spots):
+        if math.hypot(dx, dy) > hub_room or (dx, dy) == (0, 0):
+            errors.append(
+                f"merchant.yaml:spots.{i}: must be inside the hub (≤ {hub_room} tiles, not the well)"
+            )
+    if merchant.slots > len(merchant.stock):
+        errors.append("merchant.yaml:slots: more slots than stock entries")
+    for sk, st_ in merchant.stock.items():
+        where = f"merchant.yaml:stock.{sk}"
+        if st_.kind == "hint":
+            if st_.key is not None:
+                errors.append(f"{where}: hints take no key")
+            continue
+        if st_.key is None:
+            errors.append(f"{where}: needs a key")
+            continue
+        if st_.kind == "resource" and st_.key not in res.resources:
+            errors.append(f"{where}: '{st_.key}' is not a resource")
+        if st_.kind == "item" and (st_.key not in items_cfg.items or not items_cfg.items[st_.key].stackable):
+            errors.append(f"{where}: '{st_.key}' is not a stackable item")
+        mi = market.items.get(st_.key)
+        if mi is not None:
+            ceiling = mi.base * hi_c * (1 + best_bonus) * merchant.min_markup
+            unit = st_.price * (1 - merchant.deal_discount) / st_.qty
+            if unit < ceiling:
+                errors.append(
+                    f"{where}: {unit:.1f} coins/unit on the deal slot is under the no-arbitrage floor "
+                    f"{ceiling:.1f} (market base × clamp max × best Market bonus × min_markup)"
+                )
+
     if errors:
         raise ConfigError(errors)
     if strict and warnings:
@@ -477,6 +534,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         combos=combos,
         recipes=recipes,
         forging=forging,
+        market=market,
+        merchant=merchant,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

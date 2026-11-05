@@ -69,6 +69,11 @@ class RateLimits(Strict):
     preview_per_min: int
 
 
+class ContainerExpansion(Strict):
+    step: int = Field(ge=1, le=50)
+    costs: list[int] = Field(min_length=1)
+
+
 class GameCfg(Strict):
     max_timer_seconds: int
     tick_rate_hz: int
@@ -77,6 +82,7 @@ class GameCfg(Strict):
     gates: Gates
     auth: AuthCfg
     rate_limits: RateLimits
+    containers: dict[Literal["inventory", "bank"], ContainerExpansion]
 
 
 # ── resources.yaml / items.yaml ─────────────────────────────────────────────
@@ -161,6 +167,7 @@ class BuildingCfg(Strict):
     requires_water: bool = False
     rare_group: str = "default"
     demolishable: bool = True
+    sell_bonus: list[float] | None = None  # market: extra sell price per level (fraction)
 
     @field_validator("footprint")
     @classmethod
@@ -622,3 +629,75 @@ class ForgingCfg(Strict):
     repair_ingots_per: int = Field(ge=1)
     salvage: SalvageCfg
     armour: dict[str, list[int]]
+
+
+# ── market.yaml ──────────────────────────────────────────────────────────────
+
+
+class MarketDefaults(Strict):
+    k: float = Field(gt=0, le=5)
+    clamp: tuple[float, float]
+    min_population: int = Field(ge=1)
+    over_cap_mult: float = Field(gt=0, le=1)
+
+
+class MarketItem(Strict):
+    base: float = Field(gt=0)
+    baseline: float = Field(gt=0)  # per active player per day
+    soft_cap: int = Field(ge=1)  # per player per day
+    k: float | None = Field(default=None, gt=0, le=5)
+    over_cap_mult: float | None = Field(default=None, gt=0, le=1)
+
+
+class TrendCfg(Strict):
+    lookback: Duration
+    threshold: float = Field(ge=0, le=1)
+
+
+class SparklineCfg(Strict):
+    points: int = Field(ge=4, le=200)
+    span: Duration
+
+
+class MarketCfg(Strict):
+    recalc_interval: Duration
+    window: Duration
+    active_window: Duration
+    history_retention: Duration
+    defaults: MarketDefaults
+    trend: TrendCfg
+    sparkline: SparklineCfg
+    max_sell: int = Field(ge=1)
+    items: dict[str, MarketItem]
+
+    def k(self, key: str) -> float:
+        return self.items[key].k or self.defaults.k
+
+    def over_cap_mult(self, key: str) -> float:
+        return self.items[key].over_cap_mult or self.defaults.over_cap_mult
+
+
+# ── merchant.yaml ────────────────────────────────────────────────────────────
+
+
+class MerchantStock(Strict):
+    kind: Literal["item", "resource", "hint"]
+    key: str | None = None
+    qty: int = Field(default=1, ge=1, le=999)
+    price: int = Field(ge=1)
+    limit: int = Field(ge=1, le=99)
+    weight: float = Field(gt=0)
+    name: str | None = None
+    blurb: str | None = None
+
+
+class MerchantCfg(Strict):
+    name: str
+    rotation: Duration
+    slots: int = Field(ge=1, le=12)
+    interact_radius: float = Field(gt=0, le=10)
+    min_markup: float = Field(ge=1)
+    deal_discount: float = Field(ge=0, lt=1)
+    spots: list[tuple[int, int]] = Field(min_length=1)
+    greetings: list[str] = Field(min_length=1)
+    stock: dict[str, MerchantStock]

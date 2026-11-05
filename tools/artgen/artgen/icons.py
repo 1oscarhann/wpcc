@@ -487,6 +487,69 @@ def u_map(c: Canvas) -> None:
     c.put(12, 5, RED[4])
 
 
+def u_market(c: Canvas) -> None:  # a little stall with a striped awning
+    for x in range(1, 15):
+        c.put(x, 3, RED[3] if (x // 2) % 2 else CLOTH[3])
+        c.put(x, 4, RED[2] if (x // 2) % 2 else CLOTH[2])
+    for x in range(1, 15, 2):
+        c.put(x, 5, RED[2] if (x // 2) % 2 else CLOTH[2])
+    c.rect(2, 6, 1, 8, WOOD[2])
+    c.rect(13, 6, 1, 8, WOOD[2])
+    c.rect(3, 10, 10, 4, WOOD[3])
+    c.hline(3, 12, 10, WOOD[4])
+    c.ellipse(6, 9, 1.6, 1.2, FIRE[3])
+    c.ellipse(9.5, 9, 1.6, 1.2, LEAF[3])
+    c.put(11, 8, GOLD[3])
+
+
+def u_chest(c: Canvas) -> None:  # the bank
+    c.rect(2, 7, 12, 7, WOOD[3])
+    c.rect(2, 4, 12, 4, WOOD[4])
+    c.hline(3, 12, 3, WOOD[5])
+    c.hline(2, 13, 7, WOOD[1])
+    c.vline(4, 4, 13, GOLD[2])
+    c.vline(11, 4, 13, GOLD[2])
+    c.rect(7, 7, 2, 3, GOLD[3])
+    c.put(7, 8, INK)
+
+
+def u_cart(c: Canvas) -> None:  # the merchant's wagon
+    for x in range(2, 13):
+        c.put(x, 2, RED[3] if (x // 2) % 2 else CLOTH[3])
+        c.put(x, 3, RED[2] if (x // 2) % 2 else CLOTH[2])
+    c.vline(3, 4, 8, WOOD[2])
+    c.vline(11, 4, 8, WOOD[2])
+    c.rect(2, 7, 11, 4, WOOD[3])
+    c.hline(2, 12, 7, WOOD[4])
+    c.rect(5, 5, 3, 2, GOLD[3])
+    c.line(13, 9, 15, 8, WOOD[2])
+    c.ellipse(4.5, 12, 2.2, 2.2, WOOD[1])
+    c.put(4, 12, WOOD[4])
+    c.ellipse(10.5, 12, 2.2, 2.2, WOOD[1])
+    c.put(10, 12, WOOD[4])
+
+
+def u_scroll(c: Canvas) -> None:  # a recipe hint
+    c.rect(4, 3, 9, 10, PAPER[3])
+    c.rect(3, 2, 11, 2, PAPER[2])
+    c.rect(3, 12, 11, 2, PAPER[2])
+    c.hline(5, 11, 6, PAPER[1])
+    c.hline(5, 10, 8, PAPER[1])
+    c.hline(5, 9, 10, PAPER[1])
+    c.put(11, 9, RED[3])
+    c.put(12, 10, RED[2])
+
+
+def u_trend_up(c: Canvas) -> None:
+    c.poly([(8, 3), (13, 9), (3, 9)], LEAF[3])
+    c.rect(6, 9, 4, 4, LEAF[2])
+
+
+def u_trend_down(c: Canvas) -> None:
+    c.poly([(8, 13), (13, 7), (3, 7)], RED[3])
+    c.rect(6, 3, 4, 4, RED[2])
+
+
 ICONS: dict[str, Callable[[Canvas], None]] = {
     "wood": i_wood, "stone": i_stone, "ore": i_ore, "food": i_food, "herbs": i_herbs, "fish": i_fish,
     "hide": i_hide, "crystal": i_crystal, "planks": i_planks, "bricks": i_bricks, "ingots": i_ingots,
@@ -497,6 +560,8 @@ ICONS: dict[str, Callable[[Canvas], None]] = {
     "close": u_close, "demolish": u_demolish, "settings": u_settings, "sound": u_sound, "mute": u_mute,
     "timer": u_timer, "lock": u_lock, "check": u_check, "info": u_info, "star": u_star, "home": u_home,
     "avatar": u_avatar, "queue": u_queue, "plus": u_plus, "map": u_map, "book": u_book, "anvil": u_anvil,
+    "market": u_market, "chest": u_chest, "cart": u_cart, "scroll": u_scroll,
+    "trend_up": u_trend_up, "trend_down": u_trend_down,
     "leather_armour": armour_icon(TIER_RAMPS[0], TIER_TRIM[0], True),
     "plate_armour": armour_icon(TIER_RAMPS[1], TIER_TRIM[1], False),
 }

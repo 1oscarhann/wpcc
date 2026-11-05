@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hearthforge.api.deps import Auth, current_user, get_db, get_state, rate_limit
 from hearthforge.services import crafting as svc
+from hearthforge.services import idempotency
 from hearthforge.services import village as village_svc
 from hearthforge.state import AppState
 
@@ -57,22 +59,23 @@ async def station(
 @router.post("/jobs", dependencies=[Depends(act)])
 async def start(
     body: StartIn,
+    key: uuid.UUID = Depends(idempotency.require_key),
     auth: Auth = Depends(current_user),
     st: AppState = Depends(get_state),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    now = st.clock.now()
     async with db.begin():
+        replay = await idempotency.claim(db, auth.user.id, key, "crafting.start", body.model_dump(), now)
+        if replay is not None:
+            return replay
         ld, job = await svc.start(
-            db,
-            st.config,
-            auth.user.id,
-            st.clock.now(),
-            body.station_id,
-            body.recipe,
-            body.quantity,
-            body.rares,
+            db, st.config, auth.user.id, now, body.station_id, body.recipe, body.quantity, body.rares
         )
-        out = await _respond(st, ld, {"job": village_svc.job_view(job)})
+        out = {"village": village_svc.village_state(st.config, ld, now), "job": village_svc.job_view(job)}
+        await idempotency.store(db, auth.user.id, key, out)
+    if st.village_hub is not None:
+        await st.village_hub.publish(out["village"]["owner_id"], out["village"])
     if body.rares and st.rooms is not None:
         await st.rooms.reload_loadout(auth.user.id)
     return out

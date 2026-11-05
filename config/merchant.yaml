@@ -1,0 +1,45 @@
+# The wandering merchant (BALANCE §8.2). She parks her cart somewhere in the realm's hub and
+# changes stock (and spot) every `rotation`. Stock is derived from (merchant id, rotation index), so
+# it needs no table and every player in the realm sees the same cart. Purchase limits are per player.
+#
+# To buy you walk up to the cart in Avatar Mode (within `interact_radius` tiles). From Build Mode
+# you can peek at the stock but not buy.
+#
+# No arbitrage, enforced by the loader: anything the market also buys costs at least `min_markup` ×
+# the highest price the market could ever pay for it (base × clamp max × best Market bonus), even
+# on the deal slot.
+#
+# Blueprints, seeds, pet eggs and rare decorations join the pools when those systems exist
+# (Phases 14 and 16).
+
+name: Tamsin the Tinker
+rotation: 4h
+slots: 6
+interact_radius: 3.5
+min_markup: 1.25
+deal_discount: 0.2               # one slot per rotation is marked down
+spots:                           # tile offsets from the hub centre (the well); one per rotation
+  - [5, 3]
+  - [-6, 4]
+  - [4, -6]
+  - [-5, -5]
+  - [8, -1]
+greetings:
+  - Fresh off the far roads, friend!
+  - Mind the cart, the left wheel bites.
+  - Everything's half price. Of something.
+  - I trade in shiny things and rumours.
+  - Back so soon? I'm flattered.
+
+# kind: item → your bag · resource → your storehouse · hint → reveals one undiscovered combo's buildings
+stock:
+  ironbark:      { kind: item,     key: ironbark,             qty: 2,  price: 220,  limit: 2, weight: 10 }
+  starstone:     { kind: item,     key: starstone,            qty: 1,  price: 200,  limit: 2, weight: 7 }
+  potions:       { kind: item,     key: small_healing_potion, qty: 3,  price: 75,   limit: 3, weight: 12 }
+  crystal_crate: { kind: resource, key: crystal,              qty: 10, price: 680,  limit: 1, weight: 7 }
+  ingot_crate:   { kind: resource, key: ingots,               qty: 20, price: 1040, limit: 1, weight: 7 }
+  leather_roll:  { kind: resource, key: leather,              qty: 10, price: 600,  limit: 1, weight: 6 }
+  plank_crate:   { kind: resource, key: planks,               qty: 50, price: 1080, limit: 1, weight: 6 }
+  hide_bundle:   { kind: resource, key: hide,                 qty: 20, price: 440,  limit: 2, weight: 6 }
+  recipe_hint:   { kind: hint,     price: 400, limit: 1, weight: 9,
+                   name: Recipe Hint, blurb: "A torn page that names the buildings of one combo you haven't found." }

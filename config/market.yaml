@@ -1,0 +1,44 @@
+# NPC market (BALANCE §8.1, P1). Sell resources from your storehouse and materials from your bag
+# at a Market building. Prices are recalculated by the worker every `recalc_interval` from the last
+# `window` of sales by everyone:
+#
+#   baseline = per_player_baseline × max(active_players_24h, min_population)
+#   price    = base × clamp(exp(−k × (units_sold_24h − baseline) / baseline), clamp[0], clamp[1])
+#
+# At sale time the price gets the Market's level bonus (buildings.yaml → market.sell_bonus), and once
+# a player passes an item's daily soft cap, *their* price for the rest of the (UTC) day is × over_cap_mult.
+# Payouts round down, so selling one unit at a time never beats selling a stack.
+
+recalc_interval: 10m
+window: 24h                      # rolling sales window (sum of the last 144 ten-minute buckets)
+active_window: 24h               # "active player" = seen within this long
+history_retention: 30d
+defaults: { k: 0.6, clamp: [0.4, 2.5], min_population: 20, over_cap_mult: 0.5 }
+trend: { lookback: 1h, threshold: 0.03 }   # arrow ↑/↓ when the price moved more than 3% in the last hour
+sparkline: { points: 24, span: 24h }
+max_sell: 5000                   # most units in one sell request
+
+# base: coins per unit at ×1.0 · baseline: per active player per day · soft_cap: per player per day
+items:
+  # raw resources (from your storehouse)
+  wood:        { base: 2,   baseline: 400, soft_cap: 2000 }
+  stone:       { base: 2,   baseline: 300, soft_cap: 2000 }
+  food:        { base: 2,   baseline: 300, soft_cap: 2000 }
+  ore:         { base: 4,   baseline: 120, soft_cap: 800 }
+  herbs:       { base: 4,   baseline: 100, soft_cap: 600 }
+  fish:        { base: 6,   baseline: 80,  soft_cap: 500 }
+  hide:        { base: 5,   baseline: 60,  soft_cap: 400 }
+  crystal:     { base: 15,  baseline: 15,  soft_cap: 100 }
+  # intermediates (from your storehouse)
+  planks:      { base: 5,   baseline: 100, soft_cap: 600 }
+  bricks:      { base: 5,   baseline: 100, soft_cap: 600 }
+  ingots:      { base: 12,  baseline: 60,  soft_cap: 400 }
+  leather:     { base: 14,  baseline: 40,  soft_cap: 300 }
+  bread:       { base: 7,   baseline: 80,  soft_cap: 500 }
+  potion_base: { base: 10,  baseline: 40,  soft_cap: 300 }
+  # monster materials and rares (from your bag, then your bank)
+  slime_gel:   { base: 3,   baseline: 60,  soft_cap: 400 }
+  wolf_fang:   { base: 6,   baseline: 30,  soft_cap: 200 }
+  spider_silk: { base: 7,   baseline: 30,  soft_cap: 200 }
+  ironbark:    { base: 25,  baseline: 5,   soft_cap: 40, k: 0.5 }
+  starstone:   { base: 45,  baseline: 3,   soft_cap: 25, k: 0.5 }

@@ -27,6 +27,7 @@ class DiscoveryKind(enum.StrEnum):
     monster = "monster"
     fish = "fish"
     rare_material = "rare_material"
+    hint = "hint"  # a combo whose buildings a merchant hint revealed (Phase 7)
 
 
 class CraftJob(Base):

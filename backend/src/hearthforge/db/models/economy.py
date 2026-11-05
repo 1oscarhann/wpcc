@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Identity, Index, Text
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Identity, Index, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hearthforge.db.base import Base, created_at_col, pg_enum
@@ -33,6 +33,7 @@ class Transaction(Base):
         Index("ix_transactions_user_created", "user_id", "created_at"),
         Index("ix_transactions_reason_created", "reason", "created_at"),
         Index("ix_transactions_ref", "ref_type", "ref_id"),
+        Index("ix_transactions_coin_created", "created_at", postgresql_where=text("asset = 'coin'")),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)

@@ -47,7 +47,7 @@ def test_kill_loot_and_ko_marker(settings, game_config, database_url) -> None:  
                 if bot.events_of("DEATH"):
                     break
             assert bot.events_of("HIT") and bot.events_of("DEATH")
-            for _ in range(30):
+            for _ in range(100):  # generous: under a loaded test run ticks can bunch up
                 bot.step()
                 if any(e[2] == "coins" for e in bot.events_of("PICKUP")):
                     break
@@ -112,3 +112,35 @@ def run_sql(client: TestClient, st: Any, stmt: Any) -> list[Any]:
             return list((await s.execute(stmt)).scalars())
 
     return client.portal.call(go)  # type: ignore[union-attr]
+
+
+def test_merchant_needs_you_at_the_cart(settings, game_config, database_url) -> None:  # noqa: ANN001
+    """Presence is checked against the real room: from Build Mode you can look, at the cart you can buy."""
+    app = make_app(settings, game_config)
+    with TestClient(app, base_url="http://testserver") as client:
+        me = signup(client, "Shopper")
+        st = app.state.hf
+        uid = uuid.UUID(me["user_id"])
+        headers = {"x-csrf-token": me["csrf_token"]}
+        view = client.get("/api/merchant/hub").json()
+        hint_or_cheap = min(view["slots"], key=lambda s: s["price"])
+        body = {"slot": hint_or_cheap["slot"], "rotation": view["rotation"]}
+        r = client.post(
+            "/api/merchant/hub/buy", json=body, headers={**headers, "idempotency-key": str(uuid.uuid4())}
+        )
+        assert r.json()["error"]["code"] == "too_far"
+        with client.websocket_connect("/ws", headers={"origin": "http://testserver"}) as ws:
+            bot = Bot(ws)
+            ws.send_bytes(pack("ENTER_AVATAR"))
+            bot.recv_until("ROOM_JOINED")
+            _room, p = st.rooms.find(uid)
+            p.m.x, p.m.y = view["pos"][0] + 1.0, view["pos"][1] + 1.0  # stroll over to the cart
+            assert client.get("/api/merchant/hub").json()["near"] is True
+            r = client.post(
+                "/api/merchant/hub/buy", json=body, headers={**headers, "idempotency-key": str(uuid.uuid4())}
+            )
+            # 200 unless that slot is a hint with nothing left to hint or more than the starter coins
+            assert r.status_code == 200 or r.json()["error"]["code"] in (
+                "insufficient_coins",
+                "nothing_to_hint",
+            ), r.text

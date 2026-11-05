@@ -27,6 +27,10 @@ async def main() -> None:
         clock=Clock(),
         passwords=Passwords(settings.argon2_profile),
     )
+    from hearthforge.services import market
+
+    async with st.sessionmaker() as session, session.begin():
+        await market.ensure_started(session, config, st.clock.now())  # first prices + the recalc chain
     try:
         await Worker(st).run_forever()
     finally:
