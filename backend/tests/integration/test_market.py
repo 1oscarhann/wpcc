@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -366,3 +367,15 @@ async def test_admin_economy(client: AsyncClient, player: dict[str, Any], st: An
     async with st.sessionmaker() as s:
         sample = (await s.execute(select(EconomySample))).scalar_one()
         assert sample.faucet >= earned and sample.sink >= 300
+
+
+async def test_recalc_window_is_bounded(player: dict[str, Any], st: Any, clock: Any) -> None:
+    """A recalc for time t counts the 24 h *up to* t, never sales booked after it (backfills, replays)."""
+    step = st.config.market.recalc_interval
+    now = clock.now()
+    later = dom.bucket_start(now, step) + timedelta(hours=3)
+    async with st.sessionmaker() as s, s.begin():
+        await s.execute(insert(MarketSalesBucket).values(item_key="wood", bucket_start=later, units=50_000))
+        assert (await market_svc.units_24h(s, st.config, now)).get("wood", 0) == 0
+        assert (await market_svc.units_24h(s, st.config, later))["wood"] == 50_000
+        assert (await market_svc.units_24h(s, st.config, later + timedelta(hours=25))).get("wood", 0) == 0

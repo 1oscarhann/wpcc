@@ -190,7 +190,7 @@ def market_recalc() -> None:
 
 @market_app.command("seed")
 def market_seed(
-    hours: int = typer.Option(24, help="How much fake history to write"),
+    hours: int = typer.Option(48, help="How much fake history to write (≥ 24 so the window is full)"),
     seed: int = typer.Option(7),
     yes: bool = typer.Option(False, "--yes", help="Required: this writes made-up sales"),
 ) -> None:
@@ -220,13 +220,18 @@ def market_seed(
         n = int(hours * 3600 // step)
         start = dom.bucket_start(now, step) - timedelta(seconds=n * step)
         phase = {k: rng.random() * 6.28 for k in m.items}
-        mood = {k: rng.choice([0.6, 0.9, 1.0, 1.2, 1.6]) for k in m.items}
+        mood = {k: rng.choice([0.7, 0.9, 1.0, 1.1, 1.3]) for k in m.items}
+        # each item gets a little story over the last 12 h: a selling spree, a drought, or calm
+        story = {k: rng.choice([-0.85, -0.6, 0.0, 0.0, 0.9, 1.6]) for k in m.items}
         for i in range(n + 1):
             t = start + timedelta(seconds=i * step)
+            late = max(0.0, min(1.0, (i - (n - 72)) / 72))  # 0 → 1 across the final 12 hours
+            ease = late * late * (3 - 2 * late)
             for k, it in m.items.items():
                 per_bucket = it.baseline * m.defaults.min_population * step / m.window
-                wave = 1 + 0.6 * math.sin(phase[k] + i / 9)
-                units = max(0, int(per_bucket * mood[k] * wave * rng.uniform(0.5, 1.5)))
+                wave = 1 + 0.35 * math.sin(phase[k] + i / 9)
+                vol = mood[k] * (1 + story[k] * ease)
+                units = max(0, int(per_bucket * vol * wave * rng.uniform(0.6, 1.4)))
                 stmt = insert(MarketSalesBucket).values(item_key=k, bucket_start=t, units=units)
                 await session.execute(
                     stmt.on_conflict_do_update(

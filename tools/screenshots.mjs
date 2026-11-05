@@ -285,7 +285,8 @@ async function apiPost(page, path, body) {
   return page.evaluate(
     async ([p, b]) => {
       const csrf = document.cookie.split("; ").find((c) => c.startsWith("hf_csrf="))?.split("=")[1];
-      const r = await fetch(p, { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": csrf }, body: JSON.stringify(b) });
+      const headers = { "content-type": "application/json", "x-csrf-token": csrf, "idempotency-key": crypto.randomUUID() };
+      const r = await fetch(p, { method: "POST", headers, body: JSON.stringify(b) });
       return r.json();
     },
     [path, body],
@@ -374,6 +375,93 @@ PHASES[6] = async (page, kind) => {
   await page.getByRole("button", { name: "Bag", exact: true }).click();
   await page.locator('button[title^="Copper Spear"]').first().click();
   await shot(page, "10-bag-gear", kind, { wait: 500 });
+};
+
+// ── Phase 7: market, merchant, bank ──────────────────────────────────────
+let seeded = false;
+PHASES[7] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  if (!seeded) {
+    hf("market seed --yes"); // DEV ONLY: 24 h of made-up realm sales so sparklines have a story
+    seeded = true;
+  }
+  const name = await signupFlow(page, kind);
+  hf(`test-account ${name}`);
+  hf(`grant ${name} --coins 6000 --res wood=900 --res stone=900 --res ore=200 --item slime_gel=40 --item wolf_fang=12 --item ironbark=3`);
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(1200);
+  const spot = await page.evaluate(async () => {
+    const ok = async (x, y) => (await (await fetch(`/api/village/preview?key=market&x=${x}&y=${y}`)).json()).valid;
+    for (let y = 24; y <= 33; y++) for (let x = 12; x <= 28; x++) if (await ok(x, y)) return [x, y];
+    return null;
+  });
+  if (!spot) throw new Error("no spot for the market");
+  const [mx, my] = spot;
+  await apiPost(page, "/api/village/buildings", { key: "market", x: mx, y: my, rotation: 0 });
+  hf(`fast-forward ${name} 30s`);
+  await refresh(page);
+  await page.evaluate(([x, y]) => window.__hfGame.devFocusTile?.(x, y), [mx + 2, my + 1]);
+  await page.waitForTimeout(900);
+  const mc = await tapTile(page, mx + 2, my + 1.5);
+  await page.mouse.click(mc.x, mc.y);
+  await shot(page, "01-market-selected", kind, { wait: 600 });
+  await page.getByRole("button", { name: /^Trade/ }).click();
+  await page.locator(".market-row").first().waitFor();
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page.locator(".market-row", { hasText: "Wood" }).first().click();
+  await shot(page, "02-market", kind, { wait: 600 });
+  if (!mobile) {
+    const sb = await page.locator(".sell-box .spark svg").boundingBox();
+    await page.mouse.move(sb.x + sb.width * 0.35, sb.y + sb.height / 2);
+    await shot(page, "03-sparkline-hover", kind, { wait: 300 });
+  }
+  await page.getByRole("button", { name: "I have", exact: true }).click();
+  await page.locator(".market-row", { hasText: "Wood" }).first().click();
+  await page.locator(".sell-box").getByRole("button", { name: "100", exact: true }).click();
+  await page.locator(".sell-box").getByRole("button", { name: /^Sell / }).click();
+  await shot(page, "04-sold", kind, { wait: 700 });
+  await page.locator(".market-row", { hasText: "Ironbark" }).first().click();
+  await page.locator(".sell-box").getByRole("button", { name: /^All/ }).click();
+  await shot(page, "05-sell-rare", kind, { wait: 400 });
+  await page.getByRole("tab", { name: /Wandering merchant/ }).click();
+  await page.locator(".stock-card").first().waitFor();
+  await shot(page, "06-merchant-peek", kind, { wait: 500 });
+  await page.keyboard.press("Escape");
+
+  // the bank lives at home
+  await page.getByRole("button", { name: "Bag and bank" }).click();
+  await page.locator('button[title^="Slime Gel"]').first().click();
+  await page.getByRole("button", { name: /To bank/ }).click();
+  await page.waitForTimeout(500);
+  await page.getByRole("tab", { name: /Bank/ }).click();
+  await shot(page, "07-bank", kind, { wait: 500 });
+  await page.getByRole("button", { name: "Close bag" }).click();
+
+  // walk to the merchant's cart in the hub
+  const m = await page.evaluate(() => fetch("/api/merchant/hub").then((r) => r.json()));
+  await enterAvatar(page);
+  const ok = await walk(page, Math.floor(m.pos[0]) - 1, Math.floor(m.pos[1]) + 2);
+  if (!ok) await walk(page, Math.floor(m.pos[0]) - 1, Math.floor(m.pos[1]) + 2);
+  await page.waitForTimeout(800);
+  await page.locator(".trade-prompt").waitFor({ timeout: 8000 });
+  await shot(page, "08-merchant-cart", kind, { wait: 400 });
+  await page.locator(".trade-prompt").click({ force: true });
+  await page.locator(".stock-card").first().waitFor();
+  await shot(page, "09-merchant-buy", kind, { wait: 500 });
+  const hint = page.locator(".stock-card", { hasText: "Recipe Hint" }).getByRole("button", { name: "Buy" });
+  const target = (await hint.count()) ? hint : page.locator(".stock-card").getByRole("button", { name: "Buy" }).first();
+  await target.click();
+  await shot(page, "10-bought", kind, { wait: 700 });
+  await page.keyboard.press("Escape");
+  if (await hint.count()) {
+    await page.keyboard.press("h");
+    await page.waitForFunction(() => !window.__hfGame?.avatar);
+    await page.waitForTimeout(900);
+    await page.getByRole("button", { name: "Recipe Book" }).click();
+    await page.getByText(/Found \d of \d combos/).waitFor();
+    await shot(page, "11-hint-in-book", kind, { wait: 600 });
+  }
 };
 
 const browser = await playwright.chromium.launch();

@@ -51,13 +51,13 @@ export class MerchantCart {
     const shadow = new Graphics().ellipse(0, 0, 5.5, 2.2).fill({ color: INK, alpha: 0.28 });
     const npcRoot = new Container();
     npcRoot.addChild(shadow, this.npc);
-    npcRoot.position.set(-30, 4);
+    npcRoot.position.set(-38, 4);
     const bg = new Graphics().roundRect(-8, -8, 16, 16, 4).fill({ color: 0xfaf2dd }).stroke({ color: INK, width: 1.5 });
     const coin = new Sprite(iconTex("coins"));
     coin.anchor.set(0.5);
     coin.scale.set(0.75);
     this.bubble.addChild(bg, coin);
-    this.bubble.position.set(-30, -34);
+    this.bubble.position.set(-38, -36);
     this.root.addChild(this.cart, npcRoot, this.bubble);
     this.root.visible = false;
     this.host.objects.addChild(this.root);
@@ -112,7 +112,7 @@ export class MerchantCart {
       this.npc.texture = this.frames[f.index];
       this.npc.scale.x = f.flip ? -1 : 1;
     }
-    this.bubble.y = -34 + Math.sin(this.time / 380) * 2;
+    this.bubble.y = -36 + Math.sin(this.time / 380) * 2;
     const p = this.avatar.client.drawPos();
     const d = Math.hypot(p.x - this.view.pos[0], p.y - this.view.pos[1]);
     const near = d <= this.view.radius;
@@ -125,7 +125,7 @@ export class MerchantCart {
     this.bubble.scale.set(near ? 1.15 : 1);
     this.label.visible = d < this.view.radius + 4;
     if (this.label.visible) {
-      const s = this.host.toScreen(this.root.x - 30, this.root.y - 46);
+      const s = this.host.toScreen(this.root.x - 38, this.root.y - 48);
       this.label.position.set(Math.round(s.x), Math.round(s.y));
     }
   }

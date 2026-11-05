@@ -135,8 +135,8 @@ export function Bag({ onClose }: { onClose: () => void }) {
   return (
     <div className="panel av-bag" role="dialog" aria-label="Bag">
       <div className="row" style={{ marginBottom: 8, gap: 6 }}>
-        <span className="ribbon">{showing === "bank" ? "Bank" : "Bag"}</span>
-        <span className="grow" />
+        {!home && <span className="ribbon">Bag</span>}
+        {!home && <span className="grow" />}
         {home && (
           <span className="row" role="tablist" style={{ gap: 4 }}>
             <button role="tab" aria-selected={tab === "inventory"} className={`btn small ${tab === "inventory" ? "" : "secondary"}`} onClick={() => { setTab("inventory"); setSel(null); }}>
@@ -147,9 +147,10 @@ export function Bag({ onClose }: { onClose: () => void }) {
             </button>
           </span>
         )}
+        {home && <span className="grow" />}
         <button className="btn danger small icon-only" onClick={onClose} aria-label="Close bag"><Icon name="close" /></button>
       </div>
-      <div className="row av-equip" style={{ gap: 8, marginBottom: 10 }}>
+      {showing === "inventory" && <div className="row av-equip" style={{ gap: 8, marginBottom: 10 }}>
         {EQUIP.map(({ slot, label }) => (
           <div key={slot} className="col" style={{ alignItems: "center", gap: 2 }}>
             <Cell s={eq.get(slot)} label={label} active={sel?.kind === "equipment" && sel.s.slot === slot}
@@ -157,7 +158,7 @@ export function Bag({ onClose }: { onClose: () => void }) {
             <span className="small muted">{label}</span>
           </div>
         ))}
-      </div>
+      </div>}
       {detail && (
         <div className="slot bag-detail col" style={{ gap: 4, marginBottom: 10 }}>
           <div className="row" style={{ gap: 8 }}>
@@ -217,13 +218,7 @@ export function Bag({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       )}
-      <div className="av-grid">
-        {Array.from({ length: gridCap }, (_, i) => (
-          <Cell key={`${showing}${i}`} s={grid.get(i)} active={sel?.kind === showing && sel.s.slot === i}
-            onClick={() => { const s = grid.get(i); if (s) setSel({ kind: showing, s }); }} />
-        ))}
-      </div>
-      <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+      <div className="row" style={{ gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <span className="small muted grow">
           {grid.size}/{gridCap} slots ·{" "}
           {showing === "bank" ? "Safe at home: nothing in the bank can be lost when you're knocked out." : "Resources go into storage when you walk home."}
@@ -234,6 +229,12 @@ export function Bag({ onClose }: { onClose: () => void }) {
             <Icon name="plus" scale={1.5} /> +{exp.step} slots · {exp.next_cost.toLocaleString()} <Icon name="coins" scale={1} />
           </button>
         )}
+      </div>
+      <div className="av-grid">
+        {Array.from({ length: gridCap }, (_, i) => (
+          <Cell key={`${showing}${i}`} s={grid.get(i)} active={sel?.kind === showing && sel.s.slot === i}
+            onClick={() => { const s = grid.get(i); if (s) setSel({ kind: showing, s }); }} />
+        ))}
       </div>
     </div>
   );

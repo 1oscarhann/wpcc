@@ -61,7 +61,7 @@ async def units_24h(session: AsyncSession, cfg: GameConfig, now: datetime) -> di
     since = at - timedelta(seconds=cfg.market.window - cfg.market.recalc_interval)
     rows = await session.execute(
         select(MarketSalesBucket.item_key, func.sum(MarketSalesBucket.units))
-        .where(MarketSalesBucket.bucket_start >= since)
+        .where(MarketSalesBucket.bucket_start >= since, MarketSalesBucket.bucket_start <= at)
         .group_by(MarketSalesBucket.item_key)
     )
     return {k: int(v) for k, v in rows.all()}

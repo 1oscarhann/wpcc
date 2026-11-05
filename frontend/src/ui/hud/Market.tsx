@@ -38,8 +38,11 @@ export function Sparkline({ values, trend, w = 84, h = 24, interactive = false, 
   const lo = Math.min(...pts);
   const hi = Math.max(...pts);
   const pad = 3;
-  const span = hi - lo || hi * 0.1 || 1;
-  const xy = pts.map((v, i) => [pad + (i / (pts.length - 1)) * (w - pad * 2), pad + (1 - (v - lo) / span) * (h - pad * 2)] as const);
+  // never zoom in past ±15% of the price: small wiggles should look small
+  const mid = (hi + lo) / 2;
+  const span = Math.max(hi - lo, mid * 0.3, 0.01);
+  const lo2 = mid - span / 2;
+  const xy = pts.map((v, i) => [pad + (i / (pts.length - 1)) * (w - pad * 2), pad + (1 - (v - lo2) / span) * (h - pad * 2)] as const);
   const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
   const area = `${d}L${xy[xy.length - 1][0].toFixed(1)},${h}L${xy[0][0].toFixed(1)},${h}Z`;
   const accent = trend > 0 ? "var(--leaf)" : trend < 0 ? "var(--red)" : "var(--ink)";
