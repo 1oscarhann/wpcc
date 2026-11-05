@@ -502,6 +502,14 @@ Prices are recalculated every 10 min. After a player passes their per-item daily
 | Merchant | rotation every 4 h, 6 slots: blueprints 300–2,000, seeds 50–200, pet eggs 2,500–6,000, recipe hints 400, rare decorations 800–5,000 |
 | Cosmetics | 500–5,000 |
 
+**As built (Phase 7).** The merchant (`merchant.yaml`) rotates 6 of 9 lots every 4 h, one marked down 20%:
+- Ironbark ×2 for 220 and Starstone for 200.
+- Potions ×3 for 75.
+- Crates into storage: crystal ×10 for 680, ingots ×20 for 1,040, leather ×10 for 600, planks ×50 for 1,080, hide ×20 for 440.
+- A Recipe Hint for 400.
+
+Every lot the market also buys costs at least 1.25 × the best price the market could ever pay for it, even on the deal slot, and the loader enforces this. Blueprints, seeds, pet eggs and decorations wait for their systems.
+
 **Faucet sketch (mid-game, TH3):**
 - Passive village output sells for about 1.4k coins/h at base price, capped by storage.
 - An active forest or mountain session earns about 3–4k coins/h (kills, drops, sales).

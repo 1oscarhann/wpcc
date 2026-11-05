@@ -443,6 +443,18 @@ CREATE TABLE merchant_purchases (                     -- stock itself is derived
   PRIMARY KEY (user_id, merchant_id, rotation, slot)
 );
 
+CREATE TABLE economy_samples (                        -- Phase 7: one row per market recalc (D-060)
+  at           timestamptz PRIMARY KEY,
+  coin_supply  bigint  NOT NULL,                      -- sum of all wallets
+  players      integer NOT NULL,
+  active_24h   integer NOT NULL,
+  faucet       bigint  NOT NULL,                      -- coins created since the previous sample
+  sink         bigint  NOT NULL,                      -- coins destroyed since the previous sample
+  last_tx_id   bigint  NOT NULL                       -- flow is counted by ledger id, never by timestamps
+);
+CREATE INDEX ON transactions (created_at) WHERE asset = 'coin';   -- the economy view's 24 h / 7 d sums
+-- discovery_kind gains 'hint' (a combo whose buildings a merchant Recipe Hint revealed)
+
 CREATE TABLE player_market_listings (                 -- Phase 17
   id              uuid PRIMARY KEY,
   seller_user_id  uuid NOT NULL REFERENCES users,

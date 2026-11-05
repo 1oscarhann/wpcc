@@ -131,6 +131,10 @@ cd backend && uv run hf --help
 | `hf test-account NAME` | Allow fast-forward on an account |
 | `hf fast-forward NAME 2h` | Move timers and production forward |
 | `hf grant NAME --coins 500 --res wood=1000 --item ironbark=2` | Give coins, resources and bag items (written to the ledger) |
+| `hf make-admin NAME` | Admin role: unlocks `GET /api/admin/economy` |
+| `hf economy` | Coin supply, faucets vs sinks by reason (24 h and 7 d) |
+| `hf market recalc` | Reprice the NPC market now (the worker does it every 10 min) |
+| `hf market seed --yes` | **Dev only:** 48 h of made-up sales so sparklines and trends have a story |
 
 ## Art
 

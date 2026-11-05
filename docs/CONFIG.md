@@ -49,8 +49,8 @@ Conventions: durations use the `"45s" | "5m" | "1h"` string syntax (parsed to se
 | `dungeons.yaml` | room templates, weights, length, puzzles, bosses, rewards, daily seed rule | 12 |
 | `waves.yaml` | wave interval, warning, composition by TH level, steal cap, rewards, report lines | 13 |
 | `bosses.yaml` | realm and world bosses: phases, attacks, HP, scaling, loot | 13, 17 |
-| `market.yaml` | NPC prices, pricing params, soft caps, recalc interval, listing fee/expiry | 7, 17 |
-| `merchant.yaml` | stock pools, rotation period, prices | 7 |
+| `market.yaml` | NPC prices, pricing params, soft caps, recalc interval, trend/sparkline windows (listing fee/expiry join in 17) | 7 ✔, 17 |
+| `merchant.yaml` | stock, rotation period, slots, deal discount, parking spots, greetings, no-arbitrage markup | 7 ✔ |
 | `villagers.yaml` | name parts, appearance pools, happiness weights, arrival rules, speech lines | 14 |
 | `beauty.yaml` | beauty scoring weights | 14 |
 | `quests.yaml` | tutorial, main, daily and weekly pools | 8, 16 |
@@ -266,6 +266,8 @@ tables:
 ```
 
 ### `market.yaml`
+
+As built in Phase 7 (`config/market.yaml`): `recalc_interval`, `window`, `active_window`, `history_retention`, `defaults {k, clamp, min_population, over_cap_mult}`, `trend {lookback, threshold}`, `sparkline {points, span}`, `max_sell`, and `items.<key> {base, baseline, soft_cap, k?, over_cap_mult?}`. The Market's per-level bonus is `buildings.yaml → market.sell_bonus`; bag/bank expansion costs are `game.yaml → containers`. The loader checks every item exists and stacks, the clamp straddles 1, the window is a whole number of recalcs, and that no merchant entry the market also buys can be resold at a profit. The original sketch:
 
 ```yaml
 recalc_interval: 10m

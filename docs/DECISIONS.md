@@ -256,3 +256,40 @@ The Tannery joins as a TH3 building. Bows, hammers and staffs wait for their mov
 
 ### D-055: intermediates on
 **Decision.** `gates.intermediates_enabled` is now true (D-034's Phase 6 switch). Level 3+ upgrades cost planks and bricks, which the Workshop (TH2) makes. Rare costs stay gated until starstone is obtainable (Phase 10).
+
+### D-056: idempotency keys live in the action's transaction
+**Decision.** Spend, sell and buy routes require an `Idempotency-Key` UUID: building place/upgrade, crafting job start, repair, bag/bank expansion, market sell and merchant buy. The key row is inserted first thing *inside* the action's own transaction, and the response is stored before commit. So a key exists exactly when its action committed.
+- A replay returns the stored response.
+- A concurrent duplicate waits on the first transaction's key row, then replays it.
+- A failed action rolls its key back, so the client may retry the same key with a fixed request.
+- The same key with a different endpoint or body gets 422.
+
+The web client sends a fresh key on every mutation and, on a network error, retries **once with the same key**. A lost response can therefore never charge twice. The worker prunes keys after 24 h. Tested with five simultaneous requests sharing one key: one effect, five identical answers.
+
+### D-057: what the NPC market buys, and from where
+**Decision.** Every stackable good in `market.yaml` is sellable:
+- Resources and intermediates come out of storage.
+- Monster materials and rares come out of your bag first, then the bank.
+
+Gear isn't sold to the NPC market (salvage it instead, D-054). Selling needs a Market building. Its level adds `sell_bonus` (0/2/4/6/8%) at sale time. Prices are the recalculated ones (P1); a sale never moves the price until the next recalc. The payout rounds down once for the whole sale, so splitting a sale into single units can't farm rounding.
+
+### D-058: the wandering merchant has to be visited
+**Decision.**
+- **Stock.** Tamsin's cart is derived from `(hub:<realm>, rotation index)`, so it needs no table. Every member of a realm sees the same six slots, one of them a marked-down deal, and the same parking spot. Each 4 h rotation she moves to another spot in the hub.
+- **Limits.** Purchase limits are per player per rotation (`merchant_purchases`).
+- **Buying.** You buy only while your avatar stands at the cart. The server checks your live room position (within `interact_radius` + 0.75). From Build Mode you can peek at the stock.
+- **No arbitrage.** The loader rejects any stock entry that the market also buys whose deal price falls below `min_markup` × the best possible market payout. Buying from her and selling to the market can never profit.
+- **What's in stock now.** Rares, potions, resource crates and Recipe Hints. A hint reveals the buildings, never the result, of one undiscovered combo; it's stored as discovery kind `hint`. Blueprints, seeds, pet eggs and decorations join the pools with their systems (Phases 14 and 16).
+
+### D-059: the bank stays home
+**Decision.** The bank (60 → 200 slots) only opens in Build Mode; the server refuses bank moves while you're in a room. KO losses only ever touch the bag, so the bank is the safe place for rares. Bag (24 → 48) and bank expansions are a coin sink priced in `game.yaml → containers`.
+
+### D-060: the recalc chain and the coin-supply metric
+**Decision.**
+- **Recalc chain.** On boot, the API (with an in-process worker) and the worker process each call `ensure_started`. It prices everything if the table is empty and schedules the next `market.recalc` on the 10-minute boundary, de-duplicated by boundary. Each recalc schedules the next one, so after downtime the worker does one catch-up recalc instead of a backlog.
+- **Window.** A recalc for time *t* counts sales in (t − 24 h, t] and never after *t*. This matters for backfills and the dev seed; a test pins it.
+- **Coin supply.** Each recalc writes an `economy_samples` row: coin supply, wallets, 24 h actives, plus coins created and destroyed since the previous sample. That flow is counted by ledger id, not timestamps, so nothing is double-counted or missed.
+- **Where to see it.** `GET /api/admin/economy` (role admin, `hf make-admin NAME`) and `hf economy` show supply over 7 days, and faucets vs sinks by reason for 24 h and 7 days.
+
+### D-061: demo market history is a dev-only command
+**Decision.** `hf market seed --yes` writes 48 h of made-up realm sales, with a small story per item (a selling spree, a drought, or calm), and recalcs at every step, so sparklines and trend arrows have something to show in screenshots. It refuses without `--yes` and on `HF_ENV=prod`.
