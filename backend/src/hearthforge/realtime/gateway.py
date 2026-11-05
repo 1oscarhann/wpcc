@@ -25,6 +25,24 @@ MAX_INPUT_STRIKES = 25
 LIVE: dict[str, int] = {}  # user id → open sockets in this process
 
 
+async def _same_realm(st: AppState, uid: uuid.UUID, other: str) -> bool:
+    from sqlalchemy import select
+
+    from hearthforge.db.models import RealmMember
+
+    try:
+        oid = uuid.UUID(other)
+    except ValueError:
+        return False
+    async with st.sessionmaker() as s:
+        rows = (
+            (await s.execute(select(RealmMember.realm_id).where(RealmMember.user_id.in_([uid, oid]))))
+            .scalars()
+            .all()
+        )
+    return len(rows) == 2 and rows[0] == rows[1]
+
+
 async def _last_socket_closed(st: AppState, uid: uuid.UUID) -> None:
     """Snapshot the village for the 'While you were away' card (Phase 8)."""
     from hearthforge.services import away
@@ -62,6 +80,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
     conn = Conn(ws, user_id)
     uid = uuid.UUID(user_id)
     LIVE[user_id] = LIVE.get(user_id, 0) + 1
+    hub.register(conn)
     player = None
     room = None
     window_start, count, strikes, input_strikes = time.monotonic(), 0, 0, 0
@@ -123,11 +142,31 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     await conn.send_bytes(encode("ERROR", 409, f"err.{e.code}", {}))
             elif op == "SUB_VILLAGE":
                 owner = str(fields[0]) if fields else user_id
-                if owner != user_id:  # visiting friends arrives in Phase 15
+                # your own village, or a realm-mate's (Phase 9); visiting friends arrives in Phase 15
+                if owner != user_id and not await _same_realm(st, uid, owner):
                     await conn.send_bytes(encode("ERROR", 403, "err.not_allowed", {}))
                     continue
                 hub.subscribe(owner, conn)
                 await hub.publish(owner)
+            elif op == "PARTY":
+                if player is None or room is None:
+                    continue
+                action = fields[0] if fields else None
+                err = None
+                if action == "invite" and len(fields) > 1 and isinstance(fields[1], int):
+                    err = rooms.invite(room, player, fields[1])
+                elif action == "accept" and len(fields) > 1 and isinstance(fields[1], str):
+                    err = rooms.accept(room, player, fields[1])
+                elif action == "leave":
+                    rooms.leave_party(player.user_id)
+                if err:
+                    room.toast(player, f"party_{err}")
+            elif op == "TRAVEL":
+                if player is None or room is None or not fields or not isinstance(fields[0], int):
+                    continue
+                err = room.travel(player, fields[0])
+                if err:
+                    room.toast(player, f"travel_{err}")
             elif op == "UNSUB_VILLAGE":
                 hub.unsubscribe(str(fields[0]) if fields else user_id, conn)
     except WebSocketDisconnect:
@@ -137,6 +176,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
     finally:
         conn.closed = True
         hub.unsubscribe_all(conn)
+        hub.unregister(conn)
         rooms.disconnected(conn)
         LIVE[user_id] = LIVE.get(user_id, 1) - 1
         if LIVE[user_id] <= 0:

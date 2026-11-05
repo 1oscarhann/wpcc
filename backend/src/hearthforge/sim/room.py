@@ -382,6 +382,8 @@ class RealmRoom:
         if p.writer:
             p.writer.cancel()
         p.pending.save_pos = True
+        if self.st.rooms is not None:
+            self.st.rooms.leave_party(p.user_id)
         for o in self.players.values():
             o.ev.append([EV["PLAYER_LEFT"], p.eid])
         with contextlib.suppress(Exception):
@@ -475,6 +477,8 @@ class RealmRoom:
         self.tick_drops(t)
         if t % self.hz == 0:
             self.tick_nodes()
+            if self.st.rooms is not None:
+                self.st.rooms.party_tick(self)
         for p in self.players.values():
             p.dirty.set()
 
@@ -522,6 +526,54 @@ class RealmRoom:
         elif t % 10 == 0 and self.in_home(p) and not p.pending.deposit and self.has_resources(p):
             p.pending.deposit = True
             p.deposit_wait = self.hz * 2
+        if t % 5 == 0:
+            self.explore(p)
+
+    # ── exploration: fog of war and waystones (Phase 9) ──────────────────────
+    def explore(self, p: Player) -> None:
+        from hearthforge.services import world as world_svc
+
+        cs = self.cfg.mapgen.chunk_size
+        chunk = (int(p.m.x) // cs, int(p.m.y) // cs)
+        if p.fog is not None and chunk != p.fog_chunk:
+            p.fog_chunk = chunk
+            if world_svc.reveal(self.cfg, p.fog, chunk[0], chunk[1], self.cfg.social.fog.reveal_radius):
+                p.pending.fog = True
+        r2 = self.cfg.social.waystone.attune_radius**2
+        for w in self.grid.gen.waystones:
+            if w.index not in p.attuned and (w.x + 0.5 - p.m.x) ** 2 + (w.y + 0.5 - p.m.y) ** 2 <= r2:
+                p.attuned.add(w.index)
+                p.pending.waystones.add(w.index)
+                p.ev.append([EV["WAYSTONE"], w.index, w.name, sorted(p.attuned)])
+
+    def travel(self, p: Player, index: int) -> str | None:
+        """Fast travel between attuned waystones (P12). Returns an error code or None."""
+        if p.ko > 0:
+            return "ko"
+        if self.tick_no - p.last_combat < self.combat_lock:
+            return "in_combat"
+        stones = {w.index: w for w in self.grid.gen.waystones}
+        dest = stones.get(index)
+        if dest is None or index not in p.attuned:
+            return "not_attuned"
+        r2 = self.cfg.social.waystone.use_radius**2
+        if not any(
+            w.index in p.attuned and (w.x + 0.5 - p.m.x) ** 2 + (w.y + 0.5 - p.m.y) ** 2 <= r2
+            for w in stones.values()
+        ):
+            return "not_at_waystone"
+        for dx, dy in ((0, 1), (1, 1), (-1, 1), (1, 0), (-1, 0), (0, 2), (0, -1)):
+            x, y = dest.x + dx, dest.y + dy
+            if not self.grid.solid(x, y):
+                p.m.x, p.m.y = x + 0.5, y + 0.5
+                break
+        p.m.dodge = 0
+        p.m.atk = ATK_NONE
+        p.inputs.clear()
+        p.iframes = self.hz  # a moment to get your bearings
+        p.pending.save_pos = True
+        p.ev.append([EV["TELEPORT"], p.m.x, p.m.y, index])
+        return None
 
     def in_home(self, p: Player) -> bool:
         x, y, w, h = p.home_rect

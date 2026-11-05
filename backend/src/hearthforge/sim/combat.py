@@ -577,10 +577,16 @@ class Combat:
         spec = self.en.biomes.get(m.biome)  # type: ignore[call-overload]
         el = self.en.elite
         rng = room.rng
+        shared: set[int] = set()  # party members nearby who didn't swing still get the XP (Phase 9)
         for eid in list(m.damagers):
             p = room.players.get(eid)
             if p is None or (p.m.x - m.x) ** 2 + (p.m.y - m.y) ** 2 > 24**2:
                 continue
+            if room.st.rooms is not None:
+                r2 = room.cfg.social.party.xp_share_radius**2
+                for o in room.st.rooms.party_players(room, p.user_id):
+                    if o.eid not in m.damagers and (o.m.x - m.x) ** 2 + (o.m.y - m.y) ** 2 <= r2:
+                        shared.add(o.eid)
             p.pending.stats[f"kill.{m.key}"] += 1
             p.pending.stats["kill.any"] += 1
             # every player who helped gets their own rolls (BALANCE §6.4)
@@ -595,6 +601,12 @@ class Combat:
                 for drop in m.cfg.loot:
                     if rng.random() < drop.chance:
                         room.spawn_drop(p, drop.item, rng.randint(*drop.qty), m.x, m.y)
+        if spec is not None:
+            xp = int(spec.xp * (el.xp if m.elite else 1))
+            for eid in shared:
+                o = room.players.get(eid)
+                if o is not None and o.ko == 0:
+                    room.grant_xp(o, xp)
         _ = killer
 
     # ── projectiles (spear throw) ────────────────────────────────────────────

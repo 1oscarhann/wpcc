@@ -144,3 +144,94 @@ def test_merchant_needs_you_at_the_cart(settings, game_config, database_url) -> 
                 "insufficient_coins",
                 "nothing_to_hint",
             ), r.text
+
+
+def test_party_waystones_and_fog(settings, game_config, database_url) -> None:  # noqa: ANN001
+    """Two realm-mates over real sockets: party up, share kill XP, attune and travel, fog is saved."""
+    from hearthforge.db.models import Discovery, FogReveal
+
+    s = settings.model_copy(update={"monsters_enabled": True})
+    app = make_app(s, game_config)
+    import contextlib
+
+    with TestClient(app, base_url="http://testserver") as client, contextlib.ExitStack() as sockets:
+        ada = signup(client, "PartyAda")
+        h = {"x-csrf-token": ada["csrf_token"], "idempotency-key": str(uuid.uuid4())}
+        code = client.post("/api/realms", json={"name": "Twin Peaks"}, headers=h).json()["realm"][
+            "invite_code"
+        ]
+        ws_a = sockets.enter_context(client.websocket_connect("/ws", headers={"origin": "http://testserver"}))
+        bram = signup(client, "PartyBram")
+        h = {"x-csrf-token": bram["csrf_token"], "idempotency-key": str(uuid.uuid4())}
+        assert client.post("/api/realms/join", json={"code": code}, headers=h).status_code == 200
+        ws_b = sockets.enter_context(client.websocket_connect("/ws", headers={"origin": "http://testserver"}))
+        st = app.state.hf
+        a_id, b_id = uuid.UUID(ada["user_id"]), uuid.UUID(bram["user_id"])
+        bot_a, bot_b = Bot(ws_a), Bot(ws_b)
+        ws_a.send_bytes(pack("ENTER_AVATAR"))
+        bot_a.recv_until("ROOM_JOINED")
+        ws_b.send_bytes(pack("ENTER_AVATAR"))
+        bot_b.recv_until("ROOM_JOINED")
+        room, pa = st.rooms.find(a_id)
+        room_b, pb = st.rooms.find(b_id)
+        assert room is room_b and room.combat is not None
+        room.combat._wake = lambda t: None
+
+        # party: Ada invites, Bram accepts, both get the party frame
+        ws_a.send_bytes(pack("PARTY", "invite", pb.eid))
+        for _ in range(10):
+            bot_b.step()
+            if bot_b.events_of("PARTY_INVITE"):
+                break
+        inv = bot_b.events_of("PARTY_INVITE")[0]
+        assert inv[2] == "PartyAda"
+        ws_b.send_bytes(pack("PARTY", "accept", inv[1]))
+        for _ in range(30):
+            bot_a.step()
+            bot_b.step()
+            states = [e for e in bot_a.events_of("PARTY") if e[1] and len(e[1]["members"]) == 2]
+            if states:
+                break
+        assert states and {m["name"] for m in states[-1][1]["members"]} == {"PartyAda", "PartyBram"}
+
+        # Ada kills a slime; Bram stands close by and still gets the XP
+        from tests.unit.test_combat import spawn
+
+        x, y = pa.m.x, pa.m.y
+        pb.m.x, pb.m.y = x + 2, y
+        m = spawn(room, "slime", x + 1, y)
+        m.damagers[pa.eid] = 10
+        xp_before = pb.xp + pb.level * 10_000
+        room.combat._kill(m, pa)
+        assert pb.xp + pb.level * 10_000 > xp_before
+
+        # waystones: walk up to the Wellside stone (attunes), then travel to an attuned forest stone
+        stones = room.grid.gen.waystones
+        hub, far = stones[0], stones[-1]
+        pa.m.x, pa.m.y = hub.x + 0.5, hub.y + 1.5
+        for _ in range(10):
+            bot_a.step()
+            if bot_a.events_of("WAYSTONE"):
+                break
+        assert bot_a.events_of("WAYSTONE")[0][1] == 0 and 0 in pa.attuned
+        ws_a.send_bytes(pack("TRAVEL", far.index))  # not attuned yet: refused
+        bot_a.step()
+        assert abs(pa.m.x - far.x) > 20
+        pa.attuned.add(far.index)
+        pa.last_combat = -10_000
+        ws_a.send_bytes(pack("TRAVEL", far.index))
+        for _ in range(10):
+            bot_a.step()
+            if bot_a.events_of("TELEPORT"):
+                break
+        assert abs(pa.m.x - (far.x + 0.5)) <= 1.5 and abs(pa.m.y - (far.y + 0.5)) <= 2.5
+        deadline = time.time() + 6
+        rows: list[Any] = []
+        while time.time() < deadline and not rows:
+            bot_a.step()
+            rows = run_sql(client, st, select(FogReveal).where(FogReveal.user_id == a_id))
+        assert rows and any(rows[0].bits)
+        attuned = run_sql(
+            client, st, select(Discovery).where(Discovery.user_id == a_id, Discovery.kind == "waystone")
+        )
+        assert {d.key for d in attuned} >= {"0"}

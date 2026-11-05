@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "client_to_server": {
     "HELLO": "0x01",
     "PING": "0x02",
@@ -8,7 +8,9 @@
     "ENTER_AVATAR": "0x20",
     "LEAVE_AVATAR": "0x21",
     "INPUT": "0x22",
-    "ACTION": "0x23"
+    "ACTION": "0x23",
+    "PARTY": "0x30",
+    "TRAVEL": "0x31"
   },
   "server_to_client": {
     "WELCOME": "0x81",
@@ -42,7 +44,11 @@
     "INVENTORY": 24,
     "PLAYER": 25,
     "PLAYER_LEFT": 26,
-    "PROJECTILE_END": 27
+    "PROJECTILE_END": 27,
+    "WAYSTONE": 28,
+    "TELEPORT": 29,
+    "PARTY": 30,
+    "PARTY_INVITE": 31
   },
   "entity_kinds": {
     "avatar": 0,
@@ -74,6 +80,7 @@
     "idle": 1,
     "kicked": 3,
     "replaced": 4,
-    "shutdown": 5
+    "shutdown": 5,
+    "moved": 6
   }
 }

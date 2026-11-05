@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import secrets
 import time
 import uuid
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
@@ -28,11 +30,23 @@ if TYPE_CHECKING:
 log = logging.getLogger("hearthforge.rooms")
 
 
+@dataclass
+class Party:
+    """In memory only (D-025): a restart disbands parties and players just re-form them."""
+
+    id: str
+    realm_id: uuid.UUID
+    leader: uuid.UUID
+    members: list[uuid.UUID] = field(default_factory=list)
+
+
 class RoomManager:
     def __init__(self, st: AppState) -> None:
         self.st = st
         self.rooms: dict[uuid.UUID, RealmRoom] = {}
         self._lock = asyncio.Lock()
+        self.parties: dict[str, Party] = {}
+        self.invites: dict[uuid.UUID, tuple[str, uuid.UUID, float]] = {}  # invitee → (party, inviter, expiry)
 
     def find(self, user_id: uuid.UUID) -> tuple[RealmRoom, Player] | None:
         for room in self.rooms.values():
@@ -116,8 +130,14 @@ class RoomManager:
                         )
                     ).scalars()
                 )
+                from hearthforge.services import world as world_svc
+
+                fog = await world_svc.load_fog(s, self.st.config, user_id, realm.id)
+                attuned = await world_svc.attuned(s, user_id)
             room = await self._room(realm)
             p = self._make_player(room, conn, user, avatar, member.plot_index, loadout)
+            p.fog = fog
+            p.attuned = attuned
             wall = time.time()
             for h in harvested:
                 p.depleted[h.node_id] = wall + (h.respawn_at - now).total_seconds()
@@ -216,6 +236,141 @@ class RoomManager:
         for o in room.players.values():
             if o is not p:
                 o.ev.append([EV["PLAYER"], *room.roster_entry(p)])
+
+    # ── realm changes (Phase 9) ─────────────────────────────────────────────
+    async def evict(self, user_id: uuid.UUID) -> None:
+        """Their village moved to another realm: out of this room (the client goes back to Build Mode)."""
+        found = self.find(user_id)
+        if found is not None:
+            room, p = found
+            self.leave_party(user_id)
+            await room.remove_player(p, ROOM_LEFT["moved"])
+
+    async def refresh_realm(self, realm_id: uuid.UUID) -> None:
+        """Members came or went: reload every village's buildings (collision) in that realm's room."""
+        room = self.rooms.get(realm_id)
+        if room is not None and not room.closed:
+            await self.load_villages(room)
+            from hearthforge.realtime.protocol import encode
+
+            frame = encode("BLOCKS", room.grid.block_rects, sorted(room.claimed))
+            for p in list(room.players.values()):
+                asyncio.create_task(room._send(p, frame))
+
+    # ── parties (Phase 9) ───────────────────────────────────────────────────
+    def party_of(self, user_id: uuid.UUID) -> Party | None:
+        for party in self.parties.values():
+            if user_id in party.members:
+                return party
+        return None
+
+    def party_players(self, room: RealmRoom, user_id: uuid.UUID) -> list[Player]:
+        party = self.party_of(user_id)
+        if party is None:
+            return []
+        return [p for uid in party.members if (p := room.by_user.get(uid)) is not None]
+
+    def invite(self, room: RealmRoom, inviter: Player, target_eid: int) -> str | None:
+        """Returns an error code, or None when the invite went out."""
+        target = room.players.get(target_eid)
+        if target is None or target is inviter:
+            return "no_player"
+        party = self.party_of(inviter.user_id)
+        if party is not None and len(party.members) >= self.st.config.social.party.max_size:
+            return "party_full"
+        if party is not None and target.user_id in party.members:
+            return "already_in"
+        if party is None:
+            party = Party(secrets.token_hex(4), room.realm_id, inviter.user_id, [inviter.user_id])
+            self.parties[party.id] = party
+        self.invites[target.user_id] = (
+            party.id,
+            inviter.user_id,
+            time.monotonic() + self.st.config.social.party.invite_ttl,
+        )
+        from hearthforge.realtime.protocol import EV
+
+        target.ev.append([EV["PARTY_INVITE"], party.id, inviter.name])
+        self._push_party(party, room)
+        return None
+
+    def accept(self, room: RealmRoom, p: Player, party_id: str) -> str | None:
+        inv = self.invites.get(p.user_id)
+        if inv is None or inv[0] != party_id or inv[2] < time.monotonic():
+            return "invite_expired"
+        party = self.parties.get(party_id)
+        if party is None:
+            return "invite_expired"
+        if len(party.members) >= self.st.config.social.party.max_size:
+            return "party_full"
+        del self.invites[p.user_id]
+        self.leave_party(p.user_id)
+        party.members.append(p.user_id)
+        self._push_party(party, room)
+        return None
+
+    def leave_party(self, user_id: uuid.UUID) -> None:
+        party = self.party_of(user_id)
+        if party is None:
+            return
+        party.members.remove(user_id)
+        room = self.rooms.get(party.realm_id)
+        if room is not None:
+            from hearthforge.realtime.protocol import EV
+
+            p = room.by_user.get(user_id)
+            if p is not None:
+                p.ev.append([EV["PARTY"], None])
+        if len(party.members) <= 1:
+            for uid in party.members:
+                if room is not None and (o := room.by_user.get(uid)) is not None:
+                    from hearthforge.realtime.protocol import EV
+
+                    o.ev.append([EV["PARTY"], None])
+            del self.parties[party.id]
+            return
+        if party.leader == user_id:
+            party.leader = party.members[0]
+        if room is not None:
+            self._push_party(party, room)
+
+    def party_state(self, party: Party, room: RealmRoom) -> dict[str, Any]:
+        out = []
+        for uid in party.members:
+            o = room.by_user.get(uid)
+            out.append(
+                {
+                    "user_id": str(uid),
+                    "eid": o.eid if o else None,
+                    "name": o.name if o else "?",
+                    "level": o.level if o else 0,
+                    "hp": round(o.hp) if o else 0,
+                    "hp_max": o.stats.hp_max if o else 1,
+                    "here": o is not None,
+                    "x": round(o.m.x, 1) if o else None,
+                    "y": round(o.m.y, 1) if o else None,
+                }
+            )
+        return {"id": party.id, "leader": str(party.leader), "members": out}
+
+    def _push_party(self, party: Party, room: RealmRoom) -> None:
+        from hearthforge.realtime.protocol import EV
+
+        state = self.party_state(party, room)
+        for uid in party.members:
+            o = room.by_user.get(uid)
+            if o is not None:
+                o.ev.append([EV["PARTY"], state])
+
+    def party_tick(self, room: RealmRoom) -> None:
+        """Once a second: party frames (HP bars, map dots) for everyone in a party in this room."""
+        for party in list(self.parties.values()):
+            if party.realm_id == room.realm_id:
+                self._push_party(party, room)
+        now = time.monotonic()
+        for uid, (_pid, _inviter, exp) in list(self.invites.items()):
+            if exp < now:
+                del self.invites[uid]
 
     def on_village_state(self, owner_id: str, state: dict[str, Any]) -> None:
         for room in self.rooms.values():

@@ -30,6 +30,28 @@ class VillageHub:
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._dirty: set[str] = set()
         self.poll_interval = poll_interval
+        self.users: dict[str, set[Conn]] = defaultdict(set)  # every live socket, by user (Phase 9)
+
+    def register(self, ws: Conn) -> None:
+        self.users[ws.user_id].add(ws)
+
+    def unregister(self, ws: Conn) -> None:
+        s = self.users.get(ws.user_id)
+        if s is not None:
+            s.discard(ws)
+            if not s:
+                self.users.pop(ws.user_id, None)
+
+    def online(self) -> set[str]:
+        return set(self.users)
+
+    async def notify(self, user_ids: list[str] | set[str], kind: str, payload: dict | None = None) -> None:
+        """A small nudge to every socket of these users (e.g. 'realm' → refetch the realm)."""
+        frame = encode("NOTIFY", kind, payload or {})
+        for uid in user_ids:
+            for ws in list(self.users.get(uid, ())):
+                with contextlib.suppress(Exception):
+                    await ws.send_bytes(frame)
 
     def subscribe(self, owner_id: str, ws: Conn) -> None:
         self.subs[owner_id].add(ws)
