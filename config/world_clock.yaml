@@ -13,7 +13,8 @@ night:                        # monsters after dark (BALANCE §6.2)
   hp: 1.25
   dmg: 1.15
   loot_qty: 1.5
-  groups: 1.4                 # more spawn groups per chunk
+  rare_chance: 2.0            # rare-material drop chances doubled
+  groups: 1.4                 # more spawn groups per chunk; the extra ones only wake at night
 weather:
   block: 20m
   states:

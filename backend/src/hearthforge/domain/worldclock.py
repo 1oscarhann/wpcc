@@ -70,7 +70,7 @@ def weather_for_block(cfg: WorldClockCfg, seed: int, i: int) -> str:
     """The season is read at the block's midpoint, so a block never straddles two seasons' weights."""
     mid = block_start(cfg, i) + timedelta(seconds=cfg.weather.block / 2)
     s = season(cfg, mid)
-    weights = [(k, st.weights.get(s, 0)) for k, st in cfg.weather.states.items()]
+    weights = [(k, st.weights.get(s, 0.0)) for k, st in cfg.weather.states.items()]  # type: ignore[call-overload]
     total = sum(w for _, w in weights)
     if total <= 0:
         return next(iter(cfg.weather.states))

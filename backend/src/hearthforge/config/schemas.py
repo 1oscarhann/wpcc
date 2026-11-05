@@ -489,15 +489,38 @@ class CombatCfg(Strict):
 
 
 class EnemyAttack(Strict):
-    shape: Literal["circle", "line"]
-    range: float = Field(gt=0, le=6)  # circle radius around the landing point / line length
+    shape: Literal["circle", "line", "shot"]  # shot: a projectile along the telegraphed line (kiters)
+    range: float = Field(gt=0, le=10)  # circle radius around the landing point / line length / shot reach
     width: float = Field(default=0.8, gt=0, le=3)
-    trigger: float = Field(gt=0, le=8)  # start winding up when the target is this close
+    trigger: float = Field(gt=0, le=9)  # start winding up when the target is this close
     windup: Duration
     active: Duration
     recover: Duration
     lunge: float = Field(default=0, ge=0, le=6)  # tiles moved during the active phase
     knockback: float = Field(default=0.6, ge=0)
+    at_target: bool = False  # circle lands on the target's spot instead of a hop (summoner roots)
+    root: Duration | None = None  # a hit roots the player in place this long
+
+
+class ShotCfg(Strict):
+    speed: float = Field(gt=0, le=30)  # tiles per second
+    radius: float = Field(default=0.3, gt=0, le=1)
+    sprite: Literal["arrow", "spit", "sting", "ice", "fire", "bolt", "rock"]
+    chain: int = Field(default=0, ge=0, le=4)  # chain lightning: jumps to this many more players
+    chain_radius: float = Field(default=3.5, gt=0)
+    chain_dmg: float = Field(default=0.6, gt=0, le=1)
+
+
+class SummonCfg(Strict):
+    enemy: str
+    count: int = Field(ge=1, le=4)
+    every: Duration
+    max_alive: int = Field(ge=1, le=8)
+
+
+class SplitCfg(Strict):
+    into: str
+    count: int = Field(ge=1, le=4)
 
 
 class Poison(Strict):
@@ -524,7 +547,12 @@ class EnemyCfg(Strict):
     poison: Poison | None = None
     ambush_radius: float = Field(default=0, ge=0)  # ambushers hide until a player is this close
     loot: list[LootDrop] = []
-    elite_name: str
+    elite_name: str | None = None  # None: never spawns as an elite (minions, storm spawns)
+    shot: ShotCfg | None = None  # kiters: what the shot looks like and how fast it flies
+    keep_away: float = Field(default=0, ge=0)  # kiters/summoners back off when you get this close
+    summon: SummonCfg | None = None
+    split: SplitCfg | None = None  # splits into smaller ones on death (Big Slime)
+    roaming: bool = False  # not tied to a biome: stats are scaled by the biome it appears in
 
 
 class EliteCfg(Strict):
@@ -536,6 +564,12 @@ class EliteCfg(Strict):
     knockback_resist: float = Field(ge=0, le=1)
 
 
+class BiomeScale(Strict):
+    hp: float = Field(ge=1)
+    dmg: float = Field(ge=1)
+    defence: float = Field(ge=0)
+
+
 class BiomeSpawns(Strict):
     difficulty: int = Field(ge=1, le=6)
     groups_per_chunk: float = Field(ge=0, le=4)
@@ -543,6 +577,12 @@ class BiomeSpawns(Strict):
     elite_chance: float = Field(ge=0, le=1)
     xp: int = Field(ge=0)
     coins: Range
+    scale: BiomeScale  # BALANCE §6.2 multipliers (baked into roster stats; applied to roaming spawns)
+
+
+class CoopCfg(Strict):
+    hp_per_player: float = Field(ge=0)  # HP × (1 + this × extra players near the spawn)
+    radius: float = Field(gt=0)
 
 
 class EnemiesCfg(Strict):
@@ -552,6 +592,9 @@ class EnemiesCfg(Strict):
     despawn_after: Duration
     respawn: Duration
     elite: EliteCfg
+    coop: CoopCfg
+    storm_enemy: str  # appears near players during storms (world_clock.yaml → weather.storm.storm_spawns)
+    minion_xp: float = Field(ge=0, le=1)  # summoned minions give this share of XP and no loot
     biomes: dict[Biome, BiomeSpawns]
     enemies: dict[str, EnemyCfg]
 
@@ -799,7 +842,8 @@ class NightCfg(Strict):
     hp: float = Field(ge=1)
     dmg: float = Field(ge=1)
     loot_qty: float = Field(ge=1)
-    groups: float = Field(ge=1)
+    rare_chance: float = Field(ge=1)  # rare-material drop chances × this
+    groups: float = Field(ge=1)  # spawn points per chunk × this; the extra ones only wake at night
 
 
 class WeatherStateCfg(Strict):

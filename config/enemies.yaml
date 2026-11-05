@@ -1,16 +1,41 @@
-# Monsters (BALANCE §6). Stats are the final values in their home biome (biome multipliers already applied).
+# Monsters (BALANCE §6). Roster stats are the final values in their home biome: BALANCE §6.1 archetype
+# bases × the §6.2 biome multipliers (biomes.<b>.scale), already applied. `roaming` enemies (the Storm
+# Elemental) carry difficulty-1 stats and get the scale of whatever biome they turn up in.
 # Elites multiply hp/dmg and drop more. Every player in range gets their own loot rolls (BALANCE §6.4).
-aggro_radius: 6.5            # tiles; a monster notices you inside this
+# Night (world_clock.yaml → night) buffs spawns and loot; fog shrinks aggro; storms bring Storm Elementals.
+aggro_radius: 6.5            # tiles; a monster notices you inside this (× weather aggro, e.g. fog 0.7)
 leash_radius: 13             # tiles from home; further than this and it gives up and walks back
 wake_radius_chunks: 2        # spawn points wake when a player is this many chunks away
 despawn_after: 60s           # monsters despawn this long after nobody is near
 respawn: 75s                 # a spawn point refills this long after its group is wiped
 elite: { hp: 4.0, dmg: 1.6, scale: 1.3, xp: 5, loot_rolls: 3, knockback_resist: 0.7 }
+coop: { hp_per_player: 0.5, radius: 20 }   # HP × (1 + 0.5 × extra players within 20 tiles of the spawn)
+storm_enemy: storm_elemental
+minion_xp: 0.25              # summoned minions: a quarter of the XP, no coins, no loot
 
 biomes:
-  meadow: { difficulty: 1, groups_per_chunk: 0.30, roster: { slime: 1.0 }, elite_chance: 0.06, xp: 8, coins: [1, 3] }
-  forest: { difficulty: 2, groups_per_chunk: 0.75, roster: { wolf: 0.55, spider: 0.45 }, elite_chance: 0.08, xp: 22, coins: [3, 6] }
+  meadow:
+    { difficulty: 1, groups_per_chunk: 0.30, elite_chance: 0.06, xp: 8, coins: [1, 3], scale: { hp: 1, dmg: 1, defence: 0 },
+      roster: { slime: 0.55, big_slime: 0.15, thornhare: 0.15, buzzling: 0.15 } }
+  forest:
+    { difficulty: 2, groups_per_chunk: 0.75, elite_chance: 0.08, xp: 22, coins: [3, 6], scale: { hp: 2, dmg: 1.8, defence: 2 },
+      roster: { wolf: 0.35, spider: 0.25, bandit_archer: 0.15, bandit_brute: 0.12, sapling: 0.13 } }
+  stonepeak:
+    { difficulty: 3, groups_per_chunk: 0.85, elite_chance: 0.09, xp: 50, coins: [6, 12], scale: { hp: 4, dmg: 3, defence: 6 },
+      roster: { rock_golem: 0.2, ram_goat: 0.22, harpy: 0.2, crystal_sprite: 0.13, pebbling: 0.25 } }
+  swamp:
+    { difficulty: 4, groups_per_chunk: 0.90, elite_chance: 0.10, xp: 95, coins: [10, 20], scale: { hp: 6.5, dmg: 4.5, defence: 10 },
+      roster: { bog_lurker: 0.22, toad_spitter: 0.2, leechling: 0.25, mire_shaman: 0.13, snapjaw: 0.2 } }
+  frozen:
+    { difficulty: 5, groups_per_chunk: 0.95, elite_chance: 0.11, xp: 170, coins: [15, 30], scale: { hp: 10, dmg: 6.5, defence: 16 },
+      roster: { ice_wraith: 0.2, frost_wolf: 0.27, yeti: 0.15, snow_imp: 0.2, rime_stalker: 0.18 } }
+  ashen:
+    { difficulty: 6, groups_per_chunk: 1.00, elite_chance: 0.12, xp: 300, coins: [25, 45], scale: { hp: 14, dmg: 9, defence: 24 },
+      roster: { fire_imp: 0.25, magma_hound: 0.22, ash_golem: 0.15, cinder_witch: 0.13, ember_archer: 0.25 } }
 
+# Archetypes (BALANCE §6.1): swarmer (hop bite) · chaser (lunge) · kiter (shoots along a telegraphed line,
+# backs off inside keep_away) · charger (long telegraphed dash) · tank (slow slam around itself) ·
+# summoner (calls minions, roots you with a circle on your spot) · ambusher (hides, then pounces).
 enemies:
   slime:
     name: Green Slime
@@ -25,6 +50,48 @@ enemies:
     loot:
       - { item: slime_gel, chance: 0.6, qty: [1, 2] }
     elite_name: Crowned Slime
+  big_slime:
+    name: Big Slime
+    archetype: tank
+    hp: 60
+    dmg: 7
+    defence: 1
+    speed: 2.2
+    radius: 0.55
+    group: [1, 1]
+    attack: { shape: circle, range: 1.6, trigger: 1.7, windup: 800ms, active: 200ms, recover: 900ms, knockback: 1.6 }
+    split: { into: slime, count: 2 }
+    loot:
+      - { item: slime_gel, chance: 0.8, qty: [2, 3] }
+    elite_name: Slime King
+  thornhare:
+    name: Thornhare
+    archetype: charger
+    hp: 30
+    dmg: 7
+    defence: 2
+    speed: 3.4
+    radius: 0.42
+    group: [1, 2]
+    attack: { shape: line, range: 4, width: 1.0, trigger: 4.5, windup: 650ms, active: 300ms, recover: 1100ms, lunge: 4, knockback: 1.4 }
+    loot:
+      - { item: hide, chance: 0.5, qty: [1, 1] }
+    elite_name: Briar Buck
+  buzzling:
+    name: Buzzling
+    archetype: kiter
+    hp: 18
+    dmg: 4
+    defence: 1
+    speed: 3.6
+    radius: 0.36
+    group: [1, 2]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 8, sprite: sting }
+    keep_away: 4
+    loot:
+      - { item: herbs, chance: 0.5, qty: [1, 2] }
+    elite_name: Queen Buzzling
   wolf:
     name: Wolf
     archetype: chaser
@@ -54,3 +121,366 @@ enemies:
     loot:
       - { item: spider_silk, chance: 0.6, qty: [1, 2] }
     elite_name: Brood Mother
+  bandit_archer:
+    name: Bandit Archer
+    archetype: kiter
+    hp: 60
+    dmg: 11
+    defence: 3
+    speed: 3.6
+    radius: 0.36
+    group: [1, 2]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 11, sprite: arrow }
+    keep_away: 4.5
+    loot:
+      - { item: hide, chance: 0.35, qty: [1, 1] }
+      - { item: ironbark, chance: 0.02, qty: [1, 1] }
+    elite_name: Bandit Captain
+  bandit_brute:
+    name: Bandit Brute
+    archetype: tank
+    hp: 180
+    dmg: 18
+    defence: 8
+    speed: 2.2
+    radius: 0.55
+    group: [1, 1]
+    attack: { shape: circle, range: 1.6, trigger: 1.7, windup: 800ms, active: 200ms, recover: 900ms, knockback: 1.6 }
+    loot:
+      - { item: ore, chance: 0.5, qty: [1, 3] }
+      - { item: wolf_fang, chance: 0.15, qty: [1, 1] }
+    elite_name: Bandit Chief
+  sapling:
+    name: Sapling
+    archetype: summoner
+    hp: 120
+    dmg: 7
+    defence: 5
+    speed: 2.2
+    radius: 0.4
+    group: [1, 1]
+    attack: { shape: circle, range: 1.2, trigger: 6, windup: 900ms, active: 200ms, recover: 1300ms, knockback: 0, at_target: true, root: 1500ms }
+    keep_away: 3.5
+    summon: { enemy: seedling, count: 2, every: 6s, max_alive: 4 }
+    loot:
+      - { item: wood, chance: 0.6, qty: [2, 4] }
+      - { item: ironbark, chance: 0.04, qty: [1, 1] }
+    elite_name: Elder Sapling
+  seedling:
+    name: Seedling
+    archetype: swarmer
+    hp: 48
+    dmg: 9
+    defence: 2
+    speed: 2.8
+    radius: 0.32
+    group: [1, 1]
+    attack: { shape: circle, range: 0.85, trigger: 1.5, windup: 450ms, active: 250ms, recover: 650ms, lunge: 1.2, knockback: 0.5 }
+  rock_golem:
+    name: Rock Golem
+    archetype: tank
+    hp: 360
+    dmg: 30
+    defence: 12
+    speed: 2.2
+    radius: 0.55
+    group: [1, 1]
+    attack: { shape: circle, range: 1.6, trigger: 1.7, windup: 800ms, active: 200ms, recover: 900ms, knockback: 1.6 }
+    loot:
+      - { item: golem_shard, chance: 0.6, qty: [1, 2] }
+      - { item: ore, chance: 0.4, qty: [1, 2] }
+    elite_name: Granite Golem
+  ram_goat:
+    name: Ram Goat
+    archetype: charger
+    hp: 160
+    dmg: 27
+    defence: 8
+    speed: 3.4
+    radius: 0.42
+    group: [1, 2]
+    attack: { shape: line, range: 4, width: 1.0, trigger: 4.5, windup: 650ms, active: 300ms, recover: 1100ms, lunge: 4, knockback: 1.4 }
+    loot:
+      - { item: hide, chance: 0.5, qty: [1, 2] }
+      - { item: golem_shard, chance: 0.2, qty: [1, 1] }
+    elite_name: Thunder Ram
+  harpy:
+    name: Harpy
+    archetype: kiter
+    hp: 120
+    dmg: 18
+    defence: 7
+    speed: 3.6
+    radius: 0.36
+    group: [1, 2]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 10, sprite: rock }
+    keep_away: 4.5
+    loot:
+      - { item: golem_shard, chance: 0.4, qty: [1, 1] }
+    elite_name: Harpy Matron
+  crystal_sprite:
+    name: Crystal Sprite
+    archetype: summoner
+    hp: 240
+    dmg: 12
+    defence: 9
+    speed: 2.2
+    radius: 0.4
+    group: [1, 1]
+    attack: { shape: circle, range: 1.2, trigger: 6, windup: 900ms, active: 200ms, recover: 1300ms, knockback: 0, at_target: true, root: 1500ms }
+    keep_away: 3.5
+    summon: { enemy: pebbling, count: 2, every: 6s, max_alive: 4 }
+    loot:
+      - { item: crystal, chance: 0.5, qty: [1, 2] }
+      - { item: starstone, chance: 0.03, qty: [1, 1] }
+    elite_name: Prism Sprite
+  pebbling:
+    name: Pebbling
+    archetype: swarmer
+    hp: 96
+    dmg: 15
+    defence: 6
+    speed: 2.8
+    radius: 0.32
+    group: [2, 4]
+    attack: { shape: circle, range: 0.85, trigger: 1.5, windup: 450ms, active: 250ms, recover: 650ms, lunge: 1.2, knockback: 0.5 }
+    loot:
+      - { item: golem_shard, chance: 0.3, qty: [1, 1] }
+    elite_name: Boulderling
+  bog_lurker:
+    name: Bog Lurker
+    archetype: ambusher
+    hp: 195
+    dmg: 40
+    defence: 11
+    speed: 4.0
+    radius: 0.38
+    group: [1, 2]
+    attack: { shape: line, range: 3.0, width: 0.8, trigger: 3.4, windup: 420ms, active: 250ms, recover: 800ms, lunge: 3.0, knockback: 0.6 }
+    poison: { dps: 8, duration: 4s }
+    ambush_radius: 4.5
+    loot:
+      - { item: bog_moss, chance: 0.6, qty: [1, 2] }
+      - { item: swamp_venom, chance: 0.03, qty: [1, 1] }
+    elite_name: Elder Lurker
+  toad_spitter:
+    name: Toad Spitter
+    archetype: kiter
+    hp: 195
+    dmg: 27
+    defence: 11
+    speed: 3.6
+    radius: 0.36
+    group: [1, 2]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 9, sprite: spit }
+    keep_away: 4
+    poison: { dps: 6, duration: 3s }
+    loot:
+      - { item: bog_moss, chance: 0.5, qty: [1, 2] }
+    elite_name: Toad Matriarch
+  leechling:
+    name: Leechling
+    archetype: swarmer
+    hp: 156
+    dmg: 22
+    defence: 10
+    speed: 2.8
+    radius: 0.32
+    group: [2, 4]
+    attack: { shape: circle, range: 0.85, trigger: 1.5, windup: 450ms, active: 250ms, recover: 650ms, lunge: 1.2, knockback: 0.5 }
+    loot:
+      - { item: bog_moss, chance: 0.3, qty: [1, 1] }
+    elite_name: Bloodleech
+  mire_shaman:
+    name: Mire Shaman
+    archetype: summoner
+    hp: 390
+    dmg: 18
+    defence: 13
+    speed: 2.2
+    radius: 0.4
+    group: [1, 1]
+    attack: { shape: circle, range: 1.2, trigger: 6, windup: 900ms, active: 200ms, recover: 1300ms, knockback: 0, at_target: true, root: 1500ms }
+    keep_away: 3.5
+    summon: { enemy: leechling, count: 2, every: 6s, max_alive: 4 }
+    loot:
+      - { item: bog_moss, chance: 0.6, qty: [1, 2] }
+      - { item: herbs, chance: 0.5, qty: [1, 3] }
+      - { item: swamp_venom, chance: 0.03, qty: [1, 1] }
+    elite_name: Mire Hexer
+  snapjaw:
+    name: Snapjaw
+    archetype: charger
+    hp: 260
+    dmg: 40
+    defence: 12
+    speed: 3.4
+    radius: 0.42
+    group: [1, 2]
+    attack: { shape: line, range: 4, width: 1.0, trigger: 4.5, windup: 650ms, active: 300ms, recover: 1100ms, lunge: 4, knockback: 1.4 }
+    loot:
+      - { item: hide, chance: 0.5, qty: [1, 2] }
+      - { item: bog_moss, chance: 0.3, qty: [1, 1] }
+    elite_name: Ironjaw
+  ice_wraith:
+    name: Ice Wraith
+    archetype: kiter
+    hp: 300
+    dmg: 39
+    defence: 17
+    speed: 3.6
+    radius: 0.36
+    group: [1, 2]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 10, sprite: ice }
+    keep_away: 4.5
+    loot:
+      - { item: crystal, chance: 0.4, qty: [1, 2] }
+      - { item: frost_shard, chance: 0.03, qty: [1, 1] }
+    elite_name: Wraith Queen
+  frost_wolf:
+    name: Frost Wolf
+    archetype: chaser
+    hp: 350
+    dmg: 46
+    defence: 18
+    speed: 4.6
+    radius: 0.4
+    group: [2, 3]
+    attack: { shape: line, range: 1.7, width: 0.9, trigger: 2.3, windup: 480ms, active: 200ms, recover: 700ms, lunge: 1.8, knockback: 0.9 }
+    loot:
+      - { item: frost_fur, chance: 0.6, qty: [1, 2] }
+      - { item: wolf_fang, chance: 0.3, qty: [1, 1] }
+    elite_name: Winter Alpha
+  yeti:
+    name: Yeti
+    archetype: tank
+    hp: 900
+    dmg: 65
+    defence: 22
+    speed: 2.2
+    radius: 0.55
+    group: [1, 1]
+    attack: { shape: circle, range: 1.6, trigger: 1.7, windup: 800ms, active: 200ms, recover: 900ms, knockback: 1.6 }
+    loot:
+      - { item: frost_fur, chance: 0.7, qty: [1, 3] }
+    elite_name: Elder Yeti
+  snow_imp:
+    name: Snow Imp
+    archetype: swarmer
+    hp: 240
+    dmg: 32
+    defence: 16
+    speed: 2.8
+    radius: 0.32
+    group: [2, 4]
+    attack: { shape: circle, range: 0.85, trigger: 1.5, windup: 450ms, active: 250ms, recover: 650ms, lunge: 1.2, knockback: 0.5 }
+    loot:
+      - { item: frost_fur, chance: 0.3, qty: [1, 1] }
+    elite_name: Blizzard Imp
+  rime_stalker:
+    name: Rime Stalker
+    archetype: ambusher
+    hp: 300
+    dmg: 58
+    defence: 17
+    speed: 4.0
+    radius: 0.38
+    group: [1, 2]
+    attack: { shape: line, range: 3.0, width: 0.8, trigger: 3.4, windup: 420ms, active: 250ms, recover: 800ms, lunge: 3.0, knockback: 0.6 }
+    ambush_radius: 4.5
+    loot:
+      - { item: frost_fur, chance: 0.5, qty: [1, 2] }
+      - { item: frost_shard, chance: 0.03, qty: [1, 1] }
+    elite_name: Rime Reaver
+  fire_imp:
+    name: Fire Imp
+    archetype: swarmer
+    hp: 336
+    dmg: 45
+    defence: 24
+    speed: 2.8
+    radius: 0.32
+    group: [2, 4]
+    attack: { shape: circle, range: 0.85, trigger: 1.5, windup: 450ms, active: 250ms, recover: 650ms, lunge: 1.2, knockback: 0.5 }
+    loot:
+      - { item: ember_dust, chance: 0.4, qty: [1, 1] }
+    elite_name: Blaze Imp
+  magma_hound:
+    name: Magma Hound
+    archetype: charger
+    hp: 560
+    dmg: 81
+    defence: 26
+    speed: 3.4
+    radius: 0.42
+    group: [1, 2]
+    attack: { shape: line, range: 4, width: 1.0, trigger: 4.5, windup: 650ms, active: 300ms, recover: 1100ms, lunge: 4, knockback: 1.4 }
+    loot:
+      - { item: ember_dust, chance: 0.5, qty: [1, 2] }
+      - { item: hide, chance: 0.3, qty: [1, 1] }
+    elite_name: Molten Hound
+  ash_golem:
+    name: Ash Golem
+    archetype: tank
+    hp: 1260
+    dmg: 90
+    defence: 30
+    speed: 2.2
+    radius: 0.55
+    group: [1, 1]
+    attack: { shape: circle, range: 1.6, trigger: 1.7, windup: 800ms, active: 200ms, recover: 900ms, knockback: 1.6 }
+    loot:
+      - { item: ember_dust, chance: 0.6, qty: [1, 2] }
+      - { item: ore, chance: 0.5, qty: [2, 3] }
+    elite_name: Obsidian Golem
+  cinder_witch:
+    name: Cinder Witch
+    archetype: summoner
+    hp: 840
+    dmg: 36
+    defence: 27
+    speed: 2.2
+    radius: 0.4
+    group: [1, 1]
+    attack: { shape: circle, range: 1.2, trigger: 6, windup: 900ms, active: 200ms, recover: 1300ms, knockback: 0, at_target: true, root: 1500ms }
+    keep_away: 3.5
+    summon: { enemy: fire_imp, count: 2, every: 6s, max_alive: 4 }
+    loot:
+      - { item: ember_dust, chance: 0.6, qty: [1, 2] }
+      - { item: ember_core, chance: 0.02, qty: [1, 1] }
+    elite_name: Pyre Witch
+  ember_archer:
+    name: Ember Archer
+    archetype: kiter
+    hp: 420
+    dmg: 54
+    defence: 25
+    speed: 3.6
+    radius: 0.36
+    group: [1, 2]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 12, sprite: fire }
+    keep_away: 4.5
+    loot:
+      - { item: ember_dust, chance: 0.5, qty: [1, 2] }
+    elite_name: Ember Marksman
+  storm_elemental:
+    name: Storm Elemental
+    archetype: kiter
+    hp: 50
+    dmg: 8
+    defence: 2
+    speed: 3.6
+    radius: 0.36
+    group: [1, 1]
+    attack: { shape: shot, range: 8, width: 0.5, trigger: 7, windup: 550ms, active: 100ms, recover: 900ms, knockback: 0.4 }
+    shot: { speed: 14, sprite: bolt, chain: 2 }
+    keep_away: 4.5
+    roaming: true
+    loot:
+      - { item: storm_glass, chance: 0.5, qty: [1, 1] }
+      - { item: crystal, chance: 0.4, qty: [1, 2] }

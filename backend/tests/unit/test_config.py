@@ -117,7 +117,8 @@ def test_avatar_mode_config_is_wired() -> None:
     cfg = load_config(REPO_ROOT / "config")
     assert cfg.nodes.nodes["tree"].hits == 3
     assert set(cfg.combat.weapons) >= {"sword", "spear"}
-    assert cfg.enemies.biomes["forest"].roster.keys() == {"wolf", "spider"}
+    assert {"wolf", "spider"} <= cfg.enemies.biomes["forest"].roster.keys()
+    assert len(cfg.enemies.biomes) == 6 and all(len(b.roster) >= 4 for b in cfg.enemies.biomes.values())
     assert cfg.avatar.ko.rare_loss == 0.25
 
 

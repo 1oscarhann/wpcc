@@ -404,10 +404,25 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         for i, drop in enumerate(en.loot):
             if drop.item not in items:
                 errors.append(f"enemies.yaml:enemies.{ek}.loot.{i}: unknown item '{drop.item}'")
-    for bk, biome in enemies.biomes.items():
+        where = f"enemies.yaml:enemies.{ek}"
+        if (en.attack.shape == "shot") != (en.shot is not None):
+            errors.append(f"{where}: a 'shot' attack needs a shot block (and only a shot attack has one)")
+        if en.attack.root is not None and not en.attack.at_target:
+            errors.append(f"{where}.attack.root: only an at_target circle can root")
+        for what, ref in (("summon", en.summon and en.summon.enemy), ("split", en.split and en.split.into)):
+            if ref and ref not in enemies.enemies:
+                errors.append(f"{where}.{what}: unknown enemy '{ref}'")
+            elif ref and (enemies.enemies[ref].summon or enemies.enemies[ref].split):
+                errors.append(f"{where}.{what}: '{ref}' must not summon or split itself")
+    for bkey, biome in enemies.biomes.items():
+        bk = str(bkey)
         for ek in biome.roster:
             if ek not in enemies.enemies:
                 errors.append(f"enemies.yaml:biomes.{bk}.roster: unknown enemy '{ek}'")
+            elif biome.elite_chance > 0 and enemies.enemies[ek].elite_name is None:
+                errors.append(f"enemies.yaml:enemies.{ek}: in the {bk} roster, so it needs an elite_name")
+    if enemies.storm_enemy not in enemies.enemies or not enemies.enemies[enemies.storm_enemy].roaming:
+        errors.append(f"enemies.yaml:storm_enemy: '{enemies.storm_enemy}' must be a roaming enemy")
     if not mapgen.plot.ring_radius + mapgen.plot.frame < mapgen.forest.radius < mapgen.map_size // 2:
         errors.append("mapgen.yaml:forest.radius: must sit between the plot ring and the map edge")
 

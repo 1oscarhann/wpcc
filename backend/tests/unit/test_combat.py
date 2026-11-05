@@ -132,10 +132,12 @@ def test_every_helper_gets_their_own_loot(game_config) -> None:  # noqa: ANN001
     a = add_player(room, x - 1, y)
     b = add_player(room, x + 1, y)
     m = spawn(room, "slime", x, y)
+    assert m.hp_max == 36  # co-op: one more player nearby → HP × 1.5 (BALANCE §6.2)
     m.state = "recover"
     mv = room.rules.weapons["sword"].light[0]
     room.combat.hit_monster(a, m, mv, m.x, m.y)
     room.combat.hit_monster(b, m, mv, m.x, m.y)
+    room.combat.hit_monster(a, m, room.rules.weapons["sword"].light[1], m.x, m.y)
     assert m.id not in room.combat.monsters
     owners = {d.owner for d in room.drops.values()}
     assert owners == {a.eid, b.eid}

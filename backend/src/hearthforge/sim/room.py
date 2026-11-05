@@ -158,6 +158,7 @@ class Player:
     iframes: int = 0
     ko: int = 0  # ticks until respawn
     poison: int = 0  # ticks left
+    rooted: int = 0  # ticks left: a summoner's root circle holds you in place (Phase 10)
     poison_dps: float = 0.0
     potion_cd: int = 0
     toast_cd: dict[str, int] = field(default_factory=dict)
@@ -189,6 +190,8 @@ class Player:
             f |= SELF_FLAG["in_combat"]
         if self.poison > 0:
             f |= SELF_FLAG["poisoned"]
+        if self.rooted > 0:
+            f |= SELF_FLAG["rooted"]
         return f
 
 
@@ -486,6 +489,8 @@ class RealmRoom:
 
     def step_player(self, p: Player, mx: int, my: int, ax: int, ay: int, b: int, solid: mo.Solid) -> None:
         w = self.rules.weapons[p.w]
+        if p.rooted > 0:
+            mx = my = 0  # rooted: you can still swing, aim and drink, just not walk
         started = mo.step(p.m, mx, my, ax, ay, b, self.rules, w, solid)
         if started:
             p.atk_serial += 1
@@ -515,6 +520,8 @@ class RealmRoom:
             p.iframes -= 1
         if p.potion_cd > 0:
             p.potion_cd -= 1
+        if p.rooted > 0:
+            p.rooted -= 1
         if p.poison > 0:
             p.poison -= 1
             if t % self.hz == 0 and self.combat is not None:

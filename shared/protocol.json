@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "client_to_server": {
     "HELLO": "0x01",
     "PING": "0x02",
@@ -48,7 +48,8 @@
     "WAYSTONE": 28,
     "TELEPORT": 29,
     "PARTY": 30,
-    "PARTY_INVITE": 31
+    "PARTY_INVITE": 31,
+    "ZAP": 32
   },
   "entity_kinds": {
     "avatar": 0,
@@ -73,7 +74,8 @@
     "iframes": 1,
     "ko": 2,
     "in_combat": 4,
-    "poisoned": 8
+    "poisoned": 8,
+    "rooted": 16
   },
   "room_left": {
     "left": 0,
