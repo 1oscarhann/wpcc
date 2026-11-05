@@ -172,7 +172,7 @@ async def test_solo_has_no_stash_and_overview(client: AsyncClient, st: Any) -> N
     n = ov["n"]
     assert n == st.config.mapgen.map_size // st.config.mapgen.chunk_size
     assert len(base64.b64decode(ov["data"])) == n * n and len(base64.b64decode(ov["fog"])) == (n * n + 7) // 8
-    assert len(ov["waystones"]) == 11 and ov["waystones"][0]["name"] == "Wellside" and ov["attuned"] == []
+    assert len(ov["waystones"]) == 23 and ov["waystones"][0]["name"] == "Wellside" and ov["attuned"] == []
     async with st.sessionmaker() as s:
         m = (await s.execute(select(RealmMember))).scalar_one()
         assert m.plot_index == 0

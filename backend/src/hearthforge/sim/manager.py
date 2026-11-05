@@ -60,6 +60,7 @@ class RoomManager:
         if room is not None and not room.closed:
             return room
         room = RealmRoom(self.st, realm.id, realm.seed)
+        room.weather_seed = realm.weather_seed
         await self.load_villages(room)
         if self.st.settings.monsters_enabled:
             from hearthforge.sim.combat import Combat

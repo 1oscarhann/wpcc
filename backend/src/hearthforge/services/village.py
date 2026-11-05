@@ -26,6 +26,7 @@ from hearthforge.db.models import (
     DiscoveryKind,
     JobStatus,
     Notification,
+    Realm,
     RealmMember,
     Resource,
     Village,
@@ -34,7 +35,7 @@ from hearthforge.db.models import (
 )
 from hearthforge.domain import combos as combos_dom
 from hearthforge.domain import debris as debris_gen
-from hearthforge.domain import mapgen
+from hearthforge.domain import mapgen, worldclock
 from hearthforge.domain.economy import BuildingView, caps_milli, rates_milli, town_hall_level
 from hearthforge.domain.placement import (
     ERROR_TEXT,
@@ -44,7 +45,7 @@ from hearthforge.domain.placement import (
     placement_errors,
     rotated_footprint,
 )
-from hearthforge.domain.resources import MILLI, ResState, settle
+from hearthforge.domain.resources import MILLI, ResState, settle, settle_weather
 from hearthforge.services import events, ledger, plots
 
 
@@ -58,6 +59,7 @@ class Loaded:
     jobs: list[CraftJob] = field(default_factory=list)  # running station jobs
     discovered: set[str] = field(default_factory=set)  # combo keys this player has found
     new_discoveries: list[str] = field(default_factory=list)  # found during this request
+    weather_seed: int | None = None  # the realm's weather timeline (P9)
 
 
 # ── loading & settling ──────────────────────────────────────────────────────
@@ -122,17 +124,46 @@ async def load_locked(
             )
         ).scalars()
     )
-    return Loaded(village, buildings, resources, wallet, plot_index, jobs, discovered)
+    weather_seed = (
+        await session.execute(select(Realm.weather_seed).where(Realm.id == village.realm_id))
+    ).scalar_one_or_none()
+    return Loaded(village, buildings, resources, wallet, plot_index, jobs, discovered, [], weather_seed)
 
 
 def _views(buildings: list[VillageBuilding]) -> list[BuildingView]:
     return [BuildingView(b.building_key, b.level, b.state.value) for b in buildings]
 
 
-def _settle_resources(res: dict[str, Resource], at: datetime) -> None:
-    for r in res.values():
-        s = settle(ResState(r.amount_milli, r.base_rate_milli, r.cap_milli, r.last_updated_at), at)
+def _settle_resources(
+    res: dict[str, Resource], at: datetime, cfg: GameConfig | None = None, seed: int | None = None
+) -> None:
+    """Bring stock up to `at`. With a realm weather seed, weather multiplies production per block (P9)."""
+    for key, r in res.items():
+        st = ResState(r.amount_milli, r.base_rate_milli, r.cap_milli, r.last_updated_at)
+        segs = None
+        if cfg is not None and seed is not None and r.base_rate_milli > 0 and at > r.last_updated_at:
+            segs = weather_mults(cfg, seed, key, r.last_updated_at, at)
+        s = settle_weather(st, at, segs) if segs else settle(st, at)
         r.amount_milli, r.last_updated_at = s.amount, s.at
+
+
+def weather_mults(
+    cfg: GameConfig, seed: int, key: str, t0: datetime, t1: datetime
+) -> list[tuple[datetime, datetime, float]] | None:
+    """Weather segments as (start, end, multiplier), adjacent equal multipliers merged. None = all 1.0."""
+    wc = cfg.world_clock
+    if not any(key in st.production for st in wc.weather.states.values()):
+        return None
+    out: list[tuple[datetime, datetime, float]] = []
+    for a, b, w in worldclock.segments(wc, seed, t0, t1):
+        m = worldclock.production_mult(wc, w, key)
+        if out and out[-1][2] == m:
+            out[-1] = (out[-1][0], b, m)
+        else:
+            out.append((a, b, m))
+    if len(out) == 1 and out[0][2] == 1.0:
+        return None
+    return out
 
 
 def _apply_rates(cfg: GameConfig, ld: Loaded) -> None:
@@ -159,7 +190,7 @@ def settle_village(
     due.sort(key=lambda d: (d[0], d[1]))
     done: list[VillageBuilding] = []
     for at, kind, obj in due:
-        _settle_resources(ld.resources, at)
+        _settle_resources(ld.resources, at, cfg, ld.weather_seed)
         if kind == 1:
             _finish_intermediate(session, ld, obj, at)
             continue
@@ -179,7 +210,7 @@ def settle_village(
             )
         )
         done.append(b)
-    _settle_resources(ld.resources, now)
+    _settle_resources(ld.resources, now, cfg, ld.weather_seed)
     sync_combos(session, cfg, ld)
     if due:
         ld.village.version += 1

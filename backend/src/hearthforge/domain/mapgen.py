@@ -9,7 +9,10 @@ Generated server-side only; the client fetches chunks. v1 terrain:
   and lily pads.
 - the Whispering Forest from `forest.radius` outward (Phase 4): dark forest floor, dense old trees with
   ferns and webs, sunny clearings, and dirt trails leading out from the meadow between the plots.
-Biome rings beyond the forest arrive in Phase 10 (bump `version` in mapgen.yaml then).
+- Phase 10 (v4): rings past the forest. Stonepeak (rocky ground, boulders, crags, star veins), Murkwater
+  Swamp (mud, many murky pools, dead trees, venom blooms), the Frozen North (snow, ice lakes, snowy pines,
+  frost spires) and the Ashen Wastes (ash, lava pools, charred trees, obsidian, lava vents). Ring edges
+  are warped by noise and dithered so they blend. Moonpetals hide past the meadow (night only).
 """
 
 from __future__ import annotations
@@ -38,6 +41,8 @@ def reduce_mask(m: int) -> int:
 
 
 BLOB_MASKS = sorted({reduce_mask(m) for m in range(256)})
+CARDINAL_MASKS = sorted({m & (N | E | S | W) for m in range(256)})  # 16: ice and lava (tile ids are a byte)
+_CARDINAL_KINDS = {"ice", "lava"}
 TILE_NAMES: list[str] = (
     [f"tile.grass.{v}" for v in range(4)]
     + [f"tile.flowers.{v}" for v in range(3)]
@@ -45,6 +50,10 @@ TILE_NAMES: list[str] = (
     + [f"tile.water.{m}" for m in BLOB_MASKS]
     + [f"tile.cobble.{m}" for m in BLOB_MASKS]
     + [f"tile.forest.{v}" for v in range(4)]
+    # Phase 10 (append only: ids are part of the chunk format)
+    + [f"tile.{k}.{v}" for k in ("rock", "mud", "snow", "ash") for v in range(4)]
+    + [f"tile.ice.{m}" for m in CARDINAL_MASKS]
+    + [f"tile.lava.{m}" for m in CARDINAL_MASKS]
 )
 TILE_ID = {n: i for i, n in enumerate(TILE_NAMES)}
 OBJECT_NAMES: list[str] = [
@@ -95,6 +104,30 @@ OBJECT_NAMES: list[str] = [
     "obj.fern.1",
     "obj.web.0",
     "obj.waystone.0",  # Phase 9 (P12): append only, ids are part of the chunk format
+    # Phase 10 biomes
+    "obj.boulder.0",
+    "obj.boulder.1",
+    "obj.crag.0",
+    "obj.crag.1",
+    "obj.star_vein.0",
+    "obj.ore_vein.0",
+    "obj.dead_tree.0",
+    "obj.dead_tree.1",
+    "obj.willow.0",
+    "obj.venom_bloom.0",
+    "obj.snow_pine.0",
+    "obj.snow_pine.1",
+    "obj.ice_rock.0",
+    "obj.ice_rock.1",
+    "obj.frost_spire.0",
+    "obj.snowdrift.0",
+    "obj.charred_tree.0",
+    "obj.charred_tree.1",
+    "obj.obsidian.0",
+    "obj.obsidian.1",
+    "obj.lava_vent.0",
+    "obj.ember_rock.0",
+    "obj.moonpetal.0",
 ]
 OBJECT_ID = {n: i for i, n in enumerate(OBJECT_NAMES)}
 assert len(TILE_NAMES) < 256
@@ -171,17 +204,35 @@ def waystones(cfg: MapgenCfg) -> list[Waystone]:
     c = lay.center
     out = [Waystone(0, c + 3, c + 9, "Wellside")]
     n_trails = max(1, cfg.plot.count // 2)
-    for band, (r, label) in enumerate(((150, "Meadow"), (cfg.forest.radius + 30, "Forest"))):
+
+    def stone(i: int, r: float, label: str) -> Waystone:
+        a = -math.pi / 2 + 2 * math.pi * (2 * i + 0.5) / cfg.plot.count
+        # two tiles to the side of the trail so it never blocks the path
+        px, py = -math.sin(a), math.cos(a)
+        x = round(c + r * math.cos(a) + 2.5 * px)
+        y = round(c + r * math.sin(a) + 2.5 * py)
+        deg = (math.degrees(a) + 90) % 360
+        return Waystone(len(out), x, y, f"{_COMPASS[round(deg / 45) % 8]} {label}")
+
+    for r, label in ((150, "Meadow"), (cfg.forest.radius + 30, "Forest")):
         for i in range(n_trails):
-            a = -math.pi / 2 + 2 * math.pi * (2 * i + 0.5) / cfg.plot.count
-            # two tiles to the side of the trail so it never blocks the path
-            px, py = -math.sin(a), math.cos(a)
-            x = round(c + r * math.cos(a) + 2.5 * px)
-            y = round(c + r * math.sin(a) + 2.5 * py)
-            deg = (math.degrees(a) + 90) % 360
-            name = f"{_COMPASS[round(deg / 45) % 8]} {label}"
-            out.append(Waystone(1 + band * n_trails + i, x, y, name))
+            out.append(stone(i, r, label))
+    # Phase 10: three stones per outer ring, on alternating trails (indices stay stable: append only)
+    labels = {"stonepeak": "Stonepeak", "swamp": "Murkwater", "frozen": "Frostfall", "ashen": "Ashfall"}
+    for k, b in enumerate(cfg.bands[1:]):
+        for j in range(3):
+            out.append(stone((k + 2 * j) % n_trails, b.radius + 20, labels.get(b.biome, b.biome.title())))
     return out
+
+
+_GROUND = {"forest": "forest", "stonepeak": "rock", "swamp": "mud", "frozen": "snow", "ashen": "ash"}
+_BAND_OF_GROUND = {"rock": "stonepeak", "mud": "swamp", "snow": "frozen", "ash": "ashen"}
+_POOLS = {  # band → (pool kind, noise threshold): lower threshold = more pools
+    "stonepeak": ("water", 0.84),
+    "swamp": ("water", 0.62),
+    "frozen": ("ice", 0.72),
+    "ashen": ("lava", 0.76),
+}
 
 
 def _seg_dist(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
@@ -218,7 +269,7 @@ class Generator:
             self.wild.append({(x, y): (cfg.debris.kinds[k].sprites[v], 0) for _id, k, v, x, y in items})
         # trails into the forest leave the meadow in every other gap between plots
         c = self.lay.center
-        r0, r1 = self.lay.hub_radius + 24, self.cfg.forest.radius + 34
+        r0, r1 = self.lay.hub_radius + 24, self.cfg.bands[-1].radius + 34
         self.trails = []
         for i in range(max(1, self.cfg.plot.count // 2)):
             a = -math.pi / 2 + 2 * math.pi * (2 * i + 0.5) / self.cfg.plot.count
@@ -257,14 +308,28 @@ class Generator:
         warp = (value_noise(self.seed, x, y, 14, 71) - 0.5) * 18
         return math.hypot(x + 0.5 - c, y + 0.5 - c) + warp - self.cfg.forest.radius
 
+    def band(self, x: int, y: int, dither: bool = True) -> str | None:
+        """Which outer ring a tile is in (None = meadow). Edges are noise-warped like the forest's and
+        dithered over a few tiles so neighbouring rings blend instead of meeting in a line."""
+        c = self.lay.center
+        warp = (value_noise(self.seed, x, y, 14, 71) - 0.5) * 18
+        r = math.hypot(x + 0.5 - c, y + 0.5 - c) + warp
+        if dither:
+            r += (rand01(self.seed, x, y, 72) - 0.5) * 6
+        found = None
+        for b in self.cfg.bands:
+            if r >= b.radius:
+                found = b.biome
+        return found
+
     def biome(self, x: int, y: int) -> str:
-        """Gameplay biome for spawns and nodes: 'hub', 'plot', 'meadow' or 'forest'."""
+        """Gameplay biome for spawns and nodes: 'hub', 'plot', 'meadow' or a ring ('forest', 'stonepeak'…)."""
         if self.plot_at(x, y, 6) is not None:
             return "plot"
         c = self.lay.center
         if math.hypot(x - c, y - c) < self.lay.hub_radius + 6:
             return "hub"
-        return "forest" if self.forest_depth(x, y) >= 0 else "meadow"
+        return self.band(x, y, dither=False) or "meadow"
 
     def is_hub(self, x: int, y: int) -> bool:
         c = self.lay.center
@@ -292,20 +357,24 @@ class Generator:
             return "path"
         if self.trail_dist(x, y) <= 0.75 + wiggle * 0.5:
             return "path"
-        if self._natural_pond(x, y, rd):
-            return "water"
-        depth = self.forest_depth(x, y)
-        if depth >= 0 or (depth > -5 and rand01(self.seed, x, y, 72) < (depth + 5) / 6):
-            return "forest"
-        return "grass"
+        band = self.band(x, y)
+        pool = self._natural_pond(x, y, rd, band)
+        if pool:
+            return pool
+        return _GROUND.get(band or "", "grass")
 
-    def _natural_pond(self, x: int, y: int, rd: float) -> bool:
+    def _natural_pond(self, x: int, y: int, rd: float, band: str | None = None) -> str | None:
+        """Water in the meadow, forest and stonepeak; lots of murky pools in the swamp; frozen lakes
+        (walkable ice) in the north; lava pools in the Ashen Wastes."""
         if rd < 4 or self.plot_at(x, y, 4) is not None or self.near_waystone(x, y, 6):
-            return False
+            return None
         c = self.lay.center
         if math.hypot(x - c, y - c) < self.lay.hub_radius + 8:
-            return False
-        return value_noise(self.seed, x, y, 11, 61) > 0.80
+            return None
+        if self.trail_dist(x, y) < 2.2:
+            return None
+        kind, threshold = _POOLS.get(band or "", ("water", 0.80))
+        return kind if value_noise(self.seed, x, y, 11, 61) > threshold else None
 
     def _mask(self, x: int, y: int, k: str, kinds: dict[tuple[int, int], str]) -> int:
         m = 0
@@ -316,6 +385,8 @@ class Generator:
                 kk = self.kind(*p)
             if kk == k or (k == "path" and kk == "cobble"):
                 m |= bit
+        if k in _CARDINAL_KINDS:
+            return m & (N | E | S | W)
         return reduce_mask(m)
 
     # ── chunks ─────────────────────────────────────────────────────────────
@@ -342,8 +413,8 @@ class Generator:
                         name = f"tile.flowers.{int(r * 3 / 0.55) % 3}"
                     else:
                         name = f"tile.grass.{int(r * 4) % 4}"
-                elif k == "forest":
-                    name = f"tile.forest.{int(rand01(self.seed, x, y, 1) * 4) % 4}"
+                elif k == "forest" or k in _BAND_OF_GROUND:
+                    name = f"tile.{k}.{int(rand01(self.seed, x, y, 1) * 4) % 4}"
                 else:
                     name = f"tile.{k}.{self._mask(x, y, k, kinds)}"
                 ground[ly * cs + lx] = TILE_ID[name]
@@ -375,6 +446,8 @@ class Generator:
             return None
         if k == "forest":
             return self._forest(x, y, kinds)
+        if k in _BAND_OF_GROUND:
+            return self._band_object(_BAND_OF_GROUND[k], x, y, kinds)
         if k != "grass":
             return None
         i = self.plot_at(x, y)
@@ -506,6 +579,72 @@ class Generator:
             return (f"obj.mossy_rock.{int(rand01(s, x, y, 92) * 2)}", 0)
         if 0.134 <= r < 0.14:
             return ("obj.stump.0", 0)
+        return None
+
+    def _band_object(
+        self, band: str, x: int, y: int, kinds: dict[tuple[int, int], str]
+    ) -> tuple[str, int] | None:
+        """Props and nodes for the outer rings (Phase 10). Trails stay clear; a lattice keeps lanes open."""
+        s = self.seed
+        if self.trail_dist(x, y) < 1.8:
+            return None
+        r = rand01(s, x, y, 301)
+        pick = rand01(s, x, y, 302)
+        lattice_ok = (x + 2 * y) % 5 != 0
+        if r < 0.004:
+            return ("obj.moonpetal.0", 0)  # night-only rare node, any ring past the meadow
+        r -= 0.004
+        near = {kinds.get((x + dx, y + dy)) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))}
+        if band == "stonepeak":
+            if lattice_ok and r < 0.06:
+                return (f"obj.boulder.{int(pick * 2)}", 0)
+            if lattice_ok and r < 0.085:
+                return (f"obj.crag.{int(pick * 2)}", 0)
+            if r < 0.105:
+                return (f"obj.pine.{int(pick * 2)}", 0)
+            if r < 0.112:
+                return ("obj.star_vein.0", 0)
+            if r < 0.122:
+                return ("obj.ore_vein.0", 0)
+            if r < 0.14:
+                return (f"obj.pebbles.{int(pick * 2)}", 0)
+            return None
+        if band == "swamp":
+            if "water" in near:
+                return (f"obj.reeds.{int(pick * 2)}", 0) if r < 0.45 else None
+            if lattice_ok and r < 0.07:
+                return (f"obj.dead_tree.{int(pick * 2)}", 0)
+            if lattice_ok and r < 0.095:
+                return ("obj.willow.0", 0)
+            if r < 0.105:
+                return ("obj.venom_bloom.0", 0)
+            if r < 0.14:
+                return (f"obj.mushrooms.{int(pick * 2)}", 0)
+            if r < 0.15:
+                return ("obj.log.0", 0)
+            return None
+        if band == "frozen":
+            if lattice_ok and r < 0.09:
+                return (f"obj.snow_pine.{int(pick * 2)}", 0)
+            if lattice_ok and r < 0.11:
+                return (f"obj.ice_rock.{int(pick * 2)}", 0)
+            if r < 0.117:
+                return ("obj.frost_spire.0", 0)
+            if r < 0.14:
+                return ("obj.snowdrift.0", 0)
+            return None
+        if band == "ashen":
+            if "lava" in near:
+                return None
+            if lattice_ok and r < 0.05:
+                return (f"obj.charred_tree.{int(pick * 2)}", 0)
+            if lattice_ok and r < 0.08:
+                return (f"obj.obsidian.{int(pick * 2)}", 0)
+            if r < 0.086:
+                return ("obj.lava_vent.0", 0)
+            if r < 0.11:
+                return ("obj.ember_rock.0", 0)
+            return None
         return None
 
     def _plot_object(

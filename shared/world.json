@@ -4,11 +4,13 @@
   "player_box": { "hw": 0.28, "hh": 0.16 },
   "max_step": 0.9,
   "skin": 0.0001,
-  "solid_tiles": ["tile.water."],
+  "solid_tiles": ["tile.water.", "tile.lava."],
   "solid_objects": [
     "obj.oak.", "obj.big_oak.", "obj.birch.", "obj.pine.", "obj.apple.",
     "obj.rock.", "obj.rock_big.", "obj.mossy_rock.",
-    "obj.well.", "obj.lamp.", "obj.signpost.", "obj.stump.", "obj.log.", "obj.waystone."
+    "obj.well.", "obj.lamp.", "obj.signpost.", "obj.stump.", "obj.log.", "obj.waystone.",
+    "obj.boulder.", "obj.crag.", "obj.star_vein.", "obj.ore_vein.", "obj.dead_tree.", "obj.willow.",
+    "obj.snow_pine.", "obj.ice_rock.", "obj.frost_spire.", "obj.charred_tree.", "obj.obsidian.", "obj.lava_vent."
   ],
   "buttons": { "light": 1, "heavy": 2, "ability": 4, "dodge": 8, "potion": 16 },
   "input_max": 127,

@@ -3,7 +3,7 @@
 # home and deposit them at the Town Hall or Storehouse.
 nodes:
   tree:
-    objects: [obj.oak, obj.birch, obj.pine, obj.apple, obj.big_oak]
+    objects: [obj.oak, obj.birch, obj.pine, obj.apple, obj.big_oak, obj.snow_pine, obj.dead_tree, obj.willow, obj.charred_tree]
     hits: 3
     yields: { wood: [6, 10] }
     respawn: 5m
@@ -18,7 +18,7 @@ nodes:
     xp: 15
     sound: chop
   rock:
-    objects: [obj.rock, obj.rock_big, obj.mossy_rock]
+    objects: [obj.rock, obj.rock_big, obj.mossy_rock, obj.boulder, obj.ice_rock, obj.obsidian]
     hits: 3
     yields: { stone: [5, 8] }
     bonus: { ore: { chance: 0.15, qty: [1, 2] } }
@@ -39,3 +39,52 @@ nodes:
     respawn: 4m
     xp: 1
     sound: rustle
+
+  # Phase 10: the outer rings (BALANCE §3.3). Rares only come from hand-gathering (P15).
+  ore_vein:
+    objects: [obj.ore_vein]
+    hits: 4
+    yields: { ore: [4, 6] }
+    respawn: 8m
+    xp: 4
+    sound: mine
+  star_vein:
+    objects: [obj.star_vein]
+    biome: stonepeak
+    hits: 6
+    yields: { crystal: [2, 4], starstone: [1, 2] }
+    respawn: 25m
+    xp: 25
+    sound: mine
+  venom_bloom:
+    objects: [obj.venom_bloom]
+    biome: swamp
+    hits: 1
+    yields: { swamp_venom: [1, 2] }
+    respawn: 25m
+    xp: 30
+    sound: rustle
+  frost_spire:
+    objects: [obj.frost_spire]
+    biome: frozen
+    hits: 6
+    yields: { frost_shard: [1, 2] }
+    respawn: 30m
+    xp: 40
+    sound: mine
+  lava_vent:
+    objects: [obj.lava_vent]
+    biome: ashen
+    hits: 3
+    yields: { ember_core: [1, 1] }
+    respawn: 30m
+    xp: 55
+    sound: mine
+  moonpetal:
+    objects: [obj.moonpetal]
+    hits: 1
+    yields: { moonpetal: [1, 1] }
+    respawn: 24m                     # back the next night
+    xp: 35
+    sound: rustle
+    night_only: true

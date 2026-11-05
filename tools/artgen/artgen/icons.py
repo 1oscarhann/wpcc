@@ -569,6 +569,130 @@ def u_trend_down(c: Canvas) -> None:
     c.rect(6, 3, 4, 4, RED[2])
 
 
+# ── Phase 10: biome materials, rares, weather ────────────────────────────────
+SNOW = ramp("snow")
+ICE = ramp("ice")
+ASH = ramp("ash")
+LAVA = ramp("lava")
+BOG = ramp("bog")
+VENOM = ramp("venom")
+
+
+def i_golem_shard(c: Canvas) -> None:
+    c.poly([(3, 12), (6, 3), (12, 5), (13, 12)], STONE[2])
+    c.poly([(5, 10), (7, 4), (10, 6)], STONE[3])
+    c.put(8, 8, ICE[2])
+    c.put(9, 9, ICE[3])
+
+
+def i_bog_moss(c: Canvas) -> None:
+    for cx, cy, r in ((6, 9, 3.5), (10, 8, 3.2), (8, 11, 3)):
+        c.ellipse(cx, cy, r, r * 0.8, BOG[2])
+    c.ellipse(7, 7.5, 2, 1.4, BOG[3])
+    c.put(10, 10, BOG[1])
+
+
+def i_frost_fur(c: Canvas) -> None:
+    c.poly([(2, 11), (5, 4), (11, 3), (14, 9), (10, 13)], SNOW[2])
+    for x in range(4, 13, 2):
+        c.line(x, 5, x - 1, 11, SNOW[3])
+    c.put(6, 6, SNOW[4])
+
+
+def i_ember_dust(c: Canvas) -> None:
+    c.ellipse(8, 11, 5, 2.5, ASH[2])
+    c.ellipse(8, 10, 3.5, 1.6, ASH[3])
+    for x, y in ((6, 9), (9, 8), (8, 10), (11, 9), (7, 6), (10, 5)):
+        c.put(x, y, LAVA[3])
+
+
+def i_storm_glass(c: Canvas) -> None:
+    c.poly([(8, 2), (13, 8), (8, 14), (3, 8)], WATER[2])
+    c.poly([(8, 4), (11, 8), (8, 9)], WATER[4])
+    c.line(6, 6, 9, 9, GOLD[4])
+    c.line(9, 9, 7, 12, GOLD[3])
+
+
+def i_swamp_venom(c: Canvas) -> None:
+    c.rect(6, 2, 4, 2, WOOD[3])
+    c.ellipse(8, 9.5, 4.5, 4.5, VENOM[1])
+    c.ellipse(7, 8.5, 2.6, 2.4, VENOM[2])
+    c.put(6, 7, VENOM[3])
+    c.put(10, 11, LEAF[4])
+
+
+def i_frost_shard(c: Canvas) -> None:
+    c.poly([(8, 1), (12, 8), (8, 15), (4, 8)], ICE[2])
+    c.poly([(8, 2), (8, 14), (4, 8)], ICE[3])
+    c.put(7, 5, SNOW[4])
+
+
+def i_ember_core(c: Canvas) -> None:
+    c.ellipse(8, 8, 5, 5, LAVA[1])
+    c.ellipse(8, 8, 3.6, 3.6, LAVA[2])
+    c.ellipse(7.5, 7.5, 2, 2, LAVA[3])
+    c.put(7, 7, LAVA[4])
+
+
+def i_moonpetal(c: Canvas) -> None:
+    for dx, dy in ((0, -4), (4, 0), (0, 4), (-4, 0), (3, -3), (-3, -3), (3, 3), (-3, 3)):
+        c.line(8, 8, 8 + dx, 8 + dy, ICE[3])
+    c.ellipse(8, 8, 1.6, 1.6, GOLD[3])
+    c.put(8, 4, SNOW[4])
+
+
+def u_sun(c: Canvas) -> None:
+    c.ellipse(8, 8, 3.5, 3.5, GOLD[3])
+    c.put(7, 7, GOLD[4])
+    for dx, dy in ((0, -6), (6, 0), (0, 6), (-6, 0), (4, -4), (-4, -4), (4, 4), (-4, 4)):
+        c.put(8 + dx, 8 + dy, GOLD[2])
+
+
+def u_moon(c: Canvas) -> None:
+    c.ellipse(8, 8, 5, 5, SNOW[3])
+    c.ellipse(10.5, 6.5, 4, 4, (0, 0, 0, 0))
+    for y in range(16):
+        for x in range(16):
+            if (x - 10.5) ** 2 + (y - 6.5) ** 2 < 16:
+                c.put(x, y, (0, 0, 0, 0))
+    c.put(5, 9, SNOW[2])
+
+
+def _cloud(c: Canvas, col: list) -> None:  # noqa: ANN001
+    c.ellipse(6, 7, 3.5, 2.8, col[2])
+    c.ellipse(10, 6, 3.8, 3.2, col[3])
+    c.ellipse(8, 8.5, 5.5, 2.2, col[2])
+
+
+def u_cloud(c: Canvas) -> None:
+    _cloud(c, SNOW)
+
+
+def u_rain(c: Canvas) -> None:
+    _cloud(c, SNOW)
+    for x in (5, 8, 11):
+        c.line(x, 11, x - 1, 14, WATER[3])
+
+
+def u_snowfall(c: Canvas) -> None:
+    _cloud(c, SNOW)
+    for x, y in ((5, 12), (9, 13), (12, 11), (7, 14)):
+        c.put(x, y, SNOW[4])
+
+
+def u_fog(c: Canvas) -> None:
+    for y, x0, x1 in ((5, 3, 12), (8, 2, 13), (11, 4, 14)):
+        c.hline(x0, x1, y, SNOW[2])
+        c.hline(x0 + 1, x1 - 2, y + 1, SNOW[1])
+
+
+def u_storm(c: Canvas) -> None:
+    _cloud(c, ASH[1:] + [SNOW[1]])
+    c.line(9, 10, 7, 13, GOLD[3])
+    c.line(7, 13, 9, 13, GOLD[3])
+    c.line(9, 13, 7, 15, GOLD[4])
+
+
 ICONS: dict[str, Callable[[Canvas], None]] = {
     "wood": i_wood, "stone": i_stone, "ore": i_ore, "food": i_food, "herbs": i_herbs, "fish": i_fish,
     "hide": i_hide, "crystal": i_crystal, "planks": i_planks, "bricks": i_bricks, "ingots": i_ingots,
@@ -581,6 +705,11 @@ ICONS: dict[str, Callable[[Canvas], None]] = {
     "avatar": u_avatar, "queue": u_queue, "plus": u_plus, "map": u_map, "book": u_book, "anvil": u_anvil,
     "market": u_market, "chest": u_chest, "cart": u_cart, "scroll": u_scroll,
     "trend_up": u_trend_up, "trend_down": u_trend_down, "banner": u_banner, "party": u_party,
+    "golem_shard": i_golem_shard, "bog_moss": i_bog_moss, "frost_fur": i_frost_fur, "ember_dust": i_ember_dust,
+    "storm_glass": i_storm_glass, "swamp_venom": i_swamp_venom, "frost_shard": i_frost_shard,
+    "ember_core": i_ember_core, "moonpetal": i_moonpetal,
+    "sun": u_sun, "moon": u_moon, "cloud": u_cloud, "rain": u_rain, "snowfall": u_snowfall, "fog": u_fog,
+    "storm": u_storm,
     "leather_armour": armour_icon(TIER_RAMPS[0], TIER_TRIM[0], True),
     "plate_armour": armour_icon(TIER_RAMPS[1], TIER_TRIM[1], False),
 }

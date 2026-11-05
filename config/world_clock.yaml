@@ -1,0 +1,28 @@
+# Day/night, seasons and weather (PLAN P9, Phase 10). Everything is a pure function of wall-clock time
+# (and each realm's weather seed), so the server, the worker and every client agree without syncing.
+#
+# Weather is a deterministic timeline in fixed blocks. Production effects multiply the village rate for
+# the part of each block that overlaps the time being settled, so lazy production stays exact (P9).
+
+day_cycle:
+  length: 24m
+  phases: { dawn: 2m, day: 14m, dusk: 2m, night: 6m }   # in this order, must sum to length
+season_length: 7d
+seasons: [spring, summer, autumn, winter]
+night:                        # monsters after dark (BALANCE §6.2)
+  hp: 1.25
+  dmg: 1.15
+  loot_qty: 1.5
+  groups: 1.4                 # more spawn groups per chunk
+weather:
+  block: 20m
+  states:
+    clear:  { weights: { spring: 50, summer: 65, autumn: 45, winter: 45 } }
+    rain:   { weights: { spring: 25, summer: 15, autumn: 30, winter: 0 },
+              production: { food: 1.2, herbs: 1.15 } }
+    snow:   { weights: { winter: 30 },
+              production: { food: 0.85 }, rare_node: { frost_spire: 1.5 } }
+    fog:    { weights: { spring: 15, summer: 5, autumn: 15, winter: 10 },
+              aggro: 0.7 }                              # monsters notice you from less far away
+    storm:  { weights: { spring: 10, summer: 15, autumn: 10, winter: 15 },
+              production: { food: 1.1 }, storm_spawns: 0.25 }   # chance per chunk of a Storm Elemental

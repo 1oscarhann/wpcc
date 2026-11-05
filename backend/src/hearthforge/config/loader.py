@@ -40,6 +40,7 @@ FILES: dict[str, type[BaseModel]] = {
     "merchant": s.MerchantCfg,
     "tutorial": s.TutorialCfg,
     "social": s.SocialCfg,
+    "world_clock": s.WorldClockCfg,
 }
 
 
@@ -107,6 +108,7 @@ class GameConfig:
     merchant: s.MerchantCfg
     tutorial: s.TutorialCfg
     social: s.SocialCfg
+    world_clock: s.WorldClockCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -243,6 +245,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     merchant: s.MerchantCfg = parsed["merchant"]
     tutorial: s.TutorialCfg = parsed["tutorial"]
     social: s.SocialCfg = parsed["social"]
+    world_clock: s.WorldClockCfg = parsed["world_clock"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -505,6 +508,22 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if social.realm.max_members > mapgen.plot.count:
         errors.append("social.yaml:realm.max_members: more members than plots on the ring")
 
+    # ── world clock (Phase 10) ────────────────────────────────────────────────
+    wc = world_clock
+    if abs(sum(wc.day_cycle.phases.values()) - wc.day_cycle.length) > 0.5:
+        errors.append("world_clock.yaml:day_cycle.phases: must add up to day_cycle.length")
+    if list(wc.day_cycle.phases) != ["dawn", "day", "dusk", "night"]:
+        errors.append("world_clock.yaml:day_cycle.phases: must be dawn, day, dusk, night in order")
+    if "clear" not in wc.weather.states:
+        errors.append("world_clock.yaml:weather.states: needs a 'clear' state")
+    for season_name in wc.seasons:
+        if sum(st.weights.get(season_name, 0) for st in wc.weather.states.values()) <= 0:
+            errors.append(f"world_clock.yaml:weather: no weather has weight in {season_name}")
+    for wk, wst in wc.weather.states.items():
+        for rk in wst.production:
+            if rk not in res.resources:
+                errors.append(f"world_clock.yaml:weather.states.{wk}.production: unknown resource '{rk}'")
+
     # ── containers / market / merchant (Phase 7) ──────────────────────────────
     for ckind, exp in game.containers.items():
         start = starter.containers.get(ckind, 0)
@@ -583,6 +602,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         merchant=merchant,
         tutorial=tutorial,
         social=social,
+        world_clock=world_clock,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

@@ -45,6 +45,15 @@ RAMPS: dict[str, list[str]] = {
     "mushroom": ["#7a2430", "#b8383d", "#e0574d", "#f4ece0"],
     "cloth_cream": ["#a99a80", "#cfc3a8", "#ece3cc", "#fffaf0"],
     "shadow": ["#2b1e2a"],
+    # Phase 10 biomes
+    "snow": ["#8d9fb8", "#b4c4d8", "#d6e2ee", "#eef4fa", "#ffffff"],
+    "ice": ["#4f7fa8", "#78a8cc", "#a6cfe6", "#d2ecf7"],
+    "ash": ["#231d22", "#352d31", "#4b4043", "#655756", "#85766f"],
+    "lava": ["#6e1a17", "#b52f1d", "#ea5a24", "#ffa23a", "#ffe08a"],
+    "mud": ["#30261d", "#45362a", "#5c4935", "#735d42"],
+    "bog": ["#24382c", "#335040", "#476a50", "#62875f"],
+    "obsidian": ["#191626", "#2a2440", "#40375c", "#655a88"],
+    "venom": ["#3c2156", "#6a3a8f", "#9c5fc4", "#c993e8"],
     # Rarity / UI accents
     "rarity": ["#9aa0a6", "#4caf50", "#3d8bfd", "#a259ff", "#ff9f1c"],
     "accent": ["#e05a47", "#3f8f5f", "#3a6fb0", "#f2c14e"],

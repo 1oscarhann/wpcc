@@ -632,6 +632,215 @@ def waystone() -> Canvas:
     return c
 
 
+# ── Phase 10: props for the outer rings ─────────────────────────────────────
+SNOW = ramp("snow")
+ICE = ramp("ice")
+ASH = ramp("ash")
+LAVA = ramp("lava")
+OBS = ramp("obsidian")
+VENOM = ramp("venom")
+BOG = ramp("bog")
+
+
+def recolor(c: Canvas, mapping: dict) -> Canvas:  # noqa: ANN001
+    """Swap whole ramps (e.g. stone → obsidian), keeping the outline and alpha."""
+    out = c.copy()
+    for y in range(out.h):
+        for x in range(out.w):
+            col = out.px[x, y]
+            if col[3] == 0:
+                continue
+            new = mapping.get(col[:3])
+            if new is not None:
+                out.px[x, y] = new[:3] + (col[3],)
+    return out
+
+
+def ramp_map(src: list, dst: list) -> dict:  # noqa: ANN001
+    return {src[i][:3]: dst[min(len(dst) - 1, round(i * (len(dst) - 1) / max(1, len(src) - 1)))] for i in range(len(src))}
+
+
+def boulder(variant: int) -> Canvas:
+    return rock(True, variant)
+
+
+def crag(variant: int) -> Canvas:
+    """A tall jagged stone spire."""
+    c = Canvas(22, 34)
+    c.drop_shadow(11, 31, 9, 2.5)
+    h = 26 + variant * 3
+    for y in range(32 - h, 32):
+        t = (y - (32 - h)) / h
+        half = 2 + t * (7 + variant)
+        jag = int(hash2(variant, y // 3, 501) * 2)
+        for x in range(int(11 - half) + jag, int(11 + half)):
+            light = x < 11 - half * 0.2
+            c.put(x, y, STONE[3] if light else STONE[2] if x < 11 + half * 0.5 else STONE[1])
+    for k in range(3):  # ledges
+        yy = 32 - h + 6 + k * 7
+        c.hline(int(11 - (2 + (6 + k * 7) / h * 7)), 11, yy, STONE[4])
+    c.outline(INK)
+    return c
+
+
+def vein(gem: list, base: list = STONE) -> Canvas:  # noqa: ANN001
+    """A rock studded with glinting gems or ore (star veins, ore veins)."""
+    c = rock(True, 0)
+    pts = [(6, 9), (11, 7), (14, 11), (9, 13), (17, 9)]
+    for i, (x, y) in enumerate(pts):
+        if c.filled(x, y):
+            c.put(x, y, gem[2])
+            c.put(x + 1, y, gem[3] if i % 2 else gem[2])
+            c.put(x, y - 1, gem[3])
+            if i % 2 == 0:
+                c.put(x + 1, y - 1, gem[-1])
+    _ = base
+    return c
+
+
+def dead_tree(variant: int) -> Canvas:
+    """A bare, twisted swamp tree."""
+    c = Canvas(26, 38)
+    c.drop_shadow(13, 35, 8, 2.4)
+    for y in range(14, 36):
+        w = 2 if y < 30 else 3
+        sway = int(math.sin(y / 5 + variant) * 1.5)
+        for x in range(13 - w + sway, 13 + w + sway):
+            c.put(x, y, MUD_W[2] if x < 13 + sway else MUD_W[1])
+    branches = [(13, 18, 5, 9), (13, 22, 21, 14), (13, 15, 9, 6), (13, 26, 20, 20)]
+    for i, (x0, y0, x1, y1) in enumerate(branches):
+        if variant == 1 and i == 3:
+            continue
+        c.line(x0, y0, x1, y1, MUD_W[2])
+        c.line(x0, y0 + 1, x1, y1 + 1, MUD_W[1])
+    for x, y in ((6, 10), (20, 15), (9, 7)):  # hanging moss
+        c.vline(x, y, y + 3, BOG[2])
+    c.outline(INK)
+    return c
+
+
+def willow() -> Canvas:
+    """A drooping swamp willow."""
+    c = oak(1)
+    out = recolor(c, ramp_map(LEAF, BOG))
+    for x in range(4, out.w - 4, 3):  # trailing fronds
+        for y in range(16, 24):
+            if out.filled(x, y - 1) and not out.filled(x, y) and y < out.h - 8:
+                out.put(x, y, BOG[1])
+    return out
+
+
+def venom_bloom() -> Canvas:
+    """A poisonous swamp flower with a fat purple bulb."""
+    c = Canvas(16, 18)
+    c.drop_shadow(8, 16, 5, 1.6)
+    c.vline(8, 9, 15, BOG[2])
+    c.line(8, 13, 4, 11, BOG[2])
+    c.line(8, 12, 12, 10, BOG[3])
+    c.ellipse(8, 6, 4.2, 4, VENOM[1])
+    c.ellipse(7.4, 5.2, 2.6, 2.4, VENOM[2])
+    c.put(6, 4, VENOM[3])
+    for x, y in ((5, 8), (11, 7), (8, 9)):
+        c.put(x, y, LEAF[4])
+    c.outline(INK)
+    return c
+
+
+def snow_pine(variant: int) -> Canvas:
+    c = pine(variant)
+    out = recolor(c, ramp_map(PINE, [PINE[0], PINE[1], PINE[1], PINE[2]]))
+    for y in range(out.h - 1):  # snow resting on the top edge of every branch layer
+        for x in range(out.w):
+            if out.filled(x, y + 1) and not out.filled(x, y) and out.get(x, y + 1)[:3] != INK[:3]:
+                out.put(x, y + 1, SNOW[3] if (x + y) % 3 else SNOW[4])
+    return out
+
+
+def ice_rock(variant: int) -> Canvas:
+    return recolor(rock(variant == 1, variant), ramp_map(STONE, ICE + [SNOW[3], SNOW[4]]))
+
+
+def frost_spire() -> Canvas:
+    """A cluster of tall glowing ice crystals."""
+    c = Canvas(20, 30)
+    c.drop_shadow(10, 27, 7, 2)
+    for cx, h, w in ((10, 22, 3), (6, 14, 2), (14, 16, 2)):
+        for y in range(27 - h, 27):
+            t = (y - (27 - h)) / h
+            half = max(1, round(w * min(1, t * 2.2)))
+            for x in range(cx - half, cx + half):
+                c.put(x, y, ICE[3] if x < cx else ICE[2] if t > 0.3 else ICE[1])
+        c.put(cx - 1, 27 - h + 2, SNOW[4])
+    c.outline(INK)
+    return c
+
+
+def snowdrift() -> Canvas:
+    c = Canvas(20, 10)
+    c.ellipse(10, 7, 8, 2.6, SNOW[2])
+    c.ellipse(8, 6, 5, 2, SNOW[3])
+    c.hline(5, 9, 5, SNOW[4])
+    c.outline(INK)
+    return c
+
+
+def charred_tree(variant: int) -> Canvas:
+    c = dead_tree(variant)
+    out = recolor(c, {**ramp_map(MUD_W, ASH), **{k: ASH[2] for k in ramp_map(BOG, BOG)}})
+    for x, y in ((12, 26), (14, 20), (11, 31)):  # embers glowing in the bark
+        if out.filled(x, y):
+            out.put(x, y, LAVA[3])
+    return out
+
+
+def obsidian(variant: int) -> Canvas:
+    out = recolor(rock(True, variant), ramp_map(STONE, OBS))
+    out.put(9, 8, OBS[3])
+    return out
+
+
+def lava_vent() -> Canvas:
+    """A cracked ash mound with lava glowing inside (Ember Cores)."""
+    c = Canvas(24, 18)
+    c.drop_shadow(12, 15, 10, 2.2)
+    c.ellipse(12, 11, 10, 5, ASH[1])
+    c.ellipse(11, 10, 8, 4, ASH[2])
+    c.ellipse(12, 10, 4, 2, LAVA[2])
+    c.ellipse(12, 10, 2.4, 1.2, LAVA[4])
+    for x0, y0, x1, y1 in ((4, 12, 8, 10), (16, 10, 20, 12), (10, 14, 13, 12)):
+        c.line(x0, y0, x1, y1, LAVA[1])
+    c.put(12, 6, ASH[3])
+    c.put(13, 4, ASH[3])
+    c.outline(INK)
+    return c
+
+
+def ember_rock() -> Canvas:
+    c = Canvas(14, 10)
+    c.ellipse(7, 6, 6, 3.5, ASH[2])
+    c.ellipse(6, 5, 3.5, 2, ASH[3])
+    c.put(8, 7, LAVA[3])
+    c.put(4, 6, LAVA[2])
+    c.outline(INK)
+    return c
+
+
+def moonpetal() -> Canvas:
+    """A pale night flower that only opens after dark."""
+    c = Canvas(14, 16)
+    c.drop_shadow(7, 14, 4, 1.2)
+    c.vline(7, 8, 13, LEAF[2])
+    for dx, dy in ((0, -3), (3, 0), (0, 3), (-3, 0), (2, -2), (-2, -2), (2, 2), (-2, 2)):
+        c.put(7 + dx, 6 + dy, ICE[3])
+        c.put(7 + dx // 2, 6 + dy // 2, SNOW[4])
+    c.put(7, 6, ramp("gold")[3])
+    c.outline(INK)
+    return c
+
+
+MUD_W = ramp("mud")
+
+
 def generate_extra() -> dict[str, Canvas]:
     out: dict[str, Canvas] = {}
     for v in range(2):
@@ -655,6 +864,25 @@ def generate_extra() -> dict[str, Canvas]:
     out["obj.signpost.0"] = signpost()
     out["npc.merchant_cart"] = merchant_cart()  # placed by the client (not a map object)
     out["obj.waystone.0"] = waystone()
+    # Phase 10 rings
+    gold = ramp("gold")
+    for v in range(2):
+        out[f"obj.boulder.{v}"] = boulder(v)
+        out[f"obj.crag.{v}"] = crag(v)
+        out[f"obj.dead_tree.{v}"] = dead_tree(v)
+        out[f"obj.snow_pine.{v}"] = snow_pine(v)
+        out[f"obj.ice_rock.{v}"] = ice_rock(v)
+        out[f"obj.charred_tree.{v}"] = charred_tree(v)
+        out[f"obj.obsidian.{v}"] = obsidian(v)
+    out["obj.star_vein.0"] = vein([ICE[0], ICE[1], ICE[2], ICE[3], (255, 255, 255, 255)])
+    out["obj.ore_vein.0"] = vein([ramp("wood")[1], ramp("wood")[3], gold[2], gold[3], gold[4]])
+    out["obj.willow.0"] = willow()
+    out["obj.venom_bloom.0"] = venom_bloom()
+    out["obj.frost_spire.0"] = frost_spire()
+    out["obj.snowdrift.0"] = snowdrift()
+    out["obj.lava_vent.0"] = lava_vent()
+    out["obj.ember_rock.0"] = ember_rock()
+    out["obj.moonpetal.0"] = moonpetal()
     for k in ("h", "v", "post", "gate"):
         out[f"obj.fence.{k}"] = fence(k)
     for name, frames in (("duck", duck_frames()), ("smoke", smoke_frames()), ("glint", glint_frames()),

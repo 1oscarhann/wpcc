@@ -319,6 +319,11 @@ class ForestCfg(Strict):
     clearing_threshold: float = Field(ge=0, le=1)
 
 
+class BandCfg(Strict):
+    biome: Literal["forest", "stonepeak", "swamp", "frozen", "ashen"]
+    radius: int = Field(gt=0)
+
+
 class MapgenCfg(Strict):
     version: int
     map_size: int
@@ -326,6 +331,7 @@ class MapgenCfg(Strict):
     hub_radius: int
     plot: PlotCfg
     meadow: MeadowCfg
+    bands: list[BandCfg] = Field(min_length=1)
     forest: ForestCfg
 
 
@@ -363,7 +369,7 @@ class DebrisCfg(Strict):
 
 # ── nodes.yaml ───────────────────────────────────────────────────────────────
 
-Biome = Literal["meadow", "forest"]
+Biome = Literal["meadow", "forest", "stonepeak", "swamp", "frozen", "ashen"]
 Range = tuple[int, int]
 
 
@@ -392,6 +398,7 @@ class NodeCfg(Strict):
     respawn: Duration
     xp: int = Field(ge=0)
     sound: str
+    night_only: bool = False  # only gatherable (and only shown) at night (Moonpetal)
 
     @field_validator("yields")
     @classmethod
@@ -778,3 +785,39 @@ class SocialCfg(Strict):
     party: PartyRules
     fog: FogRules
     waystone: WaystoneRules
+
+
+# ── world_clock.yaml ─────────────────────────────────────────────────────────
+
+
+class DayCycleCfg(Strict):
+    length: Duration
+    phases: dict[Literal["dawn", "day", "dusk", "night"], Duration]
+
+
+class NightCfg(Strict):
+    hp: float = Field(ge=1)
+    dmg: float = Field(ge=1)
+    loot_qty: float = Field(ge=1)
+    groups: float = Field(ge=1)
+
+
+class WeatherStateCfg(Strict):
+    weights: dict[Literal["spring", "summer", "autumn", "winter"], float]
+    production: dict[str, float] = {}
+    rare_node: dict[str, float] = {}
+    aggro: float = Field(default=1.0, gt=0, le=2)
+    storm_spawns: float = Field(default=0.0, ge=0, le=1)
+
+
+class WeatherCfg(Strict):
+    block: Duration
+    states: dict[str, WeatherStateCfg]
+
+
+class WorldClockCfg(Strict):
+    day_cycle: DayCycleCfg
+    season_length: Duration
+    seasons: list[Literal["spring", "summer", "autumn", "winter"]]
+    night: NightCfg
+    weather: WeatherCfg

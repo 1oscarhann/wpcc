@@ -110,4 +110,11 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
         },
         "map": {"size": cfg.mapgen.map_size, "chunk_size": cfg.mapgen.chunk_size},
         "debris": {k: {"sprites": d.sprites, "yields": d.yields} for k, d in cfg.debris.kinds.items()},
+        "world_clock": {
+            "day_length": cfg.world_clock.day_cycle.length,
+            "phases": cfg.world_clock.day_cycle.phases,
+            "season_length": cfg.world_clock.season_length,
+            "seasons": cfg.world_clock.seasons,
+            "weather_block": cfg.world_clock.weather.block,
+        },
     }

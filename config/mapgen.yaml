@@ -1,5 +1,5 @@
 # Realm map generation (PLAN §2.6). Bump `version` whenever output would change for an existing seed.
-version: 3            # v3 (Phase 9): waystones with small clearings around them
+version: 4            # v4 (Phase 10): all six biome rings; v3 added waystones
 map_size: 768          # tiles per side
 chunk_size: 16
 hub_radius: 18
@@ -19,6 +19,12 @@ meadow:
   rock_density: 0.006
   bush_density: 0.02
   tall_grass_density: 0.03
+bands:                                 # biome rings past the meadow, by noise-warped distance from the hub (PLAN §2.6)
+  - { biome: forest,    radius: 175 }  # Whispering Forest (difficulty 2)
+  - { biome: stonepeak, radius: 215 }  # 3
+  - { biome: swamp,     radius: 255 }  # 4: Murkwater Swamp
+  - { biome: frozen,    radius: 295 }  # 5: the Frozen North
+  - { biome: ashen,     radius: 335 }  # 6: the Ashen Wastes
 forest:
   radius: 175                          # Whispering Forest starts this far from the hub (BALANCE §6)
   tree_density: 0.16                   # per tile on the walkable lattice

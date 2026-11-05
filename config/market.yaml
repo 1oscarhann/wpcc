@@ -42,3 +42,13 @@ items:
   spider_silk: { base: 7,   baseline: 30,  soft_cap: 200 }
   ironbark:    { base: 25,  baseline: 5,   soft_cap: 40, k: 0.5 }
   starstone:   { base: 45,  baseline: 3,   soft_cap: 25, k: 0.5 }
+  # Phase 10 biome materials and rares
+  golem_shard: { base: 14,  baseline: 20,  soft_cap: 150 }
+  bog_moss:    { base: 18,  baseline: 20,  soft_cap: 150 }
+  frost_fur:   { base: 26,  baseline: 15,  soft_cap: 100 }
+  ember_dust:  { base: 34,  baseline: 15,  soft_cap: 100 }
+  storm_glass: { base: 40,  baseline: 5,   soft_cap: 40 }
+  swamp_venom: { base: 60,  baseline: 2,   soft_cap: 20, k: 0.4 }
+  moonpetal:   { base: 70,  baseline: 2,   soft_cap: 15, k: 0.4 }
+  frost_shard: { base: 80,  baseline: 2,   soft_cap: 15, k: 0.4 }
+  ember_core:  { base: 110, baseline: 1.5, soft_cap: 10, k: 0.4 }

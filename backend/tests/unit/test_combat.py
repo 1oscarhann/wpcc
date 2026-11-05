@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from hearthforge.clock import FrozenClock
 from hearthforge.sim import motion as mo
 from hearthforge.sim.combat import Combat, Monster, SpawnPoint
 from hearthforge.sim.room import Input, Player, RealmRoom
@@ -24,7 +25,7 @@ class FakeConn:
 
 
 def make_room(cfg: Any) -> RealmRoom:
-    st = SimpleNamespace(config=cfg, village_hub=None, rooms=None)
+    st = SimpleNamespace(config=cfg, village_hub=None, rooms=None, clock=FrozenClock())
     room = RealmRoom(st, uuid.uuid4(), seed=5)  # type: ignore[arg-type]
     room.set_villages({}, set())
     room.combat = Combat(room)

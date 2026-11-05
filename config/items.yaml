@@ -70,4 +70,59 @@ items:
     stackable: true
     max_stack: 99
     icon: icon.starstone
+  # Phase 10: biome materials (monster drops) and rares (hand-gathered, P15)
+  golem_shard:
+    name: Golem Shard
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.golem_shard
+  bog_moss:
+    name: Bog Moss
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.bog_moss
+  frost_fur:
+    name: Frost Fur
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.frost_fur
+  ember_dust:
+    name: Ember Dust
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.ember_dust
+  storm_glass:
+    name: Storm Glass
+    category: material
+    stackable: true
+    max_stack: 99
+    icon: icon.storm_glass
+  swamp_venom:
+    name: Swamp Venom
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.swamp_venom
+  frost_shard:
+    name: Frost Shard
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.frost_shard
+  ember_core:
+    name: Ember Core
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.ember_core
+  moonpetal:
+    name: Moonpetal
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.moonpetal
 resource_max_stack: 999

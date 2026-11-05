@@ -119,7 +119,7 @@ def _in_blob(mask: int, x: int, y: int, inset: int, jitter_salt: int) -> bool:
     return False
 
 
-def _blob_tile(mask: int, inset: int, salt: int, inside, rim_in, rim_out) -> Canvas:  # noqa: ANN001
+def _blob_tile(mask: int, inset: int, salt: int, inside, rim_in, rim_out, outside=None) -> Canvas:  # noqa: ANN001
     c = Canvas(T, T)
     inner = [[_in_blob(mask, x, y, inset, salt) for x in range(T)] for y in range(T)]
 
@@ -151,7 +151,7 @@ def _blob_tile(mask: int, inset: int, salt: int, inside, rim_in, rim_out) -> Can
                 c.put(x, y, rim_in(x, y, at) if edge else inside(x, y))
             else:
                 near = at(x - 1, y) or at(x + 1, y) or at(x, y - 1) or at(x, y + 1)
-                c.put(x, y, rim_out(x, y, at) if near else grass_color(x, y, 0))
+                c.put(x, y, rim_out(x, y, at) if near else (outside or (lambda a, b: grass_color(a, b, 0)))(x, y))
     return c
 
 
@@ -260,6 +260,100 @@ def forest_tile(variant: int) -> Canvas:
     return c
 
 
+# ── Phase 10: the outer rings ───────────────────────────────────────────────
+SNOW = ramp("snow")
+ICE = ramp("ice")
+ASH = ramp("ash")
+LAVA = ramp("lava")
+MUD = ramp("mud")
+BOG = ramp("bog")
+
+
+def _speckle_tile(variant: int, salt: int, base: list, speckles: list, rate: float = 0.12) -> Canvas:
+    c = Canvas(T, T)
+    for y in range(T):
+        for x in range(T):
+            h = hash2(x, y, salt + variant * 13)
+            col = base[0] if h < 0.55 else base[1] if h < 0.9 else base[2]
+            if hash2(x // 2, y // 2, salt + 5 + variant) < rate:
+                col = speckles[int(hash2(x, y, salt + 9) * len(speckles)) % len(speckles)]
+            c.put(x, y, col)
+    return c
+
+
+def rock_tile(variant: int) -> Canvas:
+    """Stonepeak: grey gravel with lighter chips and the odd crack."""
+    c = _speckle_tile(variant, 401, [STONE[2], STONE[2], STONE[1]], [STONE[3], STONE[4]], 0.09)
+    if variant % 2 == 0:
+        x0 = int(hash2(variant, 1, 402) * 8) + 3
+        for d in range(5):
+            c.put(x0 + d, 6 + d // 2 + (d % 2), STONE[0])
+    return c
+
+
+def mud_tile(variant: int) -> Canvas:
+    """Murkwater: dark wet mud with mossy patches and puddle glints."""
+    c = _speckle_tile(variant, 411, [MUD[1], MUD[2], MUD[1]], [BOG[1], BOG[2]], 0.14)
+    gx, gy = int(hash2(variant, 3, 412) * 10) + 3, int(hash2(3, variant, 413) * 10) + 3
+    c.hline(gx, gx + 2, gy, ramp("water")[1])
+    c.put(gx + 1, gy, ramp("water")[2])
+    return c
+
+
+def snow_tile(variant: int) -> Canvas:
+    """Frozen North: soft snow with faint blue shading and sparkles."""
+    c = _speckle_tile(variant, 421, [SNOW[3], SNOW[3], SNOW[2]], [SNOW[4], SNOW[2]], 0.06)
+    for i in range(2):
+        sx, sy = int(hash2(i, variant, 422) * 14) + 1, int(hash2(variant, i, 423) * 14) + 1
+        c.put(sx, sy, SNOW[4])
+    return c
+
+
+def ash_tile(variant: int) -> Canvas:
+    """Ashen Wastes: grey-black ash with a few glowing embers."""
+    c = _speckle_tile(variant, 431, [ASH[2], ASH[1], ASH[2]], [ASH[3], ASH[0]], 0.12)
+    if variant % 2:
+        ex, ey = int(hash2(variant, 5, 432) * 12) + 2, int(hash2(5, variant, 433) * 12) + 2
+        c.put(ex, ey, LAVA[3])
+        c.put(ex + 1, ey, LAVA[2])
+    return c
+
+
+def ice_tile(mask: int) -> Canvas:
+    def inside(x: int, y: int) -> Color:
+        if (x + 2 * y) % 11 == 0 and hash2(x // 3, y, 441) > 0.5:
+            return ICE[3]
+        return ICE[2] if hash2(x // 4, y // 3, 442) < 0.8 else ICE[1]
+
+    def rim_in(x: int, y: int, at) -> Color:  # noqa: ANN001
+        return ICE[0] if not at(x, y - 1) or not at(x - 1, y) else ICE[3]
+
+    def rim_out(x: int, y: int, at) -> Color:  # noqa: ANN001
+        return SNOW[2] if hash2(x, y, 443) < 0.7 else SNOW[1]
+
+    def outside(x: int, y: int) -> Color:
+        return SNOW[3] if hash2(x, y, 444) < 0.8 else SNOW[2]
+
+    return _blob_tile(mask, 2, 447, inside, rim_in, rim_out, outside)
+
+
+def lava_tile(mask: int) -> Canvas:
+    def inside(x: int, y: int) -> Color:
+        g = hash2(x // 3, y // 2, 451)
+        return LAVA[3] if g > 0.85 else LAVA[2] if g > 0.35 else LAVA[1]
+
+    def rim_in(x: int, y: int, at) -> Color:  # noqa: ANN001
+        return LAVA[0] if not at(x, y - 1) or not at(x - 1, y) else LAVA[4]
+
+    def rim_out(x: int, y: int, at) -> Color:  # noqa: ANN001
+        return ASH[0] if hash2(x, y, 453) < 0.6 else ASH[1]
+
+    def outside(x: int, y: int) -> Color:
+        return ASH[2] if hash2(x, y, 454) < 0.6 else ASH[1]
+
+    return _blob_tile(mask, 2, 457, inside, rim_in, rim_out, outside)
+
+
 def generate() -> dict[str, Canvas]:
     out: dict[str, Canvas] = {}
     for v in range(4):
@@ -272,4 +366,13 @@ def generate() -> dict[str, Canvas]:
         out[f"tile.path.{m}"] = path_tile(m)
         out[f"tile.water.{m}"] = water_tile(m)
         out[f"tile.cobble.{m}"] = cobble_tile(m)
+    # Phase 10 rings
+    for v in range(4):
+        out[f"tile.rock.{v}"] = rock_tile(v)
+        out[f"tile.mud.{v}"] = mud_tile(v)
+        out[f"tile.snow.{v}"] = snow_tile(v)
+        out[f"tile.ash.{v}"] = ash_tile(v)
+    for m in sorted({m & (1 | 4 | 16 | 64) for m in range(256)}):  # cardinal-only masks (N, E, S, W)
+        out[f"tile.ice.{m}"] = ice_tile(m)
+        out[f"tile.lava.{m}"] = lava_tile(m)
     return out

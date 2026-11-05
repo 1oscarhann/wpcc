@@ -121,78 +121,94 @@
    "anvil": 0,
    "avatar": 1,
    "banner": 2,
-   "book": 3,
-   "bread": 4,
-   "bricks": 5,
-   "build": 6,
-   "cart": 7,
-   "check": 8,
-   "chest": 9,
-   "close": 10,
-   "coins": 11,
-   "crystal": 12,
-   "demolish": 13,
-   "fish": 14,
-   "food": 15,
-   "herbs": 16,
-   "hide": 17,
-   "home": 18,
-   "info": 19,
-   "ingots": 20,
-   "ironbark": 21,
-   "leather": 22,
-   "leather_armour": 23,
-   "leather_armour_1": 24,
-   "leather_armour_2": 25,
-   "leather_armour_3": 26,
-   "leather_armour_4": 27,
-   "leather_armour_5": 28,
-   "lock": 29,
-   "map": 30,
-   "market": 31,
-   "move": 32,
-   "mute": 33,
-   "ore": 34,
-   "party": 35,
-   "planks": 36,
-   "plate_armour": 37,
-   "plate_armour_1": 38,
-   "plate_armour_2": 39,
-   "plate_armour_3": 40,
-   "plate_armour_4": 41,
-   "plate_armour_5": 42,
-   "plus": 43,
-   "potion_base": 44,
-   "potion_red": 45,
-   "queue": 46,
-   "rotate": 47,
-   "scroll": 48,
-   "settings": 49,
-   "slime_gel": 50,
-   "sound": 51,
-   "spear": 52,
-   "spear_1": 53,
-   "spear_2": 54,
-   "spear_3": 55,
-   "spear_4": 56,
-   "spear_5": 57,
-   "spider_silk": 58,
-   "star": 59,
-   "starstone": 60,
-   "stone": 61,
-   "sword": 62,
-   "sword_1": 63,
-   "sword_2": 64,
-   "sword_3": 65,
-   "sword_4": 66,
-   "sword_5": 67,
-   "timer": 68,
-   "trend_down": 69,
-   "trend_up": 70,
-   "undo": 71,
-   "upgrade": 72,
-   "wolf_fang": 73,
-   "wood": 74
+   "bog_moss": 3,
+   "book": 4,
+   "bread": 5,
+   "bricks": 6,
+   "build": 7,
+   "cart": 8,
+   "check": 9,
+   "chest": 10,
+   "close": 11,
+   "cloud": 12,
+   "coins": 13,
+   "crystal": 14,
+   "demolish": 15,
+   "ember_core": 16,
+   "ember_dust": 17,
+   "fish": 18,
+   "fog": 19,
+   "food": 20,
+   "frost_fur": 21,
+   "frost_shard": 22,
+   "golem_shard": 23,
+   "herbs": 24,
+   "hide": 25,
+   "home": 26,
+   "info": 27,
+   "ingots": 28,
+   "ironbark": 29,
+   "leather": 30,
+   "leather_armour": 31,
+   "leather_armour_1": 32,
+   "leather_armour_2": 33,
+   "leather_armour_3": 34,
+   "leather_armour_4": 35,
+   "leather_armour_5": 36,
+   "lock": 37,
+   "map": 38,
+   "market": 39,
+   "moon": 40,
+   "moonpetal": 41,
+   "move": 42,
+   "mute": 43,
+   "ore": 44,
+   "party": 45,
+   "planks": 46,
+   "plate_armour": 47,
+   "plate_armour_1": 48,
+   "plate_armour_2": 49,
+   "plate_armour_3": 50,
+   "plate_armour_4": 51,
+   "plate_armour_5": 52,
+   "plus": 53,
+   "potion_base": 54,
+   "potion_red": 55,
+   "queue": 56,
+   "rain": 57,
+   "rotate": 58,
+   "scroll": 59,
+   "settings": 60,
+   "slime_gel": 61,
+   "snowfall": 62,
+   "sound": 63,
+   "spear": 64,
+   "spear_1": 65,
+   "spear_2": 66,
+   "spear_3": 67,
+   "spear_4": 68,
+   "spear_5": 69,
+   "spider_silk": 70,
+   "star": 71,
+   "starstone": 72,
+   "stone": 73,
+   "storm": 74,
+   "storm_glass": 75,
+   "sun": 76,
+   "swamp_venom": 77,
+   "sword": 78,
+   "sword_1": 79,
+   "sword_2": 80,
+   "sword_3": 81,
+   "sword_4": 82,
+   "sword_5": 83,
+   "timer": 84,
+   "trend_down": 85,
+   "trend_up": 86,
+   "undo": 87,
+   "upgrade": 88,
+   "wolf_fang": 89,
+   "wood": 90
   },
   "size": 16
  },
@@ -1637,10 +1653,37 @@
   "obj.birch.1": {
    "atlas": "world"
   },
+  "obj.boulder.0": {
+   "atlas": "world"
+  },
+  "obj.boulder.1": {
+   "atlas": "world"
+  },
   "obj.bush.0": {
    "atlas": "world"
   },
   "obj.bush.1": {
+   "atlas": "world"
+  },
+  "obj.charred_tree.0": {
+   "atlas": "world"
+  },
+  "obj.charred_tree.1": {
+   "atlas": "world"
+  },
+  "obj.crag.0": {
+   "atlas": "world"
+  },
+  "obj.crag.1": {
+   "atlas": "world"
+  },
+  "obj.dead_tree.0": {
+   "atlas": "world"
+  },
+  "obj.dead_tree.1": {
+   "atlas": "world"
+  },
+  "obj.ember_rock.0": {
    "atlas": "world"
   },
   "obj.fence.gate": {
@@ -1691,7 +1734,19 @@
   "obj.flowers.4": {
    "atlas": "world"
   },
+  "obj.frost_spire.0": {
+   "atlas": "world"
+  },
+  "obj.ice_rock.0": {
+   "atlas": "world"
+  },
+  "obj.ice_rock.1": {
+   "atlas": "world"
+  },
   "obj.lamp.0": {
+   "atlas": "world"
+  },
+  "obj.lava_vent.0": {
    "atlas": "world"
   },
   "obj.lilypad.0": {
@@ -1701,6 +1756,9 @@
    "atlas": "world"
   },
   "obj.log.0": {
+   "atlas": "world"
+  },
+  "obj.moonpetal.0": {
    "atlas": "world"
   },
   "obj.mossy_rock.0": {
@@ -1722,6 +1780,15 @@
    "atlas": "world"
   },
   "obj.oak.2": {
+   "atlas": "world"
+  },
+  "obj.obsidian.0": {
+   "atlas": "world"
+  },
+  "obj.obsidian.1": {
+   "atlas": "world"
+  },
+  "obj.ore_vein.0": {
    "atlas": "world"
   },
   "obj.pebbles.0": {
@@ -1757,6 +1824,18 @@
   "obj.signpost.0": {
    "atlas": "world"
   },
+  "obj.snow_pine.0": {
+   "atlas": "world"
+  },
+  "obj.snow_pine.1": {
+   "atlas": "world"
+  },
+  "obj.snowdrift.0": {
+   "atlas": "world"
+  },
+  "obj.star_vein.0": {
+   "atlas": "world"
+  },
   "obj.stump.0": {
    "atlas": "world"
   },
@@ -1766,6 +1845,9 @@
   "obj.tall_grass.1": {
    "atlas": "world"
   },
+  "obj.venom_bloom.0": {
+   "atlas": "world"
+  },
   "obj.waystone.0": {
    "atlas": "world"
   },
@@ -1773,6 +1855,21 @@
    "atlas": "world"
   },
   "obj.well.0": {
+   "atlas": "world"
+  },
+  "obj.willow.0": {
+   "atlas": "world"
+  },
+  "tile.ash.0": {
+   "atlas": "world"
+  },
+  "tile.ash.1": {
+   "atlas": "world"
+  },
+  "tile.ash.2": {
+   "atlas": "world"
+  },
+  "tile.ash.3": {
    "atlas": "world"
   },
   "tile.cobble.0": {
@@ -1949,6 +2046,114 @@
   "tile.grass.3": {
    "atlas": "world"
   },
+  "tile.ice.0": {
+   "atlas": "world"
+  },
+  "tile.ice.1": {
+   "atlas": "world"
+  },
+  "tile.ice.16": {
+   "atlas": "world"
+  },
+  "tile.ice.17": {
+   "atlas": "world"
+  },
+  "tile.ice.20": {
+   "atlas": "world"
+  },
+  "tile.ice.21": {
+   "atlas": "world"
+  },
+  "tile.ice.4": {
+   "atlas": "world"
+  },
+  "tile.ice.5": {
+   "atlas": "world"
+  },
+  "tile.ice.64": {
+   "atlas": "world"
+  },
+  "tile.ice.65": {
+   "atlas": "world"
+  },
+  "tile.ice.68": {
+   "atlas": "world"
+  },
+  "tile.ice.69": {
+   "atlas": "world"
+  },
+  "tile.ice.80": {
+   "atlas": "world"
+  },
+  "tile.ice.81": {
+   "atlas": "world"
+  },
+  "tile.ice.84": {
+   "atlas": "world"
+  },
+  "tile.ice.85": {
+   "atlas": "world"
+  },
+  "tile.lava.0": {
+   "atlas": "world"
+  },
+  "tile.lava.1": {
+   "atlas": "world"
+  },
+  "tile.lava.16": {
+   "atlas": "world"
+  },
+  "tile.lava.17": {
+   "atlas": "world"
+  },
+  "tile.lava.20": {
+   "atlas": "world"
+  },
+  "tile.lava.21": {
+   "atlas": "world"
+  },
+  "tile.lava.4": {
+   "atlas": "world"
+  },
+  "tile.lava.5": {
+   "atlas": "world"
+  },
+  "tile.lava.64": {
+   "atlas": "world"
+  },
+  "tile.lava.65": {
+   "atlas": "world"
+  },
+  "tile.lava.68": {
+   "atlas": "world"
+  },
+  "tile.lava.69": {
+   "atlas": "world"
+  },
+  "tile.lava.80": {
+   "atlas": "world"
+  },
+  "tile.lava.81": {
+   "atlas": "world"
+  },
+  "tile.lava.84": {
+   "atlas": "world"
+  },
+  "tile.lava.85": {
+   "atlas": "world"
+  },
+  "tile.mud.0": {
+   "atlas": "world"
+  },
+  "tile.mud.1": {
+   "atlas": "world"
+  },
+  "tile.mud.2": {
+   "atlas": "world"
+  },
+  "tile.mud.3": {
+   "atlas": "world"
+  },
   "tile.path.0": {
    "atlas": "world"
   },
@@ -2088,6 +2293,30 @@
    "atlas": "world"
   },
   "tile.path.95": {
+   "atlas": "world"
+  },
+  "tile.rock.0": {
+   "atlas": "world"
+  },
+  "tile.rock.1": {
+   "atlas": "world"
+  },
+  "tile.rock.2": {
+   "atlas": "world"
+  },
+  "tile.rock.3": {
+   "atlas": "world"
+  },
+  "tile.snow.0": {
+   "atlas": "world"
+  },
+  "tile.snow.1": {
+   "atlas": "world"
+  },
+  "tile.snow.2": {
+   "atlas": "world"
+  },
+  "tile.snow.3": {
    "atlas": "world"
   },
   "tile.water.0": {

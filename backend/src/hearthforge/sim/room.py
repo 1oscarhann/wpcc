@@ -19,6 +19,7 @@ from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from hearthforge.domain import worldclock
 from hearthforge.realtime.protocol import ANIM, ENT, EV, ROOM_LEFT, SELF_FLAG, encode
 from hearthforge.sim import motion as mo
 from hearthforge.sim.grid import WorldGrid
@@ -221,6 +222,7 @@ class RealmRoom:
         self.regen_delay = int(self.cfg.avatar.regen.delay * self.hz + 0.5)
         self.tick_ms_samples: deque[float] = deque(maxlen=200)
         self.combat: Any = None  # Phase 5: sim.combat.Combat (monsters, hits, loot)
+        self.weather_seed = 0  # the realm's weather timeline (Phase 10), set by the manager
 
     # ── lifecycle ────────────────────────────────────────────────────────────
     def new_id(self) -> int:
@@ -605,16 +607,26 @@ class RealmRoom:
         half = math.radians(mv.arc) / 2
         return along >= math.sqrt(d2) * math.cos(min(math.pi, half + 0.35))
 
+    def world_now(self) -> tuple[bool, str]:
+        """(is it night, current weather) for this realm — pure functions of the clock (P9)."""
+        wc = self.cfg.world_clock
+        t = self.st.clock.now()
+        return worldclock.is_night(wc, t), worldclock.weather_at(wc, self.weather_seed, t)
+
     def gather(self, p: Player, mv: MoveRule) -> None:
         best: tuple[float, int, int, str] | None = None
         r = int(mv.range + 2)
         cx, cy = int(p.m.x), int(p.m.y)
         now = time.time()
+        night, weather = self.world_now()
+        nodes = self.cfg.nodes.nodes
         for ty in range(cy - r, cy + r + 1):
             for tx in range(cx - r, cx + r + 1):
                 key = self.grid.node_at(tx, ty)
                 if key is None:
                     continue
+                if nodes[key].night_only and not night:
+                    continue  # moonpetals only open at night (the client hides them by day)
                 nid = self.grid.node_id(tx, ty)
                 if p.depleted.get(nid, 0) > now:
                     continue
@@ -639,10 +651,13 @@ class RealmRoom:
         p.pending.harvests.append((nid, respawn_at))
         p.ev.append([EV["NODE"], nid, node.hits, node.hits, 1, int(node.respawn * 1000), node.sound])
         loot: dict[str, int] = {}
+        ws = self.cfg.world_clock.weather.states.get(weather)
+        boost = ws.rare_node.get(key, 1.0) if ws else 1.0  # e.g. snow → frost spires give 1.5×
         for k, (lo, hi) in node.yields.items():
-            loot[k] = self.rng.randint(lo, hi)
+            q = self.rng.randint(lo, hi)
+            loot[k] = int(q * boost + self.rng.random()) if boost != 1.0 else q
         for k, b in node.bonus.items():
-            if self.rng.random() < b.chance:
+            if self.rng.random() < min(1.0, b.chance * boost):
                 loot[k] = loot.get(k, 0) + self.rng.randint(*b.qty)
         nx, ny = tx + 0.5, ty + 0.5
         for k, q in loot.items():
