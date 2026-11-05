@@ -1638,3 +1638,69 @@ body[data-tut="home"] [data-tut-target="home"] {
 .party-frames .link-btn {
   color: var(--paper-mid);
 }
+
+/* ── Phase 10: world chip (time, weather, season) ───────────────────────── */
+.minimap-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.world-chip-wrap {
+  position: relative;
+}
+.world-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 5px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  color: var(--ink);
+  text-align: left;
+}
+.world-chip.is-night {
+  background: #3d4d8c;
+  color: #faf2dd;
+}
+.world-chip-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.world-chip-text .head {
+  font-size: 14px;
+}
+.world-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 230px;
+  padding: 10px 12px;
+  z-index: 6;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow);
+}
+.forecast-row {
+  display: flex;
+  gap: 10px;
+  margin: 6px 0;
+}
+.forecast-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.world-effects {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+@media (max-width: 640px) {
+  .world-chip-text .small {
+    display: none;
+  }
+}

@@ -23,6 +23,20 @@ function audio(): AudioContext | null {
   return ctx;
 }
 
+/** Shared with the soundscape (ambient beds use the same context and noise buffer). */
+export function audioContext(): { ctx: AudioContext; noise: AudioBuffer } | null {
+  const c = audio();
+  return c && noiseBuf ? { ctx: c, noise: noiseBuf } : null;
+}
+
+/** Ambience follows the "Music" slider. */
+export function ambienceVolume(): number {
+  const a = useSession.getState().me?.settings.audio as { master?: number; music?: number; muted?: boolean } | undefined;
+  if (!a) return 0.4;
+  if (a.muted) return 0;
+  return (a.master ?? 1) * (a.music ?? 0.6) * 0.5;
+}
+
 function volume(): number {
   const a = useSession.getState().me?.settings.audio as { master?: number; sfx?: number; muted?: boolean } | undefined;
   if (!a) return 0.5;
@@ -133,6 +147,20 @@ const SOUNDS: Record<string, (c: AudioContext, o: AudioNode, t: number) => void>
   },
   shimmer: (c, o, t) => [1760, 2093, 2637].forEach((f, i) => tone(c, o, "sine", f, f * 1.01, t + i * 0.05, 0.18, 0.03)),
   telegraph: (c, o, t) => tone(c, o, "triangle", 880, 700, t, 0.1, 0.05),
+  thunder: (c, o, t) => {
+    noise(c, o, t, 1.6, 0.5, "lowpass", 260, 60, 0.7);
+    noise(c, o, t + 0.15, 1.1, 0.35, "lowpass", 160, 50, 0.9);
+  },
+  shoot: (c, o, t) => noise(c, o, t, 0.14, 0.22, "bandpass", 3200, 1200, 2.5),
+  zap: (c, o, t) => {
+    noise(c, o, t, 0.18, 0.3, "highpass", 6000, 2500, 0.8);
+    tone(c, o, "sawtooth", 1400, 300, t, 0.12, 0.05);
+  },
+  summon: (c, o, t) => [330, 415, 494].forEach((f, i) => tone(c, o, "sine", f, f * 1.5, t + i * 0.07, 0.22, 0.06)),
+  split: (c, o, t) => {
+    tone(c, o, "sine", 300, 140, t, 0.16, 0.12);
+    tone(c, o, "sine", 360, 180, t + 0.06, 0.14, 0.1);
+  },
 };
 
 /** Play a named sound (rate-limited per name so swarms don't clip). */

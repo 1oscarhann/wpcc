@@ -8,6 +8,7 @@ import { itemIcon } from "../../game/items";
 import { Icon } from "../components/kit";
 import { Bag } from "./Bag";
 import { TradePrompt } from "./Market";
+import { WorldChip } from "./WorldChip";
 import { MiniMap, WaystonePrompt } from "./WorldMap";
 import { PartyButton, PartyFrames } from "./Party";
 import { useTutorial } from "../../state/tutorial";
@@ -242,7 +243,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       {(flags & KO_FLAG) !== 0 && (
         <div className="av-ko center"><div className="panel head" style={{ fontSize: 24 }}>Knocked out! Waking up at home…</div></div>
       )}
-      <div className="minimap-slot"><MiniMap small={touch} /></div>
+      <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /></div>
       <PartyFrames />
       <div className="hud-bottom">
         <TradePrompt touch={touch} />

@@ -1515,6 +1515,27 @@
   "fx.poof.3": {
    "atlas": "world"
   },
+  "fx.shot.arrow": {
+   "atlas": "world"
+  },
+  "fx.shot.bolt": {
+   "atlas": "world"
+  },
+  "fx.shot.fire": {
+   "atlas": "world"
+  },
+  "fx.shot.ice": {
+   "atlas": "world"
+  },
+  "fx.shot.rock": {
+   "atlas": "world"
+  },
+  "fx.shot.spit": {
+   "atlas": "world"
+  },
+  "fx.shot.sting": {
+   "atlas": "world"
+  },
   "fx.slash.0": {
    "atlas": "world"
   },
@@ -1560,7 +1581,565 @@
   "fx.sparkle.3": {
    "atlas": "world"
   },
+  "mon.ash_golem.attack.0": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.idle.0": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.idle.1": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.move.0": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.move.1": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.move.2": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.move.3": {
+   "atlas": "world"
+  },
+  "mon.ash_golem.windup.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.attack.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.idle.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.idle.1": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.move.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.move.1": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.move.2": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.move.3": {
+   "atlas": "world"
+  },
+  "mon.bandit_archer.windup.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.attack.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.idle.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.idle.1": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.move.0": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.move.1": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.move.2": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.move.3": {
+   "atlas": "world"
+  },
+  "mon.bandit_brute.windup.0": {
+   "atlas": "world"
+  },
+  "mon.big_slime.attack.0": {
+   "atlas": "world"
+  },
+  "mon.big_slime.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.big_slime.idle.0": {
+   "atlas": "world"
+  },
+  "mon.big_slime.idle.1": {
+   "atlas": "world"
+  },
+  "mon.big_slime.move.0": {
+   "atlas": "world"
+  },
+  "mon.big_slime.move.1": {
+   "atlas": "world"
+  },
+  "mon.big_slime.windup.0": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.attack.0": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.idle.0": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.idle.1": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.move.0": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.move.1": {
+   "atlas": "world"
+  },
+  "mon.bog_lurker.windup.0": {
+   "atlas": "world"
+  },
+  "mon.buzzling.attack.0": {
+   "atlas": "world"
+  },
+  "mon.buzzling.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.buzzling.idle.0": {
+   "atlas": "world"
+  },
+  "mon.buzzling.idle.1": {
+   "atlas": "world"
+  },
+  "mon.buzzling.move.0": {
+   "atlas": "world"
+  },
+  "mon.buzzling.move.1": {
+   "atlas": "world"
+  },
+  "mon.buzzling.move.2": {
+   "atlas": "world"
+  },
+  "mon.buzzling.move.3": {
+   "atlas": "world"
+  },
+  "mon.buzzling.windup.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.attack.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.idle.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.idle.1": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.move.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.move.1": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.move.2": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.move.3": {
+   "atlas": "world"
+  },
+  "mon.cinder_witch.windup.0": {
+   "atlas": "world"
+  },
   "mon.crown": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.attack.0": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.idle.0": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.idle.1": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.move.0": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.move.1": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.move.2": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.move.3": {
+   "atlas": "world"
+  },
+  "mon.crystal_sprite.windup.0": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.attack.0": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.idle.0": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.idle.1": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.move.0": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.move.1": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.move.2": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.move.3": {
+   "atlas": "world"
+  },
+  "mon.ember_archer.windup.0": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.attack.0": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.idle.0": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.idle.1": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.move.0": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.move.1": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.move.2": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.move.3": {
+   "atlas": "world"
+  },
+  "mon.fire_imp.windup.0": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.attack.0": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.idle.0": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.idle.1": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.move.0": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.move.1": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.move.2": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.move.3": {
+   "atlas": "world"
+  },
+  "mon.frost_wolf.windup.0": {
+   "atlas": "world"
+  },
+  "mon.harpy.attack.0": {
+   "atlas": "world"
+  },
+  "mon.harpy.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.harpy.idle.0": {
+   "atlas": "world"
+  },
+  "mon.harpy.idle.1": {
+   "atlas": "world"
+  },
+  "mon.harpy.move.0": {
+   "atlas": "world"
+  },
+  "mon.harpy.move.1": {
+   "atlas": "world"
+  },
+  "mon.harpy.move.2": {
+   "atlas": "world"
+  },
+  "mon.harpy.move.3": {
+   "atlas": "world"
+  },
+  "mon.harpy.windup.0": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.attack.0": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.idle.0": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.idle.1": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.move.0": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.move.1": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.move.2": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.move.3": {
+   "atlas": "world"
+  },
+  "mon.ice_wraith.windup.0": {
+   "atlas": "world"
+  },
+  "mon.leechling.attack.0": {
+   "atlas": "world"
+  },
+  "mon.leechling.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.leechling.idle.0": {
+   "atlas": "world"
+  },
+  "mon.leechling.idle.1": {
+   "atlas": "world"
+  },
+  "mon.leechling.move.0": {
+   "atlas": "world"
+  },
+  "mon.leechling.move.1": {
+   "atlas": "world"
+  },
+  "mon.leechling.windup.0": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.attack.0": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.idle.0": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.idle.1": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.move.0": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.move.1": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.move.2": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.move.3": {
+   "atlas": "world"
+  },
+  "mon.magma_hound.windup.0": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.attack.0": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.idle.0": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.idle.1": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.move.0": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.move.1": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.move.2": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.move.3": {
+   "atlas": "world"
+  },
+  "mon.mire_shaman.windup.0": {
+   "atlas": "world"
+  },
+  "mon.pebbling.attack.0": {
+   "atlas": "world"
+  },
+  "mon.pebbling.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.pebbling.idle.0": {
+   "atlas": "world"
+  },
+  "mon.pebbling.idle.1": {
+   "atlas": "world"
+  },
+  "mon.pebbling.move.0": {
+   "atlas": "world"
+  },
+  "mon.pebbling.move.1": {
+   "atlas": "world"
+  },
+  "mon.pebbling.windup.0": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.attack.0": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.idle.0": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.idle.1": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.move.0": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.move.1": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.move.2": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.move.3": {
+   "atlas": "world"
+  },
+  "mon.ram_goat.windup.0": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.attack.0": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.idle.0": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.idle.1": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.move.0": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.move.1": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.move.2": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.move.3": {
+   "atlas": "world"
+  },
+  "mon.rime_stalker.windup.0": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.attack.0": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.idle.0": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.idle.1": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.move.0": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.move.1": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.move.2": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.move.3": {
+   "atlas": "world"
+  },
+  "mon.rock_golem.windup.0": {
+   "atlas": "world"
+  },
+  "mon.sapling.attack.0": {
+   "atlas": "world"
+  },
+  "mon.sapling.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.sapling.idle.0": {
+   "atlas": "world"
+  },
+  "mon.sapling.idle.1": {
+   "atlas": "world"
+  },
+  "mon.sapling.move.0": {
+   "atlas": "world"
+  },
+  "mon.sapling.move.1": {
+   "atlas": "world"
+  },
+  "mon.sapling.windup.0": {
+   "atlas": "world"
+  },
+  "mon.seedling.attack.0": {
+   "atlas": "world"
+  },
+  "mon.seedling.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.seedling.idle.0": {
+   "atlas": "world"
+  },
+  "mon.seedling.idle.1": {
+   "atlas": "world"
+  },
+  "mon.seedling.move.0": {
+   "atlas": "world"
+  },
+  "mon.seedling.move.1": {
+   "atlas": "world"
+  },
+  "mon.seedling.windup.0": {
    "atlas": "world"
   },
   "mon.slime.attack.0": {
@@ -1584,6 +2163,60 @@
   "mon.slime.windup.0": {
    "atlas": "world"
   },
+  "mon.snapjaw.attack.0": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.idle.0": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.idle.1": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.move.0": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.move.1": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.move.2": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.move.3": {
+   "atlas": "world"
+  },
+  "mon.snapjaw.windup.0": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.attack.0": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.idle.0": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.idle.1": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.move.0": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.move.1": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.move.2": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.move.3": {
+   "atlas": "world"
+  },
+  "mon.snow_imp.windup.0": {
+   "atlas": "world"
+  },
   "mon.spider.attack.0": {
    "atlas": "world"
   },
@@ -1603,6 +2236,81 @@
    "atlas": "world"
   },
   "mon.spider.windup.0": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.attack.0": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.idle.0": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.idle.1": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.move.0": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.move.1": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.move.2": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.move.3": {
+   "atlas": "world"
+  },
+  "mon.storm_elemental.windup.0": {
+   "atlas": "world"
+  },
+  "mon.thornhare.attack.0": {
+   "atlas": "world"
+  },
+  "mon.thornhare.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.thornhare.idle.0": {
+   "atlas": "world"
+  },
+  "mon.thornhare.idle.1": {
+   "atlas": "world"
+  },
+  "mon.thornhare.move.0": {
+   "atlas": "world"
+  },
+  "mon.thornhare.move.1": {
+   "atlas": "world"
+  },
+  "mon.thornhare.move.2": {
+   "atlas": "world"
+  },
+  "mon.thornhare.move.3": {
+   "atlas": "world"
+  },
+  "mon.thornhare.windup.0": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.attack.0": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.idle.0": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.idle.1": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.move.0": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.move.1": {
+   "atlas": "world"
+  },
+  "mon.toad_spitter.windup.0": {
    "atlas": "world"
   },
   "mon.wolf.attack.0": {
@@ -1630,6 +2338,33 @@
    "atlas": "world"
   },
   "mon.wolf.windup.0": {
+   "atlas": "world"
+  },
+  "mon.yeti.attack.0": {
+   "atlas": "world"
+  },
+  "mon.yeti.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.yeti.idle.0": {
+   "atlas": "world"
+  },
+  "mon.yeti.idle.1": {
+   "atlas": "world"
+  },
+  "mon.yeti.move.0": {
+   "atlas": "world"
+  },
+  "mon.yeti.move.1": {
+   "atlas": "world"
+  },
+  "mon.yeti.move.2": {
+   "atlas": "world"
+  },
+  "mon.yeti.move.3": {
+   "atlas": "world"
+  },
+  "mon.yeti.windup.0": {
    "atlas": "world"
   },
   "npc.merchant_cart": {

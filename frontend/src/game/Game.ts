@@ -24,8 +24,22 @@ import { ComboFx } from "./comboFx";
 import { localPlacementError, rotatedFootprint, usableBounds } from "./placement";
 import { safeDestroy } from "./safe";
 import { sfx } from "./sfx";
+import { type Light, Sky } from "./sky";
+import { Soundscape } from "./soundscape";
+import { biomeAt, dayPhase, useWorld } from "../state/world";
 import { buildingLook, loadIconAtlas, loadWorldAtlas, tex } from "./sprites";
 
+/** Map objects that cast light at night: prefix, radius (world px), colour, flicker. */
+const GLOWS: [string, number, number, boolean][] = [
+  ["obj.lamp", 60, 0xffd28a, true],
+  ["obj.waystone", 44, 0x8fe3d6, false],
+  ["obj.lava_vent", 46, 0xff7a3a, true],
+  ["obj.ember_rock", 28, 0xff9a4a, true],
+  ["obj.star_vein", 28, 0xb6a8ff, false],
+  ["obj.frost_spire", 34, 0xa6e0ff, false],
+  ["obj.moonpetal", 30, 0xd8c8ff, false],
+  ["obj.venom_bloom", 22, 0xc993e8, false],
+];
 const TREE_PREFIXES = ["obj.oak", "obj.big_oak", "obj.birch", "obj.pine", "obj.apple"];
 const DEBRIS_LEAVES = new Set(["oak", "big_oak", "birch", "pine", "apple", "bush", "weeds"]);
 
@@ -74,6 +88,12 @@ export class Game {
   private fenceKey = "";
   private waterTiles = new Set<string>();
   private treeSpots: { x: number; y: number }[] = [];
+  // Phase 10: things that glow at night, and moonpetals (only open after dark)
+  private lightSpots: { x: number; y: number; r: number; color: number; flicker: boolean }[] = [];
+  private moonpetals: Sprite[] = [];
+  private petalsOpen: boolean | null = null;
+  private heavens: Sky | null = null;
+  private sound = new Soundscape();
   private flowerSpots: { x: number; y: number }[] = [];
   private hoverDebris: number | null = null;
   private map: MapMeta | null = null;
@@ -147,6 +167,10 @@ export class Game {
       this.sky,
     );
     this.app.stage.addChild(this.world, this.screen);
+    this.heavens = new Sky(this.app);
+    this.heavens.reduceMotion = gfx?.reduce_motion ?? false;
+    this.app.stage.addChildAt(this.heavens.layer, 1);
+    void useWorld.getState().load();
     this.comboFx = new ComboFx({
       fx: this.fx,
       objects: this.objects,
@@ -215,6 +239,9 @@ export class Game {
     this.avatar?.destroy();
     this.avatar = null;
     this.comboFx?.destroy();
+    this.sound.destroy();
+    this.heavens?.destroy();
+    this.heavens = null;
     if (gridLink.grid === this.grid) gridLink.grid = null;
     this.unsub.forEach((u) => u());
     this.mates?.destroy();
@@ -337,6 +364,44 @@ export class Game {
     this.comboFx?.update(dms);
     this.ghostResonance(dms);
     this.clouds.update(dt, this.viewRect());
+    this.updateSky(dms);
+  }
+
+  /** Phase 10: day/night light, season tint, weather and the soundscape. */
+  private updateSky(dms: number): void {
+    if (!this.heavens) return;
+    const dt = Math.min(dms, 50) / 1000;
+    const phase = dayPhase();
+    const { season, weather } = useWorld.getState();
+    const biome = biomeAt(this.cam.x / T, this.cam.y / T);
+    const lights: Light[] = [];
+    if (phase.dark > 0.02 || weather === "storm") {
+      const z = this.cam.zoom;
+      const r = this.viewRect();
+      const pad = 80;
+      const add = (wx: number, wy: number, rad: number, color: number, flicker: boolean, power = 1) => {
+        if (wx < r.x0 - pad || wx > r.x1 + pad || wy < r.y0 - pad || wy > r.y1 + pad) return;
+        lights.push({ x: this.world.x + wx * z, y: this.world.y + wy * z, r: rad * z, color, flicker, power });
+      };
+      for (const l of this.lightSpots) add(l.x, l.y, l.r, l.color, l.flicker);
+      for (const v of this.views.values()) {
+        // lit windows: a warm pool around every finished building
+        if (v.level < 1) continue;
+        const [fw, fh] = rotatedFootprint(this.defs[v.key].footprint, v.rotation);
+        add(v.root.x + (fw * T) / 2, v.root.y + fh * T - 10, 22 + fw * 9, 0xffc46e, true, 0.95);
+      }
+      if (this.avatar) {
+        const p = this.avatar.client.drawPos();
+        add(p.x * T, p.y * T - 6, 88, 0xfff0d0, true, 1.1); // your lantern
+      }
+    }
+    this.heavens.update(dt, { phase, season, weather, biome, lights });
+    this.sound.update(dt, biome, phase.name === "night", weather);
+    const open = phase.dark > 0.5;
+    if (open !== this.petalsOpen) {
+      this.petalsOpen = open;
+      for (const s of this.moonpetals) if (!s.destroyed) gsap.to(s, { alpha: open ? 1 : 0, duration: 1.2 });
+    }
   }
 
   /** P17: when the ghost would form a combo, it shimmers (named if discovered, a mystery if not). */
@@ -500,6 +565,7 @@ export class Game {
     if (!frozen) this.ambient?.update(dms);
     this.comboFx?.update(dms);
     this.clouds.update(Math.min(dms, 50) / 1000, this.viewRect());
+    this.updateSky(dms);
   }
 
   private sampleAvatarInput(c: RoomClient): void {
@@ -652,6 +718,9 @@ export class Game {
       const tx = ch.cx * cs + (i % cs);
       const ty = ch.cy * cs + Math.floor(i / cs);
       if (name.startsWith("tile.water")) this.waterTiles.add(`${tx},${ty}`);
+      else if (name.startsWith("tile.lava") && (tx * 5 + ty * 3) % 4 === 0) {
+        this.lightSpots.push({ x: tx * T + 8, y: ty * T + 8, r: 24, color: 0xff6a2a, flicker: true });
+      }
       else if (name.startsWith("tile.flowers") && (tx * 7 + ty * 3) % 4 === 0) this.flowerSpots.push({ x: tx * T + 8, y: ty * T + 8 });
     }
     c.cacheAsTexture(true);
@@ -679,6 +748,12 @@ export class Game {
       s.zIndex = name.startsWith("obj.lilypad") ? wy - 16 : wy;
       this.objects.addChild(s);
       this.objectSprites.set(wty * m.size + wtx, s);
+      const glow = GLOWS.find(([p]) => name.startsWith(p));
+      if (glow) this.lightSpots.push({ x: wx, y: wy - 8, r: glow[1], color: glow[2], flicker: glow[3] });
+      if (name.startsWith("obj.moonpetal")) {
+        s.alpha = this.petalsOpen ? 1 : 0;
+        this.moonpetals.push(s);
+      }
       if (TREE_PREFIXES.some((p) => name.startsWith(p))) this.treeSpots.push({ x: wx, y: wy - s.height * 0.6 });
       else if (name.startsWith("obj.flowers") || name.startsWith("obj.flower_bush")) this.flowerSpots.push({ x: wx, y: wy - 4 });
     }
@@ -695,6 +770,8 @@ export class Game {
     this.objectSprites.clear();
     this.treeSpots.length = 0;
     this.flowerSpots.length = 0;
+    this.lightSpots.length = 0;
+    this.moonpetals.length = 0;
   }
 
   private plotOwnerAt(tx: number, ty: number): string | null {

@@ -59,7 +59,14 @@ export interface ConfigBundle {
     default_appearance: Appearance;
   };
   plot: { frame: number; start_size: number; max_size: number; pond: { x: number; y: number; w: number; h: number } };
-  map: { size: number; chunk_size: number };
+  map: { size: number; chunk_size: number; bands: { biome: string; radius: number }[] };
+  world_clock: {
+    day_length: number;
+    phases: Record<string, number>;
+    season_length: number;
+    seasons: string[];
+    weather_block: number;
+  };
   debris: Record<string, { sprites: string[]; yields: Record<string, number> }>;
   sim: unknown; // sim/rules.ts Rules
   nodes: Record<string, { objects: string[]; biome: string | null; hits: number; yields: Record<string, [number, number]>; sound: string }>;

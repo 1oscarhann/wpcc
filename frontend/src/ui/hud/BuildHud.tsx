@@ -7,6 +7,7 @@ import { enterAvatar } from "../../net/room";
 import { useMarket } from "../../state/market";
 import { useTutorial } from "../../state/tutorial";
 import { useRealm } from "../../state/realm";
+import { WorldChip } from "./WorldChip";
 import { MiniMap } from "./WorldMap";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
@@ -342,7 +343,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
       <TopBar v={v} now={now} onSettings={onSettings} />
       <div className="village-name"><span className="ribbon">{v.name}</span></div>
       <ClearHint v={v} />
-      <div className="minimap-slot"><MiniMap small={touch} /></div>
+      <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /></div>
       {!wsConnected && <div className="panel-dark hud-offline small">Reconnecting… (updates every few seconds)</div>}
       <div className="hud-bottom">
         {placing ? (

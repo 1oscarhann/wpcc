@@ -108,7 +108,11 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
             "max_size": plot.max_size,
             "pond": plot.pond.model_dump(),
         },
-        "map": {"size": cfg.mapgen.map_size, "chunk_size": cfg.mapgen.chunk_size},
+        "map": {
+            "size": cfg.mapgen.map_size,
+            "chunk_size": cfg.mapgen.chunk_size,
+            "bands": [{"biome": b.biome, "radius": b.radius} for b in cfg.mapgen.bands],
+        },
         "debris": {k: {"sprites": d.sprites, "yields": d.yields} for k, d in cfg.debris.kinds.items()},
         "world_clock": {
             "day_length": cfg.world_clock.day_cycle.length,

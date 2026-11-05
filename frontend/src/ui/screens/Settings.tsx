@@ -60,7 +60,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       <div className="col" style={{ gap: 14 }}>
         <h3>Sound</h3>
         {slider("master", "Master")}
-        {slider("music", "Music")}
+        {slider("music", "Music & ambience")}
         {slider("sfx", "Effects")}
         <label className="row">
           <input type="checkbox" className="toggle" checked={audio.muted}

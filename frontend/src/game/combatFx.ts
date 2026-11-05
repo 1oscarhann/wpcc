@@ -2,15 +2,27 @@
 // hit-stop and shake (visual only, D-010), death poofs, KO and heals.
 import gsap from "gsap";
 import { AnimatedSprite, Container, Graphics, Sprite } from "pixi.js";
-import { ANIM, ENT, EV, type Ent, type RoomEvent } from "../net/room";
+import { ANIM, ENT, EV, SELF_FLAG, type Ent, type RoomEvent } from "../net/room";
 import type { AvatarWorld, WorldHost } from "./avatarWorld";
 import { safeDestroy } from "./safe";
 import { sfx } from "./sfx";
-import { tex } from "./sprites";
+import { hasSprite, tex } from "./sprites";
 
 const T = 16;
 const INK = 0x2b1e2a;
-const MOVE_FRAMES: Record<string, number> = { slime: 2, wolf: 4, spider: 2 };
+const MOVE_FRAMES = new Map<string, number>();
+/** Quadrupeds, bipeds and flyers have 4 move frames; blobs and plants have 2. */
+function moveFrames(key: string): number {
+  let n = MOVE_FRAMES.get(key);
+  if (n === undefined) {
+    n = hasSprite(`mon.${key}.move.3`) ? 4 : 2;
+    MOVE_FRAMES.set(key, n);
+  }
+  return n;
+}
+const SQUISHY = new Set(["slime", "big_slime", "pebbling", "leechling", "toad_spitter", "bog_lurker"]);
+const NIGHT = 16;
+const MONSTER_SHOT = 1;
 
 interface MonsterView {
   root: Container;
@@ -19,6 +31,7 @@ interface MonsterView {
   bar: Graphics;
   crown: Sprite | null;
   glow: Graphics | null;
+  night: Graphics | null;
   key: string;
   elite: boolean;
   t: number;
@@ -30,6 +43,7 @@ interface MonsterView {
 export class CombatFx {
   private monsters = new Map<number, MonsterView>();
   private projectiles = new Map<number, Sprite>();
+  private root: Graphics | null = null;
   private telegraphs = new Map<number, { g: Graphics; tween: gsap.core.Tween }>();
   private time = 0;
   private lastLocalHit = -1e9;
@@ -42,6 +56,7 @@ export class CombatFx {
   destroy(): void {
     for (const m of this.monsters.values()) safeDestroy(m.root);
     for (const p of this.projectiles.values()) safeDestroy(p);
+    if (this.root) safeDestroy(this.root);
     for (const t of this.telegraphs.values()) {
       t.tween.kill();
       t.g.destroy();
@@ -56,14 +71,44 @@ export class CombatFx {
       if (ent.kind === ENT.monster) this.updateMonster(ent, rt, dms);
       else if (ent.kind === ENT.projectile) this.updateProjectile(ent, rt);
     }
+    this.updateRoot();
+  }
+
+  /** Rooted by a summoner: thorny vines wrap the avatar's feet until it wears off. */
+  private updateRoot(): void {
+    const c = this.world.client;
+    const rooted = (c.flags & SELF_FLAG.rooted) !== 0;
+    const av = rooted ? this.world.avatarView(c.eid) : undefined;
+    if (!av) {
+      if (this.root) this.root.visible = false;
+      return;
+    }
+    if (!this.root) {
+      this.root = new Graphics();
+      this.host.objects.addChild(this.root);
+    }
+    const g = this.root;
+    g.visible = true;
+    g.clear();
+    const wob = Math.sin(this.time / 120) * 0.6;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + this.time / 900;
+      const x = Math.cos(a) * 7;
+      const y = Math.sin(a) * 2.6;
+      g.moveTo(x, y).quadraticCurveTo(x * 0.6 + wob, y - 7, x * 0.2, y - 11 - (i % 2) * 3);
+    }
+    g.stroke({ width: 1.6, color: 0x3f7d3a, alpha: 0.95 });
+    g.ellipse(0, 0, 8, 3).stroke({ width: 1, color: 0x8cc663, alpha: 0.7 });
+    g.position.set(av.root.x, av.root.y);
+    g.zIndex = av.root.zIndex + 1;
   }
 
   private frame(key: string, anim: number, at: number, t: number): string {
     if (anim === ANIM.windup) return `mon.${key}.windup.0`;
     if (anim === ANIM.active) return `mon.${key}.attack.0`;
     if (anim === ANIM.walk) {
-      const n = MOVE_FRAMES[key] ?? 2;
-      return `mon.${key}.move.${Math.floor(t / (key === "wolf" ? 90 : 160)) % n}`;
+      const n = moveFrames(key);
+      return `mon.${key}.move.${Math.floor(t / (n === 4 ? 100 : 160)) % n}`;
     }
     void at;
     return `mon.${key}.idle.${Math.floor(t / 420) % 2}`;
@@ -83,11 +128,17 @@ export class CombatFx {
       const bar = new Graphics();
       let glow: Graphics | null = null;
       let crown: Sprite | null = null;
+      let night: Graphics | null = null;
+      if ((s.flags & NIGHT) !== 0) {
+        // spawned after dark: a violet haze around its feet
+        night = new Graphics().ellipse(0, 0, 11, 4.5).fill({ color: 0x9b7fd6, alpha: 0.32 });
+        root.addChild(night);
+      }
       if (elite) {
         glow = new Graphics().ellipse(0, 0, 10, 4).fill({ color: 0xf7d66a, alpha: 0.35 });
         root.addChild(glow);
         body.scale.set(1.3);
-        if (ent.type === "slime") {
+        if (ent.type === "slime" || ent.type === "big_slime") {
           crown = new Sprite(tex("mon.crown"));
           crown.anchor.set(0.5, 1);
         }
@@ -95,7 +146,7 @@ export class CombatFx {
       root.addChild(shadow, body, bar);
       if (crown) root.addChild(crown);
       this.host.objects.addChild(root);
-      v = { root, body, shadow, bar, crown, glow, key: ent.type, elite, t: Math.random() * 1000, lastHp: s.hp, flash: 0, dying: false };
+      v = { root, body, shadow, bar, crown, glow, night, key: ent.type, elite, t: Math.random() * 1000, lastHp: s.hp, flash: 0, dying: false };
       this.monsters.set(ent.id, v);
       gsap.fromTo(body, { alpha: 0 }, { alpha: 1, duration: 0.3 });
     }
@@ -115,7 +166,7 @@ export class CombatFx {
       v.body.tint = Math.floor(v.t / 90) % 2 ? 0xff9a8a : 0xffffff;
     } else {
       v.body.x = 0;
-      v.body.tint = 0xffffff;
+      v.body.tint = v.night ? 0xe6dcff : 0xffffff;
     }
     if (v.flash > 0) {
       v.flash -= dms;
@@ -127,6 +178,7 @@ export class CombatFx {
     v.shadow.alpha = hidden ? 0.2 : 1;
     if (v.crown) v.crown.position.set(0, -v.body.texture.height * sc + 6);
     if (v.glow) v.glow.alpha = 0.55 + Math.sin(v.t / 300) * 0.25;
+    if (v.night) v.night.alpha = hidden ? 0.15 : 0.6 + Math.sin(v.t / 450) * 0.3;
     v.bar.clear();
     if (s.hp < 255 && !hidden) {
       const w = v.elite ? 22 : 14;
@@ -140,13 +192,14 @@ export class CombatFx {
     const s = this.world.client.sampleAt(ent, rt + 1) ?? ent.samples[ent.samples.length - 1];
     if (!s) return;
     let sp = this.projectiles.get(ent.id);
+    const monster = (s.flags & MONSTER_SHOT) !== 0;
     if (!sp) {
-      sp = new Sprite(tex("wpn.spear"));
-      sp.anchor.set(0.6, 0.5);
+      sp = new Sprite(tex(monster ? `fx.shot.${ent.type}` : "wpn.spear"));
+      sp.anchor.set(monster ? 0.7 : 0.6, 0.5);
       this.host.objects.addChild(sp);
       this.projectiles.set(ent.id, sp);
     }
-    sp.position.set(s.x * T, s.y * T - 8);
+    sp.position.set(s.x * T, s.y * T - (monster ? 7 : 8));
     sp.zIndex = s.y * T + 8;
     sp.rotation = Math.atan2(s.dy, s.dx);
   }
@@ -177,8 +230,14 @@ export class CombatFx {
         this.hit(ev as number[]);
         break;
       case EV.DEATH: {
-        const [, mid, x, y, , elite] = ev as [number, number, number, number, string, number];
-        this.death(mid, x, y, (ev[4] as string) ?? "", Boolean(elite));
+        const [, mid, x, y, , how] = ev as [number, number, number, number, string, number];
+        if (how === 2) this.fade(mid, x, y);
+        else this.death(mid, x, y, (ev[4] as string) ?? "", Boolean(how));
+        break;
+      }
+      case EV.ZAP: {
+        const [, x0, y0, x1, y1] = ev as number[];
+        this.zap(x0 * T, y0 * T - 10, x1 * T, y1 * T - 10);
         break;
       }
       case EV.PROJECTILE_END: {
@@ -285,7 +344,7 @@ export class CombatFx {
       this.host.floatText(x, y - 8, crit ? `${dmg}!` : `${dmg}`, crit ? 0xf7d66a : 0xfaf2dd, 0, crit ? 20 : 15);
       if (src === c.eid) {
         this.lastLocalHit = performance.now();
-        sfx(crit ? "crit" : mv.key === "slime" ? "squish" : "hit");
+        sfx(crit ? "crit" : SQUISHY.has(mv.key) ? "squish" : "hit");
         this.host.hitStop(crit ? 60 : kind === 3 ? 55 : 40);
         if (crit || kind === 3) this.host.shake(2, 120);
       }
@@ -308,6 +367,45 @@ export class CombatFx {
     }
   }
 
+  /** Night-only spawns at dawn, storm spawns when the storm passes, minions with their summoner. */
+  private fade(mid: number, x: number, y: number): void {
+    const v = this.monsters.get(mid);
+    if (v) {
+      v.dying = true;
+      this.monsters.delete(mid);
+      v.bar.clear();
+      gsap.to(v.root, { alpha: 0, duration: 0.8, onComplete: () => safeDestroy(v.root) });
+      gsap.to(v.root, { y: v.root.y - 6, duration: 0.8 });
+    }
+    this.host.sparkles(x * T, y * T - 8);
+  }
+
+  /** Chain lightning: a jagged bolt that flickers twice. */
+  private zap(x0: number, y0: number, x1: number, y1: number): void {
+    const g = new Graphics();
+    const seg = 6;
+    const draw = (j: number) => {
+      g.clear();
+      g.moveTo(x0, y0);
+      for (let i = 1; i < seg; i++) {
+        const t = i / seg;
+        const nx = -(y1 - y0);
+        const ny = x1 - x0;
+        const l = Math.hypot(nx, ny) || 1;
+        const off = (Math.sin(i * 12.9898 + j * 78.233) * 43758.5453) % 1;
+        g.lineTo(x0 + (x1 - x0) * t + (nx / l) * off * 5, y0 + (y1 - y0) * t + (ny / l) * off * 5);
+      }
+      g.lineTo(x1, y1);
+      g.stroke({ width: 2.5, color: 0xfbe68a, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff, alpha: 1 });
+    };
+    draw(0);
+    g.zIndex = 99998;
+    this.host.objects.addChild(g);
+    gsap.delayedCall(0.06, () => draw(1));
+    gsap.to(g, { alpha: 0, duration: 0.25, delay: 0.1, onComplete: () => safeDestroy(g) });
+    sfx("zap");
+  }
+
   private death(mid: number, x: number, y: number, key: string, elite: boolean): void {
     const v = this.monsters.get(mid);
     if (v) {
@@ -328,7 +426,7 @@ export class CombatFx {
     this.host.objects.addChild(poof);
     poof.play();
     if (performance.now() - this.lastLocalHit < 400) this.host.hitStop(60);
-    sfx(key === "slime" ? "squish" : "poof");
+    sfx(SQUISHY.has(key) ? "squish" : "poof");
     if (elite) {
       this.host.sparkles(x * T, y * T - 10);
       this.host.shake(3, 160);

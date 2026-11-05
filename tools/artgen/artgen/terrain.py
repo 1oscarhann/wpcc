@@ -319,11 +319,22 @@ def ash_tile(variant: int) -> Canvas:
     return c
 
 
+def _corners(mask: int) -> int:
+    """Ice and lava only carry cardinal bits (tile ids are a byte); a corner is in when both its sides are."""
+    for d, a, b in ((NE, N, E), (SE, S, E), (SW, S, W), (NW, N, W)):
+        if mask & a and mask & b:
+            mask |= d
+    return mask
+
+
 def ice_tile(mask: int) -> Canvas:
+    mask = _corners(mask)
+
     def inside(x: int, y: int) -> Color:
-        if (x + 2 * y) % 11 == 0 and hash2(x // 3, y, 441) > 0.5:
+        # long diagonal glints that run on across tiles, and a few soft milky patches
+        if (x - y) % 16 == 5 and hash2(x // 6, y // 6, 441) > 0.35:
             return ICE[3]
-        return ICE[2] if hash2(x // 4, y // 3, 442) < 0.8 else ICE[1]
+        return ICE[1] if hash2(x // 5, y // 4, 442) > 0.86 else ICE[2]
 
     def rim_in(x: int, y: int, at) -> Color:  # noqa: ANN001
         return ICE[0] if not at(x, y - 1) or not at(x - 1, y) else ICE[3]
@@ -338,6 +349,8 @@ def ice_tile(mask: int) -> Canvas:
 
 
 def lava_tile(mask: int) -> Canvas:
+    mask = _corners(mask)
+
     def inside(x: int, y: int) -> Color:
         g = hash2(x // 3, y // 2, 451)
         return LAVA[3] if g > 0.85 else LAVA[2] if g > 0.35 else LAVA[1]

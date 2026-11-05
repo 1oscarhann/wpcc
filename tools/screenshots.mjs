@@ -782,6 +782,38 @@ PHASES["9v"] = async (page, kind) => {
   await ctx2.close();
 };
 
+PHASES[10] = async (page, kind) => {
+  await freshPlayer(page, kind);
+  await page.waitForFunction(() => window.__hfSky);
+  await page.evaluate(() => window.__hfSky("day,clear,spring"));
+  await shot(page, "01-village-day", kind, { wait: 1500 });
+  await page.evaluate(() => window.__hfSky("dusk,0.5,autumn"));
+  await shot(page, "02-village-dusk", kind, { wait: 900 });
+  await page.evaluate(() => window.__hfSky("night,clear"));
+  await shot(page, "03-village-night", kind, { wait: 900 });
+  await page.evaluate(() => window.__hfSky("day,rain,autumn"));
+  await page.locator(".world-chip").click();
+  await shot(page, "04-rain-forecast", kind, { wait: 1400 });
+  await page.locator(".world-chip").click();
+  await page.evaluate(() => window.__hfSky("day,clear,summer"));
+  await enterAvatar(page);
+  const tour = [
+    ["05-forest-storm", 192, "day,storm,summer"],
+    ["06-stonepeak", 233, "day,clear,summer"],
+    ["07-swamp-fog", 273, "day,fog,autumn"],
+    ["08-frozen-snow", 313, "day,snow,winter"],
+    ["09-ashen", 352, "day,clear,summer"],
+    ["10-ashen-night", 352, "night,clear,summer"],
+  ];
+  for (const [name, r, sky] of tour) {
+    const spot = await ringSpot(page, r);
+    await apiPost(page, "/api/dev/teleport", { x: spot[0], y: spot[1] });
+    await page.evaluate((q) => window.__hfSky(q), sky);
+    await page.waitForTimeout(4000); // chunks load, spawn points wake
+    await shot(page, name, kind, { wait: 300 });
+  }
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

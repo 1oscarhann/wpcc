@@ -174,7 +174,11 @@ export class RoomClient {
   }
 
   private fixedStep(): void {
-    const { mx, my, ax, ay } = this.input;
+    const { ax, ay } = this.input;
+    // rooted by a summoner's circle: the server ignores movement, so predict (and send) none
+    const rooted = (this.flags & SELF_FLAG.rooted) !== 0;
+    const mx = rooted ? 0 : this.input.mx;
+    const my = rooted ? 0 : this.input.my;
     const b = this.input.held | this.input.latched;
     this.input.latched = 0;
     if (this.ko) {
