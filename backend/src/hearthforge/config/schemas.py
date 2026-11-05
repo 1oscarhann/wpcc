@@ -865,3 +865,54 @@ class WorldClockCfg(Strict):
     seasons: list[Literal["spring", "summer", "autumn", "winter"]]
     night: NightCfg
     weather: WeatherCfg
+
+
+# ── pois.yaml (Phase 10) ─────────────────────────────────────────────────────
+
+PoiKind = Literal["ruins", "shrine", "lore_stone", "cave", "merchant", "lost_villager"]
+
+
+class ChestCfg(Strict):
+    coins: Range
+    rolls: int = Field(ge=0, le=6)
+    pool: dict[str, Range]
+    rare: dict[str, float] = {}
+
+
+class BlessingCfg(Strict):
+    name: str
+    text: str
+    damage: float = Field(default=0, ge=0, le=1)
+    defence: float = Field(default=0, ge=0, le=1)
+    coins: float = Field(default=0, ge=0, le=2)
+
+
+class ShrinesCfg(Strict):
+    cooldown: Duration
+    duration: Duration
+    blessings: dict[str, BlessingCfg] = Field(min_length=1)
+
+
+class LostVillagerCfg(Strict):
+    xp: int = Field(ge=0)
+    coins: Range
+    names: list[str] = Field(min_length=1)
+
+
+class LoreCfg(Strict):
+    title: str
+    text: str
+
+
+class PoisCfg(Strict):
+    interact_radius: float = Field(gt=0, le=6)
+    clear_radius: int = Field(ge=1, le=6)
+    min_spacing: float = Field(gt=0)
+    edge_margin: float = Field(ge=0)
+    trail_clearance: float = Field(ge=0)
+    bands: dict[Biome, dict[PoiKind, int]]
+    chests: dict[Biome, ChestCfg]
+    shrines: ShrinesCfg
+    lost_villager: LostVillagerCfg
+    lore_xp: int = Field(ge=0)
+    lore: dict[Biome, list[LoreCfg]]

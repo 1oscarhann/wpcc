@@ -86,10 +86,14 @@ class Pending:
     stats: Counter[str] = field(default_factory=Counter)  # user_stats increments (kills, gathering…)
     fog: bool = False  # newly revealed map chunks to save (Phase 9)
     waystones: set[int] = field(default_factory=set)  # newly attuned waystones (Phase 9)
+    pois: dict[str, float] = field(default_factory=dict)  # POI key → when used (Phase 10)
+    lore: set[str] = field(default_factory=set)  # lore entries read for the first time
 
     def empty(self) -> bool:
         return not (
-            self.stats
+            self.pois
+            or self.lore
+            or self.stats
             or self.fog
             or self.waystones
             or self.recovered
@@ -122,6 +126,8 @@ class Pending:
         self.stats.update(o.stats)
         self.fog |= o.fog
         self.waystones |= o.waystones
+        self.pois = {**o.pois, **self.pois}
+        self.lore |= o.lore
 
 
 @dataclass
@@ -174,6 +180,8 @@ class Player:
     fog: bytearray | None = None  # revealed chunks in this realm (Phase 9)
     fog_chunk: tuple[int, int] = (-1, -1)
     attuned: set[int] = field(default_factory=set)  # waystones this player can travel to
+    pois: dict[str, float] = field(default_factory=dict)  # POIs used: key "x,y" → epoch s (Phase 10)
+    blessing: tuple[str, int] | None = None  # shrine blessing key, tick it ends
     party: str | None = None  # party id (in memory, D-025)
 
     @property
@@ -583,6 +591,106 @@ class RealmRoom:
         p.pending.save_pos = True
         p.ev.append([EV["TELEPORT"], p.m.x, p.m.y, index])
         return None
+
+    # ── points of interest (Phase 10) ────────────────────────────────────────
+    def blessing(self, p: Player, stat: str) -> float:
+        """The active shrine blessing's bonus for `stat` (damage | defence | coins), else 0."""
+        if p.blessing is None or p.blessing[1] <= self.tick_no:
+            return 0.0
+        b = self.cfg.pois.shrines.blessings.get(p.blessing[0])
+        return float(getattr(b, stat, 0.0)) if b else 0.0
+
+    def restore_blessing(self, p: Player) -> None:
+        """Back in the world within a blessing's duration: it's still on you."""
+        sh = self.cfg.pois.shrines
+        now = time.time()
+        for poi in self.grid.gen.pois:
+            at = p.pois.get(poi.key)
+            if poi.kind == "shrine" and at is not None and now - at < sh.duration:
+                keys = list(sh.blessings)
+                p.blessing = (
+                    keys[poi.variant % len(keys)],
+                    self.tick_no + int((sh.duration - (now - at)) * self.hz),
+                )
+
+    def interact(self, p: Player, index: int) -> None:
+        pc = self.cfg.pois
+        pois = self.grid.gen.pois
+        if p.ko > 0 or not 0 <= index < len(pois):
+            return
+        poi = pois[index]
+        if (poi.x + 0.5 - p.m.x) ** 2 + (poi.y + 0.5 - p.m.y) ** 2 > (pc.interact_radius + 0.75) ** 2:
+            self.toast(p, "poi_too_far")
+            return
+        now = time.time()
+        used = p.pois.get(poi.key)
+
+        def mark() -> None:
+            p.pois[poi.key] = now
+            p.pending.pois[poi.key] = now
+
+        data: dict[str, Any] = {}
+        if poi.kind == "ruins":
+            if used is not None:
+                self.toast(p, "chest_empty")
+                return
+            ch = pc.chests[poi.biome]  # type: ignore[index]
+            loot: dict[str, int] = {}
+            coins = self.rng.randint(*ch.coins)
+            pool = list(ch.pool.items())
+            for _ in range(ch.rolls):
+                k, (lo, hi) = pool[self.rng.randrange(len(pool))]
+                loot[k] = loot.get(k, 0) + self.rng.randint(lo, hi)
+            for k, chance in ch.rare.items():
+                if self.rng.random() < chance:
+                    loot[k] = loot.get(k, 0) + 1
+            self.spawn_drop(p, "coins", coins, poi.x + 0.5, poi.y + 0.9)
+            for k, q in loot.items():
+                self.spawn_drop(p, k, q, poi.x + 0.5, poi.y + 0.9)
+            mark()
+            p.pending.stats["poi.chest"] += 1
+            data = {"coins": coins, "loot": loot}
+        elif poi.kind == "shrine":
+            sh = pc.shrines
+            if used is not None and now - used < sh.cooldown:
+                self.toast(p, "shrine_resting", {"minutes": int((sh.cooldown - (now - used)) // 60) + 1})
+                return
+            keys = list(sh.blessings)
+            key = keys[poi.variant % len(keys)]
+            b = sh.blessings[key]
+            p.blessing = (key, self.tick_no + int(sh.duration * self.hz))
+            mark()
+            p.pending.stats["poi.shrine"] += 1
+            data = {"blessing": key, "name": b.name, "text": b.text, "secs": int(sh.duration)}
+        elif poi.kind == "lore_stone":
+            entries = pc.lore[poi.biome]  # type: ignore[index]
+            i = poi.variant % len(entries)
+            e = entries[i]
+            first = used is None
+            if first:
+                mark()
+                p.pending.lore.add(f"{poi.biome}:{i}")
+                p.pending.stats["lore.read"] += 1
+                self.grant_xp(p, pc.lore_xp)
+            data = {"title": e.title, "text": e.text, "first": first, "xp": pc.lore_xp if first else 0}
+        elif poi.kind == "lost_villager":
+            if used is not None:
+                self.toast(p, "villager_home")
+                return
+            lv = pc.lost_villager
+            name = lv.names[poi.variant % len(lv.names)]
+            coins = self.rng.randint(*lv.coins)
+            self.spawn_drop(p, "coins", coins, poi.x + 0.5, poi.y + 0.9)
+            self.grant_xp(p, lv.xp)
+            mark()
+            p.pending.stats["villagers.found"] += 1
+            data = {"name": name, "coins": coins}
+        else:  # cave (sealed for now) or a trader's stall: remembered for the map
+            if used is None:
+                mark()
+            if poi.kind == "merchant":
+                data = {"merchant_id": f"wild:{index}"}
+        p.ev.append([EV["POI"], index, poi.kind, data])
 
     def in_home(self, p: Player) -> bool:
         x, y, w, h = p.home_rect

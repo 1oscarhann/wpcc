@@ -96,6 +96,24 @@ function draw(ctx: CanvasRenderingContext2D, o: Overview, opts: DrawOpts): { x: 
       ctx.fillText(w.name, x, y - r - 3);
     }
   }
+  // points of interest you've seen (Phase 10)
+  const POI_COLORS: Record<string, string> = {
+    ruins: "#c58a52", shrine: "#94cdeb", lore_stone: "#a6cfe6", cave: "#585c6e", merchant: "#e0ad3c", lost_villager: "#f2bb97",
+  };
+  for (const q of o.pois ?? []) {
+    if (!isRevealed(o, Math.floor(q.x / o.chunk_size), Math.floor(q.y / o.chunk_size))) continue;
+    if (q.used && q.kind === "lost_villager") continue;
+    const x = q.x * tile;
+    const y = q.y * tile;
+    const r = Math.max(2, px * 0.45);
+    ctx.fillStyle = q.used && q.kind === "ruins" ? "#7a8092" : POI_COLORS[q.kind] ?? "#faf2dd";
+    ctx.strokeStyle = "#2b1e2a";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
   // the merchant
   const m = useMarket.getState().merchant;
   if (m && isRevealed(o, Math.floor(m.pos[0] / o.chunk_size), Math.floor(m.pos[1] / o.chunk_size))) {
@@ -226,8 +244,8 @@ export function MapModal() {
             {travel ? "Tap an attuned stone (blue) to travel there." : "Walk up to a waystone to attune it. Then travel between attuned stones for free."}
           </span>
           <div className="col" style={{ gap: 3 }}>
-            {overview.waystones.map((w) => {
-              const attuned = overview.attuned.includes(w.index);
+            {overview.waystones.filter((w) => overview.attuned.includes(w.index)).map((w) => {
+              const attuned = true;
               return (
                 <div key={w.index} className="row small" style={{ gap: 6 }}>
                   <span className={`way-dot ${attuned ? "on" : ""}`} />
@@ -239,12 +257,20 @@ export function MapModal() {
                 </div>
               );
             })}
+            {overview.waystones.length > overview.attuned.length && (
+              <div className="row small muted" style={{ gap: 6 }}>
+                <span className="way-dot" /> {overview.waystones.length - overview.attuned.length} more waystones to find
+              </div>
+            )}
           </div>
           <div className="map-legend small col" style={{ gap: 2 }}>
             <span><span className="leg" style={{ background: "#ffffff" }} /> you</span>
             <span><span className="leg" style={{ background: "#8fc95c" }} /> party</span>
             <span><span className="leg" style={{ background: "#e0ad3c" }} /> wandering merchant</span>
             <span><span className="leg diamond" /> waystone</span>
+            <span><span className="leg round" style={{ background: "#c58a52" }} /> ruins · <span className="leg round" style={{ background: "#94cdeb" }} /> shrine</span>
+            <span><span className="leg round" style={{ background: "#a6cfe6" }} /> lore stone · <span className="leg round" style={{ background: "#585c6e" }} /> cave</span>
+            <span><span className="leg round" style={{ background: "#f2bb97" }} /> lost villager</span>
           </div>
         </div>
       </div>

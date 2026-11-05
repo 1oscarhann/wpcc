@@ -1,0 +1,67 @@
+# Points of interest (Phase 10). Mapgen places them per ring from the realm seed, clears a little
+# space around each, and keeps them off trails, waystones and water. Walk up and press E (or tap the
+# prompt) to use one. What you've used is remembered per player (discoveries, kind=poi).
+#
+#   ruins          a chest in old ruins: one-time loot per player (coins + ring materials, a rare chance)
+#   shrine         a timed blessing (pick depends on the shrine); rests for `cooldown` after you pray
+#   lore_stone     a carved stone with a piece of the world's story; XP the first time
+#   cave           sealed for now (dungeons arrive in a later phase); marks the spot on your map
+#   merchant       a trader's stall: the hub merchant's stock rules, her own stock and spot
+#   lost_villager  someone lost in the wilds: send them home for coins and XP (they settle in Phase 14)
+
+interact_radius: 2.4             # tiles from the POI's tile
+clear_radius: 3                  # nothing else grows this close
+min_spacing: 16                  # tiles between POIs
+edge_margin: 9                   # keep this far inside a ring's edges
+trail_clearance: 5               # and this far off the trails
+
+bands:
+  meadow:    { lore_stone: 2, ruins: 1, lost_villager: 1 }
+  forest:    { ruins: 3, shrine: 2, lore_stone: 2, cave: 1, merchant: 1, lost_villager: 2 }
+  stonepeak: { ruins: 2, shrine: 1, lore_stone: 2, cave: 1, merchant: 1, lost_villager: 1 }
+  swamp:     { ruins: 2, shrine: 1, lore_stone: 2, cave: 1, merchant: 1, lost_villager: 1 }
+  frozen:    { ruins: 2, shrine: 1, lore_stone: 2, cave: 1, merchant: 1, lost_villager: 1 }
+  ashen:     { ruins: 2, shrine: 1, lore_stone: 2, cave: 1, merchant: 1, lost_villager: 1 }
+
+# One chest per ruins per player. `rolls` picks from the pool (qty range each); `rare` rolls once each.
+chests:
+  meadow:    { coins: [20, 40],   rolls: 2, pool: { wood: [4, 8], herbs: [2, 4], slime_gel: [1, 3] },             rare: { ironbark: 0.05 } }
+  forest:    { coins: [40, 80],   rolls: 2, pool: { hide: [2, 4], spider_silk: [1, 3], wolf_fang: [1, 2], ore: [3, 6] }, rare: { ironbark: 0.25 } }
+  stonepeak: { coins: [80, 160],  rolls: 3, pool: { golem_shard: [2, 4], crystal: [2, 4], ore: [4, 8] },        rare: { starstone: 0.25 } }
+  swamp:     { coins: [150, 280], rolls: 3, pool: { bog_moss: [2, 4], herbs: [3, 6], hide: [2, 4] },          rare: { swamp_venom: 0.2, moonpetal: 0.1 } }
+  frozen:    { coins: [240, 420], rolls: 3, pool: { frost_fur: [2, 4], crystal: [3, 6], ore: [4, 8] },        rare: { frost_shard: 0.2 } }
+  ashen:     { coins: [380, 650], rolls: 3, pool: { ember_dust: [2, 4], ore: [6, 10], crystal: [3, 6] },      rare: { ember_core: 0.15, storm_glass: 0.1 } }
+
+shrines:
+  cooldown: 20h
+  duration: 10m
+  blessings:                     # a shrine always gives the same blessing (picked from its position)
+    might:   { name: Blessing of Might,   text: "Your blows land harder.",       damage: 0.2 }
+    ward:    { name: Blessing of the Ward, text: "Blows glance off you.",         defence: 0.25 }
+    fortune: { name: Blessing of Fortune, text: "Coins find their way to you.",  coins: 0.5 }
+
+lost_villager:
+  xp: 40
+  coins: [30, 80]
+  names: [Wren, Odo, Mabel, Pip, Hollis, Tansy, Fennick, Bea, Corrin, Juniper, Abel, Marigold]
+
+lore_xp: 15
+lore:
+  meadow:
+    - { title: "The First Hearth", text: "Before the villages, there was one fire on this hill. Travellers kept it lit for each other, and when they stayed, they built around it. Every hearth since is a spark of that one." }
+    - { title: "On Wells", text: "Dig where the clover grows thickest, the old ones said. The water there remembers being rain, and rain remembers being sky." }
+  forest:
+    - { title: "Whispering Wood", text: "The trees here talk in the wind about who passed beneath them. Walk gently and they say nice things." }
+    - { title: "The Webspinners' Truce", text: "The spiders once spun bridges for the woodcutters, in return for the first silk of spring. Somebody forgot the bargain. The spiders did not." }
+  stonepeak:
+    - { title: "Songs of Stone", text: "Golems are not built. They are quarries that grew tired of being dug, and stood up to see who was digging." }
+    - { title: "Starfall", text: "On the night the sky cracked, starstones rained on the peaks. The goats ate the small ones. That is why they are so stubborn." }
+  swamp:
+    - { title: "Murkwater", text: "The bog keeps everything it is given: boots, bells, whole wagons. Somewhere under the moss there is a village that tried to drain it." }
+    - { title: "The Mire Shamans", text: "They wear masks so the swamp can't learn their faces. A swamp that knows your face can call you back." }
+  frozen:
+    - { title: "The Long Winter", text: "Up here, winter never finished leaving. It just got quieter. Listen and you can still hear it packing." }
+    - { title: "Wraith Lights", text: "The pale lights over the ice are travellers who lost their way and kept their lanterns. Do not follow them. Do wave." }
+  ashen:
+    - { title: "The Burning", text: "The wastes were a forest once. Something below grew hungry and warm, and the trees went first. The embers are still deciding what to eat next." }
+    - { title: "Obsidian", text: "Glass from the deep fires. Look into it long enough and you see the forest that was, upside down and very small." }

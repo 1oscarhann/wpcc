@@ -2400,10 +2400,19 @@
   "obj.bush.1": {
    "atlas": "world"
   },
+  "obj.cave.0": {
+   "atlas": "world"
+  },
   "obj.charred_tree.0": {
    "atlas": "world"
   },
   "obj.charred_tree.1": {
+   "atlas": "world"
+  },
+  "obj.chest.0": {
+   "atlas": "world"
+  },
+  "obj.chest.1": {
    "atlas": "world"
   },
   "obj.crag.0": {
@@ -2493,6 +2502,12 @@
   "obj.log.0": {
    "atlas": "world"
   },
+  "obj.lore_stone.0": {
+   "atlas": "world"
+  },
+  "obj.lost_villager.0": {
+   "atlas": "world"
+  },
   "obj.moonpetal.0": {
    "atlas": "world"
   },
@@ -2556,6 +2571,15 @@
   "obj.rock_big.1": {
    "atlas": "world"
   },
+  "obj.ruins.0": {
+   "atlas": "world"
+  },
+  "obj.ruins.1": {
+   "atlas": "world"
+  },
+  "obj.shrine.0": {
+   "atlas": "world"
+  },
   "obj.signpost.0": {
    "atlas": "world"
   },
@@ -2578,6 +2602,9 @@
    "atlas": "world"
   },
   "obj.tall_grass.1": {
+   "atlas": "world"
+  },
+  "obj.trader.0": {
    "atlas": "world"
   },
   "obj.venom_bloom.0": {

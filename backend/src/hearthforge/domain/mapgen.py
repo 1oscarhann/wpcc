@@ -128,6 +128,16 @@ OBJECT_NAMES: list[str] = [
     "obj.lava_vent.0",
     "obj.ember_rock.0",
     "obj.moonpetal.0",
+    # Phase 10 points of interest
+    "obj.ruins.0",
+    "obj.ruins.1",
+    "obj.chest.0",
+    "obj.chest.1",
+    "obj.shrine.0",
+    "obj.lore_stone.0",
+    "obj.cave.0",
+    "obj.trader.0",
+    "obj.lost_villager.0",
 ]
 OBJECT_ID = {n: i for i, n in enumerate(OBJECT_NAMES)}
 assert len(TILE_NAMES) < 256
@@ -192,6 +202,34 @@ class Waystone:
     x: int
     y: int
     name: str
+
+
+@dataclass(frozen=True)
+class Poi:
+    """A point of interest (Phase 10). `key` ("x,y") is what a player's use of it is saved under, so
+    changing how many there are per ring never mixes up who opened which chest."""
+
+    index: int
+    kind: str
+    x: int
+    y: int
+    biome: str
+    variant: int
+
+    @property
+    def key(self) -> str:
+        return f"{self.x},{self.y}"
+
+
+POI_OBJECT = {
+    "ruins": "obj.chest.0",
+    "shrine": "obj.shrine.0",
+    "lore_stone": "obj.lore_stone.0",
+    "cave": "obj.cave.0",
+    "merchant": "obj.trader.0",
+    "lost_villager": "obj.lost_villager.0",
+}
+_POI_LAND = {"grass", "forest", "rock", "mud", "snow", "ash"}
 
 
 _COMPASS = ["North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"]
@@ -279,6 +317,56 @@ class Generator:
         self._chunks: dict[tuple[int, int], dict] = {}
         self.waystones = waystones(self.cfg)
         self.waystone_at = {(w.x, w.y): w for w in self.waystones}
+        self.pois = self._place_pois()
+        self.poi_at = {(p.x, p.y): p for p in self.pois}
+        self.poi_deco: dict[tuple[int, int], str] = {}
+        for p in self.pois:
+            if p.kind == "ruins":  # broken walls either side of the chest
+                self.poi_deco[(p.x - 2, p.y - 1)] = "obj.ruins.0"
+                self.poi_deco[(p.x + 2, p.y - 1)] = "obj.ruins.1"
+
+    # ── points of interest (Phase 10) ────────────────────────────────────────
+    def _place_pois(self) -> list[Poi]:
+        pc = getattr(self.game, "pois", None)
+        if pc is None:
+            return []
+        c = self.lay.center
+        edge = self.cfg.map_size // 2 - 6
+        rings = [("meadow", self.lay.hub_radius + 26.0, float(self.cfg.bands[0].radius))]
+        for i, b in enumerate(self.cfg.bands):
+            outer = self.cfg.bands[i + 1].radius if i + 1 < len(self.cfg.bands) else edge
+            rings.append((b.biome, float(b.radius), float(outer)))
+        out: list[Poi] = []
+        sp2 = pc.min_spacing**2
+        for bi, (biome, r0, r1) in enumerate(rings):
+            kinds = [k for k, n in pc.bands.get(biome, {}).items() for _ in range(n)]
+            span = max(1.0, r1 - r0 - 2 * pc.edge_margin)
+            for j, kind in enumerate(kinds):
+                for attempt in range(60):
+                    a = 2 * math.pi * rand01(self.seed, bi * 101 + j, attempt, 701)
+                    r = r0 + pc.edge_margin + rand01(self.seed, bi * 103 + j, attempt, 702) * span
+                    x, y = round(c + r * math.cos(a)), round(c + r * math.sin(a))
+                    if not (8 <= x < self.cfg.map_size - 8 and 8 <= y < self.cfg.map_size - 8):
+                        continue
+                    if self.biome(x, y) != biome or self.plot_at(x, y, self.margin + 4) is not None:
+                        continue
+                    if self.trail_dist(x, y) < pc.trail_clearance or self.road_dist(x, y) < 5:
+                        continue
+                    if self.near_waystone(x, y, 7) or any((p.x - x) ** 2 + (p.y - y) ** 2 < sp2 for p in out):
+                        continue
+                    if any(
+                        self.kind(x + dx, y + dy) not in _POI_LAND
+                        for dx in range(-2, 3)
+                        for dy in range(-2, 3)
+                    ):
+                        continue
+                    variant = int(rand01(self.seed, x, y, 703) * 1_000_000)
+                    out.append(Poi(len(out), kind, x, y, biome, variant))
+                    break
+        return out
+
+    def near_poi(self, x: int, y: int, r: float) -> bool:
+        return any((p.x - x) ** 2 + (p.y - y) ** 2 <= r * r for p in self.pois)
 
     def near_waystone(self, x: int, y: int, r: float) -> bool:
         return any((w.x - x) ** 2 + (w.y - y) ** 2 <= r * r for w in self.waystones)
@@ -432,6 +520,14 @@ class Generator:
         s = self.seed
         if (x, y) == (c, c):
             return ("obj.well.0", 0)
+        poi = self.poi_at.get((x, y))
+        if poi is not None:
+            return (POI_OBJECT[poi.kind], 0)
+        deco = self.poi_deco.get((x, y))
+        if deco is not None:
+            return (deco, 0)
+        if self.pois and self.near_poi(x, y, self.game.pois.clear_radius):
+            return None  # a clearing around every point of interest
         if (x, y) in self.waystone_at:
             return ("obj.waystone.0", 0)
         if self.near_waystone(x, y, 2.3):

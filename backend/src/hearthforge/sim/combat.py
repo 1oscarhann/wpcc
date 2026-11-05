@@ -673,7 +673,7 @@ class Combat:
             self._broadcast(m.x, m.y, [EV["SFX"], "summon", m.x, m.y])
 
     def damage_player(self, p: Player, raw: float, src: int, kind: int) -> None:
-        defence = p.stats.defence + p.armour
+        defence = (p.stats.defence + p.armour) * (1 + self.room.blessing(p, "defence"))
         taken = raw * (1 - defence / (defence + self.cb.defence_k))
         taken = max(1, round(taken))
         p.hp -= taken
@@ -765,7 +765,7 @@ class Combat:
         eff = self.effects(p)
         crit = self.room.rng.random() < p.stats.crit + eff["crit"]
         dmg = mv.dmg * c.tier_mult[tier - 1] * (1 + p.stats.attack * c.attack_scaling) * rarity
-        dmg *= 1 + eff["damage"]
+        dmg *= 1 + eff["damage"] + self.room.blessing(p, "damage")
         if self.is_dull(p):
             dmg *= self.cfg.forging.dull_damage  # P2: dull, never broken
         if crit:
@@ -838,7 +838,7 @@ class Combat:
             # every player who helped gets their own rolls (BALANCE §6.4)
             if spec is not None:
                 lo, hi = spec.coins
-                coins = rng.randint(lo, hi) * (2 if m.elite else 1)
+                coins = int(rng.randint(lo, hi) * (2 if m.elite else 1) * (1 + room.blessing(p, "coins")))
                 if coins:
                     room.spawn_drop(p, "coins", coins, m.x, m.y)
             for _ in range(el.loot_rolls if m.elite else 1):

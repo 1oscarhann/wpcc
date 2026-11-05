@@ -34,7 +34,18 @@ export interface Waystone {
   name: string;
 }
 
+export interface PoiInfo {
+  index: number;
+  kind: "ruins" | "shrine" | "lore_stone" | "cave" | "merchant" | "lost_villager";
+  x: number;
+  y: number;
+  name: string;
+  used: boolean;
+}
+
 export interface Overview {
+  pois: PoiInfo[];
+  poi_radius: number;
   n: number;
   chunk_size: number;
   data: Uint8Array;
@@ -85,6 +96,11 @@ interface RealmStore {
   mapOpen: boolean;
   travelMode: boolean; // the full map was opened at a waystone: attuned stones are clickable
   nearWaystone: number | null;
+  nearPoi: number | null;
+  lore: { title: string; text: string; first: boolean; xp: number } | null;
+  blessing: { name: string; text: string; until: number } | null;
+  wildMerchant: string | null; // merchant id of a trader's stall whose wares are open
+  markPoi: (index: number) => void;
   set: (p: Partial<RealmStore>) => void;
   load: () => Promise<void>;
   loadOverview: () => Promise<void>;
@@ -106,6 +122,19 @@ export const useRealm = create<RealmStore>((set, get) => ({
   mapOpen: false,
   travelMode: false,
   nearWaystone: null,
+  nearPoi: null,
+  lore: null,
+  blessing: null,
+  wildMerchant: null,
+  markPoi(index) {
+    const o = get().overview;
+    if (o?.pois[index] && !o.pois[index].used) {
+      const pois = o.pois.slice();
+      pois[index] = { ...pois[index], used: true };
+      set({ overview: { ...o, pois } });
+    }
+    window.dispatchEvent(new CustomEvent("hf:poi-used", { detail: index }));
+  },
   set: (p) => set(p),
   load: async () => {
     try {

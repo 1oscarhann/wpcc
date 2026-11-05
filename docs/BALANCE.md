@@ -436,6 +436,33 @@ Other scaling:
 | Night | rolls ×1.5 |
 | Loot visibility | per player: every player in range gets their own independent rolls, and drops are visible only to their owner |
 
+### 6.5 As built (Phase 10)
+
+- **Roster stats.** All 30 roster enemies use the §6.1 bases × the §6.2 multipliers, generated rather than hand-typed. The Phase 5 tuned values stay for slime, wolf and spider.
+- **Speed.** Monsters walk slower than the table: player 5.0, swarmer 2.8, chaser 4.6, kiter 3.6, charger 3.4 walking (its dash is a 4-tile lunge), tank and summoner 2.2, ambusher 4.0. A chaser that's faster than you isn't fun.
+- **Kiters.** Shots fly 8–14 tiles/s up to 8 tiles. They back off inside 4–4.5 tiles, for at most 2 s.
+- **Summoners.** 2 minions every 6 s, at most 4. Minions give 25% XP and no loot. The root circle (r 1.2) holds you for 1.5 s.
+- **Storm Elemental.** Base 50 HP / 8 dmg / 2 def, × the biome scale. Chain lightning hits 2 more players within 3.5 tiles for 60%.
+- **Night.** HP ×1.25, damage ×1.15, loot quantity ×1.5, rare chance ×2, spawn groups ×1.4 (the extra ones only after dark).
+- **Co-op.** HP × (1 + 0.5 × extra players within 20 tiles), applied at spawn.
+- **Biome XP / coins per kill.**
+
+  | Biome | XP | Coins |
+  |---|---|---|
+  | Meadow | 8 | 1–3 |
+  | Forest | 22 | 3–6 |
+  | Stonepeak | 50 | 6–12 |
+  | Swamp | 95 | 10–20 |
+  | Frozen | 170 | 15–30 |
+  | Ashen | 300 | 25–45 |
+
+- **POI rewards.**
+  - Ruins chests pay 20–40 coins (meadow) up to 380–650 (ashen), plus 2–3 material rolls and a rare chance.
+  - Lore stones give 15 XP.
+  - A lost villager gives 40 XP and 30–80 coins.
+  - Shrines give +20% damage, +25% defence or +50% coins for 10 min, every 20 h.
+- **Pricing.** New materials sell for 14–34 base; the rares sell for 60–110 (see `market.yaml`).
+
 ---
 
 ## 7. Bosses

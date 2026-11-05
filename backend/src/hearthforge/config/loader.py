@@ -41,6 +41,7 @@ FILES: dict[str, type[BaseModel]] = {
     "tutorial": s.TutorialCfg,
     "social": s.SocialCfg,
     "world_clock": s.WorldClockCfg,
+    "pois": s.PoisCfg,
 }
 
 
@@ -109,6 +110,7 @@ class GameConfig:
     tutorial: s.TutorialCfg
     social: s.SocialCfg
     world_clock: s.WorldClockCfg
+    pois: s.PoisCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -246,6 +248,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     tutorial: s.TutorialCfg = parsed["tutorial"]
     social: s.SocialCfg = parsed["social"]
     world_clock: s.WorldClockCfg = parsed["world_clock"]
+    pois: s.PoisCfg = parsed["pois"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -523,6 +526,25 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if social.realm.max_members > mapgen.plot.count:
         errors.append("social.yaml:realm.max_members: more members than plots on the ring")
 
+    # ── points of interest (Phase 10) ─────────────────────────────────────────
+    droppable = set(items) | set(res.resources)
+    for bk, counts in pois.bands.items():
+        if counts.get("ruins") and bk not in pois.chests:
+            errors.append(f"pois.yaml:chests: the {bk} ring has ruins but no chest loot")
+        if counts.get("lore_stone") and not pois.lore.get(bk):
+            errors.append(f"pois.yaml:lore: the {bk} ring has lore stones but no lore")
+    for bk, ch in pois.chests.items():
+        for k, (lo, hi) in ch.pool.items():
+            if k not in droppable:
+                errors.append(f"pois.yaml:chests.{bk}.pool: unknown item '{k}'")
+            if not 0 < lo <= hi:
+                errors.append(f"pois.yaml:chests.{bk}.pool.{k}: need 0 < lo <= hi")
+        for k, chance in ch.rare.items():
+            if k not in droppable:
+                errors.append(f"pois.yaml:chests.{bk}.rare: unknown item '{k}'")
+            if not 0 < chance <= 1:
+                errors.append(f"pois.yaml:chests.{bk}.rare.{k}: chance must be in (0, 1]")
+
     # ── world clock (Phase 10) ────────────────────────────────────────────────
     wc = world_clock
     if abs(sum(wc.day_cycle.phases.values()) - wc.day_cycle.length) > 0.5:
@@ -618,6 +640,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         tutorial=tutorial,
         social=social,
         world_clock=world_clock,
+        pois=pois,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

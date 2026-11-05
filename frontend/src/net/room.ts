@@ -76,6 +76,10 @@ const TOASTS: Record<string, string> = {
   travel_in_combat: "Not mid-fight! Shake them off first.",
   travel_not_attuned: "You haven't attuned that waystone yet. Walk up to it once.",
   travel_not_at_waystone: "Stand next to a waystone to travel.",
+  poi_too_far: "A little closer…",
+  chest_empty: "You've already emptied this chest.",
+  shrine_resting: "The shrine is resting. Come back later.",
+  villager_home: "They're already on their way to your village.",
 };
 
 export class RoomClient {

@@ -279,6 +279,7 @@ export interface MerchantSlot {
 }
 
 export interface MerchantView {
+  wild?: boolean;
   merchant_id: string;
   name: string;
   greeting: string;

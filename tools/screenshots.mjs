@@ -812,6 +812,31 @@ PHASES[10] = async (page, kind) => {
     await page.waitForTimeout(4000); // chunks load, spawn points wake
     await shot(page, name, kind, { wait: 300 });
   }
+  // points of interest
+  await page.evaluate(() => window.__hfSky("day,clear,summer"));
+  const ov = await page.evaluate(async () => (await fetch("/api/realm/overview")).json());
+  const pick = (k) => ov.pois.find((q) => q.kind === k && (q.biome ?? "") !== "ashen" && Math.hypot(q.x - 384, q.y - 384) < 260) ?? ov.pois.find((q) => q.kind === k);
+  const visits = [
+    ["11-ruins-chest", "ruins"],
+    ["12-shrine", "shrine"],
+    ["13-lore-stone", "lore_stone"],
+    ["14-trader", "merchant"],
+    ["15-lost-villager", "lost_villager"],
+    ["16-sealed-cave", "cave"],
+  ];
+  for (const [name, k] of visits) {
+    const q = pick(k);
+    await apiPost(page, "/api/dev/teleport", { x: q.x, y: q.y + 2 });
+    await page.waitForTimeout(2800);
+    await page.keyboard.press("e");
+    await page.waitForTimeout(900);
+    await shot(page, name, kind, { wait: 300 });
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+  }
+  await page.keyboard.press("m");
+  await shot(page, "17-map-pois", kind, { wait: 1200 });
+  await page.keyboard.press("Escape");
 };
 
 const browser = await playwright.chromium.launch();

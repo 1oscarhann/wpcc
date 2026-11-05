@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hearthforge.config.loader import GameConfig
 from hearthforge.core.errors import GameError, NotFound
-from hearthforge.db.models import Discovery, DiscoveryKind, MerchantPurchase, RealmMember
+from hearthforge.db.models import Discovery, DiscoveryKind, MerchantPurchase, Realm, RealmMember
 from hearthforge.domain import mapgen
 from hearthforge.domain import market as dom
 from hearthforge.domain.resources import MILLI
@@ -30,34 +31,62 @@ if TYPE_CHECKING:
 PRESENCE_SLACK = 0.75  # tiles of forgiveness for client-side interpolation
 
 
-async def resolve(session: AsyncSession, user_id: uuid.UUID, merchant_id: str) -> tuple[str, uuid.UUID]:
-    """'hub' or 'hub:<your realm>' → ('hub:<realm id>', realm id). Other realms' carts are off limits."""
-    realm_id = (
-        await session.execute(select(RealmMember.realm_id).where(RealmMember.user_id == user_id))
-    ).scalar_one_or_none()
-    if realm_id is None:
+@dataclass(frozen=True)
+class Site:
+    """Where a merchant trades: the hub cart (moves every rotation) or a trader's stall at a POI."""
+
+    mid: str
+    realm_id: uuid.UUID
+    name: str
+    stall: tuple[int, int] | None = None  # wild traders (Phase 10) stand still
+
+
+async def resolve(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, merchant_id: str) -> Site:
+    """'hub' / 'hub:<your realm>' → your hub cart; 'wild:<poi index>' → a trader's stall in your realm.
+    Other realms' merchants are off limits."""
+    row = (
+        await session.execute(
+            select(RealmMember.realm_id, Realm.seed)
+            .join(Realm, Realm.id == RealmMember.realm_id)
+            .where(RealmMember.user_id == user_id)
+        )
+    ).first()
+    if row is None:
         raise NotFound("no_realm", "You're not in a realm.")
-    if merchant_id not in ("hub", f"hub:{realm_id}"):
-        raise NotFound("no_merchant", "There's no merchant here.")
-    return f"hub:{realm_id}", realm_id
+    realm_id, seed = row
+    if merchant_id in ("hub", f"hub:{realm_id}"):
+        return Site(f"hub:{realm_id}", realm_id, cfg.merchant.name)
+    if merchant_id.startswith("wild:"):
+        idx = merchant_id.removeprefix("wild:")
+        pois = mapgen.generator(cfg, seed).pois
+        if idx.isdigit() and int(idx) < len(pois) and pois[int(idx)].kind == "merchant":
+            poi = pois[int(idx)]
+            return Site(f"wild:{realm_id}:{poi.index}", realm_id, "Wandering Trader", (poi.x, poi.y))
+    raise NotFound("no_merchant", "There's no merchant here.")
 
 
-def cart_pos(cfg: GameConfig, rot: dom.Rotation) -> tuple[float, float]:
+def cart_pos(cfg: GameConfig, rot: dom.Rotation, site: Site | None = None) -> tuple[float, float]:
+    if site is not None and site.stall is not None:
+        return site.stall[0] + 0.5, site.stall[1] + 0.5
     c = mapgen.layout(cfg.mapgen).center
     return c + rot.spot[0] + 0.5, c + rot.spot[1] + 0.5
 
 
+def interact_radius(cfg: GameConfig, site: Site) -> float:
+    return cfg.pois.interact_radius + 1 if site.stall is not None else cfg.merchant.interact_radius
+
+
 def is_near(
-    cfg: GameConfig, rooms: RoomManager | None, user_id: uuid.UUID, realm_id: uuid.UUID, rot: dom.Rotation
+    cfg: GameConfig, rooms: RoomManager | None, user_id: uuid.UUID, site: Site, rot: dom.Rotation
 ) -> bool:
     found = rooms.find(user_id) if rooms is not None else None
     if found is None:
         return False
     room, p = found
-    if room.realm_id != realm_id:
+    if room.realm_id != site.realm_id:
         return False
-    x, y = cart_pos(cfg, rot)
-    return math.hypot(p.m.x - x, p.m.y - y) <= cfg.merchant.interact_radius + PRESENCE_SLACK
+    x, y = cart_pos(cfg, rot, site)
+    return math.hypot(p.m.x - x, p.m.y - y) <= interact_radius(cfg, site) + PRESENCE_SLACK
 
 
 async def _hint_candidates(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> list[str]:
@@ -107,7 +136,8 @@ async def view(
     merchant_id: str,
     now: datetime,
 ) -> dict[str, Any]:
-    mid, realm_id = await resolve(session, user_id, merchant_id)
+    site = await resolve(session, cfg, user_id, merchant_id)
+    mid = site.mid
     idx = dom.rotation_index(cfg.merchant, now)
     rot = dom.rotation(cfg.merchant, mid, idx)
     bought = {
@@ -129,17 +159,18 @@ async def view(
         v["bought"] = bought.get(sl.slot, 0)
         v["sold_out"] = v["bought"] >= v["limit"] or (v["kind"] == "hint" and not hintable)
         slots.append(v)
-    x, y = cart_pos(cfg, rot)
+    x, y = cart_pos(cfg, rot, site)
     await session.commit()
     return {
         "merchant_id": mid,
-        "name": cfg.merchant.name,
+        "name": site.name,
+        "wild": site.stall is not None,
         "greeting": rot.greeting,
         "rotation": idx,
         "ends_at_ms": int(rot.ends_at.timestamp() * 1000),
         "pos": [x, y],
-        "radius": cfg.merchant.interact_radius,
-        "near": is_near(cfg, rooms, user_id, realm_id, rot),
+        "radius": interact_radius(cfg, site),
+        "near": is_near(cfg, rooms, user_id, site, rot),
         "slots": slots,
     }
 
@@ -155,15 +186,21 @@ async def buy(
     rotation: int,
 ) -> tuple[village_svc.Loaded, dict[str, Any], bool]:
     """Buy one lot from a slot. Returns (village, result, whether the bag changed)."""
-    mid, realm_id = await resolve(session, user_id, merchant_id)
+    site = await resolve(session, cfg, user_id, merchant_id)
+    mid = site.mid
     idx = dom.rotation_index(cfg.merchant, now)
     if rotation != idx:
         raise GameError("merchant_moved_on", "She's packed up and restocked. Have a fresh look!", status=409)
     rot = dom.rotation(cfg.merchant, mid, idx)
     if not 0 <= slot < len(rot.slots):
         raise GameError("bad_slot", "That's not on the cart.")
-    if not is_near(cfg, rooms, user_id, realm_id, rot):
-        raise GameError("too_far", "Walk up to the merchant's cart in the hub to trade.")
+    if not is_near(cfg, rooms, user_id, site, rot):
+        msg = (
+            "Walk up to the trader's stall to trade."
+            if site.stall
+            else "Walk up to the merchant's cart in the hub to trade."
+        )
+        raise GameError("too_far", msg)
     sl = rot.slots[slot]
     stock = cfg.merchant.stock[sl.stock_key]
 

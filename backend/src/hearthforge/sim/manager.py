@@ -135,10 +135,13 @@ class RoomManager:
 
                 fog = await world_svc.load_fog(s, self.st.config, user_id, realm.id)
                 attuned = await world_svc.attuned(s, user_id)
+                poi_uses = await world_svc.poi_uses(s, user_id)
             room = await self._room(realm)
             p = self._make_player(room, conn, user, avatar, member.plot_index, loadout)
             p.fog = fog
             p.attuned = attuned
+            p.pois = poi_uses
+            room.restore_blessing(p)
             wall = time.time()
             for h in harvested:
                 p.depleted[h.node_id] = wall + (h.respawn_at - now).total_seconds()

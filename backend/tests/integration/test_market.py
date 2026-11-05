@@ -379,3 +379,21 @@ async def test_recalc_window_is_bounded(player: dict[str, Any], st: Any, clock: 
         assert (await market_svc.units_24h(s, st.config, now)).get("wood", 0) == 0
         assert (await market_svc.units_24h(s, st.config, later))["wood"] == 50_000
         assert (await market_svc.units_24h(s, st.config, later + timedelta(hours=25))).get("wood", 0) == 0
+
+
+async def test_wild_trader_and_poi_overview(client: AsyncClient, st: Any, player: dict[str, Any]) -> None:
+    """Phase 10: a trader's stall is a merchant with its own id and spot; the map lists the POIs."""
+    ov = (await client.get("/api/realm/overview")).json()
+    traders = [q for q in ov["pois"] if q["kind"] == "merchant"]
+    assert traders and all(q["used"] is False for q in ov["pois"])
+    t = traders[0]
+    view = (await client.get(f"/api/merchant/wild:{t['index']}")).json()
+    assert view["name"] == "Wandering Trader" and view["wild"] is True
+    assert view["pos"] == [t["x"] + 0.5, t["y"] + 0.5] and view["near"] is False
+    r = await client.post(
+        f"/api/merchant/wild:{t['index']}/buy", json={"slot": 0, "rotation": view["rotation"]}
+    )
+    assert r.status_code == 400 and r.json()["error"]["code"] == "too_far"
+    not_trader = next(q for q in ov["pois"] if q["kind"] != "merchant")
+    assert (await client.get(f"/api/merchant/wild:{not_trader['index']}")).status_code == 404
+    assert (await client.get("/api/merchant/wild:9999")).status_code == 404

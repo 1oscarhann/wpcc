@@ -1704,3 +1704,27 @@ body[data-tut="home"] [data-tut-target="home"] {
     display: none;
   }
 }
+
+/* ── Phase 10: points of interest ───────────────────────────────────────── */
+.blessing-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 5px;
+  background: #fff1b0;
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow);
+  max-width: 280px;
+  white-space: nowrap;
+}
+.lore-text {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: #e6e3ee;
+  border: 3px solid var(--ink);
+  font-style: italic;
+  line-height: 1.45;
+}
+.leg.round {
+  border-radius: 50%;
+}

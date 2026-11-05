@@ -284,22 +284,52 @@ player_market:
   new_account_gate: { min_level: 5, or_account_age: 24h }   # P4
 ```
 
-### `world_clock.yaml`
+### `world_clock.yaml` (as built, Phase 10)
 
 ```yaml
-day_cycle: { length: 24m, phases: { dawn: 2m, day: 14m, dusk: 2m, night: 6m } }
+day_cycle: { length: 24m, phases: { dawn: 2m, day: 14m, dusk: 2m, night: 6m } }   # in order, must sum to length
 season_length: 7d
 seasons: [spring, summer, autumn, winter]
+night: { hp: 1.25, dmg: 1.15, loot_qty: 1.5, rare_chance: 2.0, groups: 1.4 }
 weather:
   block: 20m
   states:
     clear: { weights: { spring: 50, summer: 65, autumn: 45, winter: 45 } }
-    rain:  { weights: { spring: 25, summer: 15, autumn: 30, winter: 0 },
-             effects: { production: { farm: 1.2, herb: 1.1 } } }
-    snow:  { weights: { winter: 30 }, effects: { rare_node_bonus: { frost_shard: 1.5 } } }
-    fog:   { weights: { spring: 15, summer: 5, autumn: 15, winter: 10 }, effects: { wild_vision: 0.6 } }
-    storm: { weights: { spring: 10, summer: 15, autumn: 10, winter: 15 }, effects: { spawn_table: storm_specials } }
+    rain:  { weights: { …, winter: 0 }, production: { food: 1.2, herbs: 1.15 } }
+    snow:  { weights: { winter: 30 }, production: { food: 0.85 }, rare_node: { frost_spire: 1.5 } }
+    fog:   { weights: …, aggro: 0.7 }
+    storm: { weights: …, production: { food: 1.1 }, storm_spawns: 0.25 }
 ```
+
+The loader checks that the phases sum to the length and come in order, that a `clear` state exists, that every season has some weather, and that production keys are real resources.
+
+### `pois.yaml` (Phase 10)
+
+```yaml
+interact_radius: 2.4
+clear_radius: 3
+min_spacing: 16
+bands:  { forest: { ruins: 3, shrine: 2, lore_stone: 2, cave: 1, merchant: 1, lost_villager: 2 }, … }
+chests: { forest: { coins: [40, 80], rolls: 2, pool: { hide: [2, 4], … }, rare: { ironbark: 0.25 } }, … }
+shrines: { cooldown: 20h, duration: 10m, blessings: { might: { damage: 0.2 }, ward: { defence: 0.25 }, fortune: { coins: 0.5 } } }
+lost_villager: { xp: 40, coins: [30, 80], names: [Wren, Odo, …] }
+lore_xp: 15
+lore: { meadow: [{ title, text }, …], … }
+```
+
+The loader checks that every ring with ruins has chest loot and every ring with lore stones has lore. Chest items must be real items or resources, with sane ranges and chances.
+
+### `enemies.yaml` additions (Phase 10)
+
+- **Per enemy:**
+  - `shot` (kiters: `speed`, `radius`, `sprite`, `chain`, `chain_radius`, `chain_dmg`) and `keep_away`.
+  - `summon` (`enemy`, `count`, `every`, `max_alive`).
+  - `split` (`into`, `count`).
+  - `roaming` (stats scaled by the biome it turns up in).
+  - `attack.at_target` + `attack.root`. `elite_name` is now optional; null means it never spawns as an elite.
+- **Per biome:** `scale: { hp, dmg, defence }` (BALANCE §6.2).
+- **Top level:** `coop: { hp_per_player, radius }`, `storm_enemy`, `minion_xp`.
+- **Cross-checks:** shot attacks need a shot block, only at-target circles root, summon/split targets exist and don't chain, roster enemies need an elite name, and the storm enemy must be roaming.
 
 ## Secrets in the client bundle
 

@@ -498,6 +498,12 @@ CREATE TABLE discoveries (                            -- permanent, per player; 
   first_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, kind, key)
 );
+-- As built, by kind:
+--   waystone: key = waystone index (Phase 9)
+--   poi:      key = 'x,y' of the POI, data = {at: epoch s of the last use}, count = uses
+--             (Phase 10: chests and lost villagers once, shrines every 20 h)
+--   lore:     key = '<biome>:<entry>' the first time you read a lore stone (Phase 10)
+-- Phase 10 needed no new tables; migration 0007 only moves realms to mapgen v4.
 
 CREATE TABLE quest_progress (
   id            uuid PRIMARY KEY,

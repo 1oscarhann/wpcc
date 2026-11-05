@@ -64,6 +64,18 @@ async def attuned(session: AsyncSession, user_id: uuid.UUID) -> set[int]:
     return {int(k) for k in keys}
 
 
+async def poi_uses(session: AsyncSession, user_id: uuid.UUID) -> dict[str, float]:
+    """POIs this player has used (Phase 10): "x,y" → when, epoch seconds."""
+    rows = (
+        await session.execute(
+            select(Discovery.key, Discovery.data).where(
+                Discovery.user_id == user_id, Discovery.kind == DiscoveryKind.poi
+            )
+        )
+    ).all()
+    return {k: float((d or {}).get("at", 0)) for k, d in rows}
+
+
 async def persist_room_progress(session: AsyncSession, room: RealmRoom, p: Player, ops: Pending) -> None:
     now = room.st.clock.now()
     if ops.fog and p.fog is not None:
@@ -75,6 +87,22 @@ async def persist_room_progress(session: AsyncSession, room: RealmRoom, p: Playe
                 index_elements=[FogReveal.user_id, FogReveal.realm_id],
                 set_={"bits": stmt.excluded.bits, "updated_at": stmt.excluded.updated_at},
             )
+        )
+    for key, at in ops.pois.items():
+        stmt = insert(Discovery).values(
+            user_id=p.user_id, kind=DiscoveryKind.poi, key=key, count=1, data={"at": at}
+        )
+        await session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=["user_id", "kind", "key"],
+                set_={"data": stmt.excluded.data, "count": Discovery.count + 1},
+            )
+        )
+    for lk in ops.lore:
+        await session.execute(
+            insert(Discovery)
+            .values(user_id=p.user_id, kind=DiscoveryKind.lore, key=lk, count=1, data={})
+            .on_conflict_do_nothing(index_elements=["user_id", "kind", "key"])
         )
     for w in ops.waystones:
         await session.execute(
@@ -111,6 +139,30 @@ def overview(cfg: GameConfig, seed: int) -> bytes:
             _OVERVIEWS.clear()
         hit = _OVERVIEWS[key] = _overview(cfg, seed)
     return hit
+
+
+POI_NAMES = {
+    "ruins": "Old Ruins",
+    "shrine": "Shrine",
+    "lore_stone": "Lore Stone",
+    "cave": "Sealed Cave",
+    "merchant": "Wandering Trader",
+    "lost_villager": "Lost Villager",
+}
+
+
+def poi_list(cfg: GameConfig, seed: int, uses: dict[str, float]) -> list[dict[str, Any]]:
+    return [
+        {
+            "index": p.index,
+            "kind": p.kind,
+            "x": p.x,
+            "y": p.y,
+            "name": POI_NAMES[p.kind],
+            "used": p.key in uses,
+        }
+        for p in mapgen.generator(cfg, seed).pois
+    ]
 
 
 def waystone_list(cfg: GameConfig) -> list[dict[str, Any]]:

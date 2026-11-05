@@ -386,6 +386,7 @@ async def overview(
     realm, _ = await realm_svc.my_member(db, auth.user.id)
     fog = await world_svc.load_fog(db, st.config, auth.user.id, realm.id)
     attuned = await world_svc.attuned(db, auth.user.id)
+    uses = await world_svc.poi_uses(db, auth.user.id)
     return {
         "n": world_svc.chunks_per_side(st.config),
         "chunk_size": st.config.mapgen.chunk_size,
@@ -395,4 +396,6 @@ async def overview(
         "waystones": world_svc.waystone_list(st.config),
         "attuned": sorted(attuned),
         "use_radius": st.config.social.waystone.use_radius,
+        "pois": world_svc.poi_list(st.config, realm.seed, uses),
+        "poi_radius": st.config.pois.interact_radius,
     }

@@ -344,3 +344,66 @@ The card clears on acknowledge. Fast-forward ages the snapshot too, so test acco
 
 ### D-069: seeing your realm-mates
 **Decision.** `GET /api/realm/villages` returns mates' village states. The client draws their buildings, debris and a name sign read-only, and subscribes to each mate's `VILLAGE_STATE` (now allowed for same-realm members), so their upgrades appear live. Collision already covered every member's village. Build Mode's camera can pan 70 tiles past your plot once you have mates (28 when solo).
+
+## Phase 10: the wider world
+
+### D-070: the world clock is pure maths
+**Decision.** Day/night, seasons and weather are pure functions of wall time (`domain/worldclock.py`). Nothing is stored and no worker runs.
+- **Day.** One global 24-minute day: dawn 2 m, day 14 m, dusk 2 m, night 6 m. Seasons are 7 days each, starting from 1970 UTC. Every realm shares the sun.
+- **Weather (P9).** Per realm, in 20-minute blocks. Block `i` hashes `(realm.weather_seed, i)` and picks a state using the season's weights, with the season read at the block's midpoint. So the forecast is just the next few blocks.
+- **Client.** It computes the day phase locally from the clock config in the bundle. `GET /api/world` gives season, weather, effects and a 4-block forecast, refetched when the block ends.
+
+### D-071: weather-aware lazy production
+**Decision.** `settle_weather` settles a resource segment by segment (weather blocks), at `round(base × multiplier)`.
+- **Merging.** Adjacent equal multipliers are merged first. A resource that no weather touches still settles in one step, exactly as before.
+- **Drift.** A sub-unit remainder at a block boundary is dropped: less than one unit per boundary. A test checks that settling in steps matches settling in one go within that bound.
+- **Effects.** Rain: food ×1.2, herbs ×1.15. Snow: food ×0.85. Storm: food ×1.1.
+
+### D-072: mapgen v4 rings
+**Decision.** Outer rings at radius 175 (forest), 215 (stonepeak), 255 (swamp), 295 (frozen) and 335 (ashen).
+- **Edges.** Edges are warped by noise (±18) and dithered (±3) so they never look like circles.
+- **Ground and pools.** Each ring has its own ground (rock, mud, snow, ash) and pools: water, murky water, walkable ice, or solid lava.
+- **Tile ids.** Ids are one byte, so ice and lava use 16 cardinal-only masks, with the corner bits implied when both sides are set. Without that, interior tiles get notched corners and frozen lakes look like wallpaper.
+- **Waystones.** 12 new ones, three per outer ring, appended so the old indices keep their meaning.
+- **Migration.** 0007 moves v3 realms to v4 in place.
+
+### D-073: night, fog and storms in combat
+**Decision.**
+- **Night.** It buffs spawns at spawn time: HP ×1.25, damage ×1.15, entity flag 16 for a violet haze. Kills give loot quantity ×1.5 (stochastic rounding) and rare-material drop chances ×2. Each chunk also gets `groups × 1.4` spawn points. The extra ones are night-only, and they fade at dawn (DEATH with flag 2) unless they're busy fighting.
+- **Fog.** Aggro radius ×0.7.
+- **Storms.** Each chunk near a player has a 25% chance per weather block of a Storm Elemental. It is a *roaming* enemy: difficulty-1 stats scaled by the biome it appears in. It fires chain lightning (EV ZAP), drops storm glass, and fades when its storm ends.
+- **Moonpetals.** These nodes are night-only. The server refuses them by day and the client hides them. A snow block gives frost spires ×1.5 yield (`rare_node`).
+
+### D-074: archetypes on one state machine
+**Decision.** All seven archetypes share the hidden → idle → chase → windup → active → recover → return machine.
+- **Chargers and tanks** are pure config: a long telegraphed lunge, or a slow slam around themselves.
+- **Kiters** telegraph a line, then fire a `Shot` along it. Trees and rocks are cover. A dodge passes through the shot (the HIT event says "dodged"). Kiters back away inside `keep_away`, but for at most 2 s before they shoot anyway.
+- **Summoners** call minions every 6 s, up to 4 at once. Minions drop nothing, give 25% XP, and fade when their summoner dies. A summoner's attack is a circle placed on your spot that *roots* you.
+- **Root.** The server zeroes movement (self flag 16) and the client predicts none while the flag is set. The few ticks before the flag arrives are fixed by normal reconciliation.
+- **Big Slime** splits into two angry slimes that share its spawn point.
+- **Deferred.** Elites' "one extra attack".
+
+### D-075: co-op HP scaling at spawn
+**Decision.** A monster's HP is ×(1 + 0.5 × extra players within 20 tiles of its spawn point) when it spawns. Minions don't scale. This closes the general part of D-068's deferral; boss scaling stays with Phase 13.
+
+### D-076: the sky is one multiply pass
+**Decision.** A screen-space layer between the world and the UI.
+- **Colour.** The base colour is season tint × weather tint × the dusk/dawn glow, blending toward night blue.
+- **Light.** Additive light sprites (your lantern, lit buildings, lamps, waystones, lava, glowing nodes) are rendered with the base into a half-resolution render texture, then multiplied over the world. In daylight a plain tinted quad is used instead, so day costs nothing extra.
+- **Weather.** Precipitation depends on the ring: rain becomes snow in the north and ash in the wastes. Fog banks drift across, and storms bring lightning flashes and thunder.
+- **Sound.** The soundscape is synthesized like the SFX: wind and rain beds plus biome critters. It follows the Music slider (now "Music & ambience").
+- **Screenshots.** In dev, `?sky=night,storm,winter` (or `window.__hfSky(...)`) overrides the sky.
+
+### D-077: points of interest
+**Decision.** Mapgen places POIs per ring from the realm seed (47 per realm with the shipped config).
+- **Placement.** Each is on dry land, off trails, roads and waystones, at least 16 tiles from the next, with a clearing around it.
+- **Saving.** Using one sends `INTERACT [index]`. What you've used is a `discoveries` row of kind `poi` keyed by `"x,y"` (not the index, so changing counts never mixes up chests), with `data.at`. No migration was needed: the enum value already existed.
+- **Ruins** hide a chest: one-time loot per player (coins, ring materials, rare chances).
+- **Shrines** give a 10-minute blessing (might, ward or fortune, fixed per shrine), then rest for 20 h. The blessing lives in memory and is restored from `data.at` when you come back.
+- **Lore stones** show a piece of original lore and give 15 XP the first time (also a `lore` discovery).
+- **Caves** are sealed until dungeons (Phase 13).
+- **Traders' stalls** are merchants with id `wild:<index>`. They use the hub merchant's stock rules and limits, with their own stock and a fixed spot.
+- **Lost villagers** give coins and XP and bump `villagers.found`. They actually settle in your village in Phase 14.
+
+### D-078: dev teleport
+**Decision.** `POST /api/dev/teleport {x, y}` exists only when `HF_ENV=dev`. It moves your avatar to the nearest open tile, heals you and gives 10 s of i-frames. It's for screenshots and playtesting the far rings. In any other environment it returns 404.

@@ -54,6 +54,7 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 | `0x24` | FISH_REEL | `bite_id:u32, client_tick:u32` | Fishing timing check. The server validates against the bite window with latency tolerance. |
 | `0x30` | PARTY | `kind:u8 (invite, accept, decline, leave, kick), user_id?` | Realm-scoped and in-memory. |
 | `0x31` | DUNGEON | `kind:u8 (enter, ready, leave), entrance_id?:u32` | |
+| `0x32` | INTERACT | `poi_index:u32` | **Phase 10.** Use the point of interest you're standing at (≤ 2.4 tiles). The answer is a POI event, or a TOAST (`poi_too_far`, `chest_empty`, `shrine_resting`, `villager_home`). |
 
 **`buttons` bitfield (u16):**
 
@@ -122,6 +123,13 @@ ents = [[id, kind, type, x*64, y*64, dx*100, dy*100, anim, anim_t, hp(0-255), fl
 - `type` is the enemy key for monsters, the item key for drops (`flags` = quantity), `"spear"` for projectiles and the weapon type for avatars.
 - Events used so far: HIT `[1, src, dst, dmg, crit, kind]` (kind 0 normal, 1 poison, 2 dodged, 3 heavy), TELEGRAPH `[2, mid, shape(0 circle, 1 line), x, y, dx, dy, range, width, warn_ms]`, PICKUP `[5, drop, item, qty, all]`, KO `[6, eid, lost]`, XP `[7, amount, level, xp, xp_next, levels_gained, hp_max]`, SFX `[10, name, x, y]`, NODE `[13, node, hits, total, depleted, respawn_ms, sound]`, TOAST `[17, key, args]`, DEPOSIT `[19, {item: qty}]`, DEATH `[20, mid, x, y, enemy, elite]`, SWING `[21, eid, atk, combo_i, ax*100, ay*100]`, HEAL `[22, eid, amount, quick]`, RESPAWN `[23, x, y]`, INVENTORY `[24, stacks]`, PLAYER `[25, …roster entry]`, PLAYER_LEFT `[26, eid]`, PROJECTILE_END `[27, id, x, y]`.
 - The table below is the long-term target; the delta-compressed `new/upd/gone` form is deferred (full AOI lists are ~600 B per tick).
+- **Phase 10 (protocol v4).**
+  - **New op.** C2S `INTERACT [poi_index]` (`0x32`).
+  - **New events.** ZAP `[32, x0, y0, x1, y1]` (chain lightning) and POI `[33, index, kind, data]` (what using a POI did: chest loot, blessing, lore text, trader id, rescued villager).
+  - **Flags.** New self flag `rooted` (16). Monster entity flags gain 16 (spawned at night) and 32 (summoned minion).
+  - **Monster shots.** They are `projectile` entities whose `type` is the sprite (`arrow`, `spit`, `sting`, `ice`, `fire`, `bolt`, `rock`), with `flags` = 1.
+  - **DEATH.** The flag 2 means "faded" (dawn, storm passed, summoner died): no loot, no poof.
+  - **TELEPORT.** Index -1 means a dev hop.
 
 ### 3.1 SNAPSHOT (target format)
 

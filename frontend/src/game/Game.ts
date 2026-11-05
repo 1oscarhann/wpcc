@@ -209,6 +209,23 @@ export class Game {
         if (s.mates !== p.mates) this.mates?.sync(Object.values(s.mates));
       }),
     );
+    // Phase 10: opened chests stay open, rescued villagers have gone home
+    const onPoiUsed = (e: Event) => {
+      const q = useRealm.getState().overview?.pois[(e as CustomEvent<number>).detail];
+      const sp = q && this.map ? this.objectSprites.get(q.y * this.map.size + q.x) : undefined;
+      if (q && sp) this.applyPoiLook(sp, q.x, q.y, true);
+    };
+    window.addEventListener("hf:poi-used", onPoiUsed);
+    this.unsub.push(() => window.removeEventListener("hf:poi-used", onPoiUsed));
+    this.unsub.push(
+      useRealm.subscribe((s, p) => {
+        if (s.overview?.pois === p.overview?.pois || !this.map) return;
+        for (const q of s.overview?.pois ?? []) {
+          const sp = q.used ? this.objectSprites.get(q.y * this.map.size + q.x) : undefined;
+          if (sp) this.applyPoiLook(sp, q.x, q.y, false);
+        }
+      }),
+    );
     const onRealm = () => void this.refreshMap();
     window.addEventListener("hf:realm-changed", onRealm);
     this.unsub.push(() => window.removeEventListener("hf:realm-changed", onRealm));
@@ -750,12 +767,25 @@ export class Game {
       this.objectSprites.set(wty * m.size + wtx, s);
       const glow = GLOWS.find(([p]) => name.startsWith(p));
       if (glow) this.lightSpots.push({ x: wx, y: wy - 8, r: glow[1], color: glow[2], flicker: glow[3] });
+      if (name.startsWith("obj.chest") || name.startsWith("obj.lost_villager")) this.applyPoiLook(s, wtx, wty, false);
       if (name.startsWith("obj.moonpetal")) {
         s.alpha = this.petalsOpen ? 1 : 0;
         this.moonpetals.push(s);
       }
       if (TREE_PREFIXES.some((p) => name.startsWith(p))) this.treeSpots.push({ x: wx, y: wy - s.height * 0.6 });
       else if (name.startsWith("obj.flowers") || name.startsWith("obj.flower_bush")) this.flowerSpots.push({ x: wx, y: wy - 4 });
+    }
+  }
+
+  private applyPoiLook(s: Sprite, x: number, y: number, animate: boolean): void {
+    const q = useRealm.getState().overview?.pois.find((p) => p.x === x && p.y === y);
+    if (!q?.used) return;
+    if (q.kind === "ruins") {
+      s.texture = tex("obj.chest.1");
+      if (animate) gsap.fromTo(s.scale, { y: 0.8 }, { y: 1, duration: 0.35, ease: "back.out(3)" });
+    } else if (q.kind === "lost_villager") {
+      if (animate) gsap.to(s, { alpha: 0, y: s.y - 6, duration: 1.4, delay: 0.8, onComplete: () => void (s.visible = false) });
+      else s.visible = false;
     }
   }
 
@@ -1459,11 +1489,13 @@ export class Game {
     } else if (k === "escape") {
       av.set({ bagOpen: false });
       useMarket.getState().set({ merchantOpen: false });
+      useRealm.getState().set({ wildMerchant: null, lore: null });
     } else if (k === "e" || k === "f") {
       const m = useMarket.getState();
       const r = useRealm.getState();
       if (m.near) m.set({ merchantOpen: !m.merchantOpen });
       else if (r.nearWaystone !== null) r.set({ mapOpen: !r.mapOpen, travelMode: true });
+      else if (r.nearPoi !== null) roomLink.send?.("INTERACT", r.nearPoi);
     } else if (k === "h") leaveAvatar();
     else if (k === "+" || k === "=") this.zoomAvatar(1);
     else if (k === "-") this.zoomAvatar(-1);

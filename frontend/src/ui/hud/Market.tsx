@@ -2,7 +2,7 @@
 // soft cap) and the wandering merchant's cart (peek from home, buy when you're standing at it).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../../api/client";
-import type { InventoryView, MarketItem, MarketView, MerchantSlot, SaleResult, VillageState } from "../../api/types";
+import type { InventoryView, MarketItem, MarketView, MerchantSlot, MerchantView, SaleResult, VillageState } from "../../api/types";
 import { enterAvatar } from "../../net/room";
 import { sfx } from "../../game/sfx";
 import { useMarket } from "../../state/market";
@@ -277,10 +277,20 @@ function StockCard({ s, canBuy, busy, onBuy }: { s: MerchantSlot; canBuy: boolea
   );
 }
 
-export function MerchantStock({ mode }: { mode: "peek" | "buy" }) {
-  const merchant = useMarket((s) => s.merchant);
-  const fetchMerchant = useMarket((s) => s.fetchMerchant);
-  const near = useMarket((s) => s.near);
+export function MerchantStock({ mode, merchantId }: { mode: "peek" | "buy"; merchantId?: string }) {
+  // merchantId: a trader's stall at a POI (Phase 10); default is the hub cart
+  const hub = useMarket((s) => s.merchant);
+  const fetchHub = useMarket((s) => s.fetchMerchant);
+  const hubNear = useMarket((s) => s.near);
+  const [wild, setWild] = useState<MerchantView | null>(null);
+  const fetchMerchant = useCallback(async () => {
+    if (!merchantId) return fetchHub();
+    const m = await api<MerchantView>(`/api/merchant/${merchantId}`).catch(() => null);
+    setWild(m);
+    return m;
+  }, [merchantId, fetchHub]);
+  const merchant = merchantId ? wild : hub;
+  const near = merchantId ? Boolean(wild?.near) : hubNear;
   const coins = useVillage((s) => s.village?.coins ?? 0);
   const config = useSession((s) => s.config)!;
   const [busy, setBusy] = useState(false);
@@ -298,7 +308,7 @@ export function MerchantStock({ mode }: { mode: "peek" | "buy" }) {
   const buy = async (s: MerchantSlot) => {
     setBusy(true);
     try {
-      const r = await api<{ village: VillageState; purchase: { got: Record<string, unknown> } }>(`/api/merchant/hub/buy`, {
+      const r = await api<{ village: VillageState; purchase: { got: Record<string, unknown> } }>(`/api/merchant/${merchantId ?? "hub"}/buy`, {
         method: "POST",
         body: { slot: s.slot, rotation: merchant.rotation },
       });
@@ -314,7 +324,7 @@ export function MerchantStock({ mode }: { mode: "peek" | "buy" }) {
       toast(e instanceof ApiError ? e.message : "She shrugs. Try again?", "bad");
     } finally {
       setBusy(false);
-      await useMarket.getState().fetchMerchant();
+      await fetchMerchant();
     }
   };
   return (
@@ -324,10 +334,10 @@ export function MerchantStock({ mode }: { mode: "peek" | "buy" }) {
         <div className="col grow" style={{ gap: 2 }}>
           <span className="head" style={{ fontSize: 19 }}>{merchant.name}</span>
           <span className="small" style={{ fontStyle: "italic" }}>“{merchant.greeting}”</span>
-          <span className="small muted">Packs up and moves on in {formatDuration(ends)} · you have {coins.toLocaleString()} <Icon name="coins" scale={1} /></span>
+          <span className="small muted">{merchant.wild ? "Restocks in" : "Packs up and moves on in"} {formatDuration(ends)} · you have {coins.toLocaleString()} <Icon name="coins" scale={1} /></span>
         </div>
       </div>
-      {mode === "peek" && (
+      {mode === "peek" && !merchantId && (
         <div className="slot small row" style={{ gap: 8, flexWrap: "wrap" }}>
           <span className="grow">Her cart is parked in the <b>hub</b>, the cobbled square at the middle of the realm. Walk over to trade.</span>
           <button className="btn small gold" onClick={() => {

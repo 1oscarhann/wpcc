@@ -10,7 +10,8 @@
     "INPUT": "0x22",
     "ACTION": "0x23",
     "PARTY": "0x30",
-    "TRAVEL": "0x31"
+    "TRAVEL": "0x31",
+    "INTERACT": "0x32"
   },
   "server_to_client": {
     "WELCOME": "0x81",
@@ -49,7 +50,8 @@
     "TELEPORT": 29,
     "PARTY": 30,
     "PARTY_INVITE": 31,
-    "ZAP": 32
+    "ZAP": 32,
+    "POI": 33
   },
   "entity_kinds": {
     "avatar": 0,
