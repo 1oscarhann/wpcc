@@ -623,6 +623,165 @@ PHASES[8] = async (page, kind) => {
   await shot(page, "12-away-card", kind, { wait: 700 });
 };
 
+// ── Phase 9: two players in one realm ────────────────────────────────────
+async function freshPlayer(page, kind) {
+  const name = await signupFlow(page, kind);
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await apiPost(page, "/api/tutorial/skip", {});
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(1500);
+  return name;
+}
+
+async function walkTo(page, x, y, ms = 60000) {
+  // pathfinding only sees loaded chunks, so long trips go in short hops toward the target
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    const hop = await page.evaluate(([tx, ty]) => {
+      const g = window.__hfGame;
+      const c = g.avatar.client;
+      const dx = tx + 0.5 - c.me.x;
+      const dy = ty + 0.5 - c.me.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 2.2) return null;
+      const k = Math.min(1, 16 / d);
+      for (let r = 0; r < 6; r++) {
+        for (const [ox, oy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, -r], [r, -r], [-r, r]]) {
+          const hx = Math.floor(c.me.x + dx * k) + ox;
+          const hy = Math.floor(c.me.y + dy * k) + oy;
+          if (!g.grid.solid(hx, hy)) return [hx, hy];
+        }
+      }
+      return [Math.floor(c.me.x + dx * k), Math.floor(c.me.y + dy * k)];
+    }, [x, y]);
+    if (!hop) return true;
+    const ok = await Promise.race([walk(page, hop[0], hop[1]), page.waitForTimeout(8000).then(() => false)]);
+    if (!ok) await page.waitForTimeout(400);
+  }
+  return false;
+}
+
+PHASES[9] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  const ada = await freshPlayer(page, kind);
+  await page.getByRole("button", { name: "Realm", exact: true }).click();
+  await page.getByText("Open your realm").waitFor();
+  await shot(page, "01-realm-solo", kind, { wait: 600 });
+  await page.getByLabel("Realm name").fill("Hearth Hollow");
+  await page.getByRole("button", { name: "Open it up" }).click();
+  await page.locator(".invite-chip .code").waitFor();
+  await shot(page, "02-realm-open", kind, { wait: 600 });
+  const code = (await page.locator(".invite-chip .code").textContent()).trim();
+  if (mobile) {
+    await page.keyboard.press("Escape");
+    await enterAvatar(page);
+    await shot(page, "03-minimap-avatar", kind, { wait: 900 });
+    await page.keyboard.press("m");
+    await shot(page, "04-map", kind, { wait: 700 });
+    return;
+  }
+
+  // a second player joins with the code
+  const ctx2 = await page.context().browser().newContext(VIEWPORTS[kind]);
+  const p2 = await ctx2.newPage();
+  p2.on("pageerror", (e) => console.error(`[bram] page error:`, e.message));
+  const bram = await freshPlayer(p2, kind);
+  await p2.getByRole("button", { name: "Realm", exact: true }).click();
+  await p2.getByLabel("Invite code").fill(code);
+  await p2.getByRole("button", { name: "Join realm" }).click();
+  await p2.waitForTimeout(2500); // the page reloads into the new realm
+  await p2.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await p2.waitForTimeout(1500);
+  await shot(p2, "03-bram-joined", kind, { wait: 400 });
+
+  // the owner sees Bram arrive (pushed over the socket)
+  await page.locator(".member-row", { hasText: bram }).waitFor({ timeout: 15000 });
+  await shot(page, "04-members-owner", kind, { wait: 500 });
+
+  // the stash
+  hf(`grant ${ada} --item ironbark=6 --item slime_gel=12`);
+  await page.getByRole("tab", { name: /Stash/ }).click();
+  await page.locator('button[title^="Ironbark"]').first().click();
+  await page.waitForTimeout(500);
+  await page.locator('button[title^="Slime Gel"]').first().click();
+  await page.waitForTimeout(500);
+  await shot(page, "05-stash-owner", kind, { wait: 400 });
+  await p2.getByRole("button", { name: "Realm", exact: true }).click();
+  await p2.getByRole("tab", { name: /Stash/ }).click();
+  await p2.locator(".stash-rules").waitFor();
+  await shot(p2, "06-stash-newcomer", kind, { wait: 500 });
+  await p2.keyboard.press("Escape");
+  await page.getByRole("tab", { name: /Activity/ }).click();
+  await page.locator(".activity-row").first().waitFor();
+  await shot(page, "07-activity", kind, { wait: 500 });
+  await page.keyboard.press("Escape");
+
+  // Bram's village, seen from Ada's
+  const look = await page.evaluate(() => {
+    const m = window.__hfVillage.getState().map;
+    const mine = m.plots[m.my_plot].origin;
+    const theirs = m.plots.find((p) => p.owner && p.index !== m.my_plot).origin;
+    return [theirs[0] - mine[0] + 24, theirs[1] - mine[1] + 24];
+  });
+  await page.evaluate(([x, y]) => window.__hfGame.devFocusTile(x, y), look);
+  await shot(page, "08-neighbour-village", kind, { wait: 1800 });
+
+  // a party
+  await enterAvatar(page);
+  await enterAvatar(p2);
+  await page.getByRole("button", { name: "Party", exact: true }).click();
+  await page.locator(".party-pop").getByRole("button", { name: "Invite" }).first().click();
+  await p2.locator(".party-invite").waitFor({ timeout: 10000 });
+  await shot(p2, "09-party-invite", kind, { wait: 300 });
+  await p2.getByRole("button", { name: "Join", exact: true }).click();
+  await page.locator(".party-frames").waitFor({ timeout: 10000 });
+  await page.getByRole("button", { name: "Party", exact: true }).click();
+  await shot(page, "10-party", kind, { wait: 800 });
+
+  // waystones: attune the one by the well, walk out along a trail to a meadow stone, then travel back
+  const ov = await page.evaluate(() => fetch("/api/realm/overview").then((r) => r.json()));
+  await page.locator(".party-pop").waitFor({ state: "detached", timeout: 1000 }).catch(() => page.getByRole("button", { name: "Party", exact: true }).click());
+  const hub = ov.waystones[0];
+  await walkTo(page, hub.x, hub.y + 1, 200000);
+  await page.waitForTimeout(900);
+  await shot(page, "11-waystone-attuned", kind, { wait: 200 });
+  const meadow = ov.waystones.slice(1, 6).sort((a, b) => Math.hypot(a.x - hub.x, a.y - hub.y) - Math.hypot(b.x - hub.x, b.y - hub.y))[0];
+  await walkTo(page, meadow.x, meadow.y + 1, 200000);
+  await page.waitForTimeout(900);
+  await page.keyboard.press("m");
+  await shot(page, "12-map", kind, { wait: 700 });
+  await page.getByRole("button", { name: "Close" }).last().click();
+  await page.keyboard.press("e");
+  await page.getByText("Waystone: where to?").waitFor({ timeout: 8000 });
+  await shot(page, "13-travel", kind, { wait: 600 });
+  await page.locator(".map-side").getByRole("button", { name: "Go" }).first().click();
+  await page.waitForTimeout(1600);
+  await shot(page, "14-teleported", kind, { wait: 300 });
+  await ctx2.close();
+};
+
+PHASES["9v"] = async (page, kind) => {
+  await freshPlayer(page, kind);
+  await apiPost(page, "/api/realms", { name: "Neighbourly" });
+  const code = (await page.evaluate(() => fetch("/api/realm").then((r) => r.json()))).realm.invite_code;
+  const ctx2 = await page.context().browser().newContext(VIEWPORTS[kind]);
+  const p2 = await ctx2.newPage();
+  await freshPlayer(p2, kind);
+  await apiPost(p2, "/api/realms/join", { code });
+  await page.waitForTimeout(3000);
+  console.log("mates drawn:", await page.evaluate(() => window.__hfGame.mates.drawn.size));
+  await enterAvatar(page);
+  const gate = await page.evaluate(() => {
+    const m = window.__hfVillage.getState().map;
+    const p = m.plots.find((q) => q.owner && q.index !== m.my_plot);
+    return [p.origin[0] + p.gate[0], p.origin[1] + p.gate[1] + 2];
+  });
+  await walkTo(page, gate[0], gate[1], 150000);
+  await shot(page, "15-mate-village", kind, { wait: 800 });
+  await ctx2.close();
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

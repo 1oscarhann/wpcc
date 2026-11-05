@@ -58,11 +58,11 @@ Conventions: durations use the `"45s" | "5m" | "1h"` string syntax (parsed to se
 | `cosmetics.yaml` | outfits, dyes, banners, skins, titles | 16 |
 | `pets.yaml`, `mounts.yaml`, `fishing.yaml` | pet and mount stats and bonuses, fish per biome/season, minigame timing | 16 |
 | `login_rewards.yaml` | calendar | 16 |
-| `social.yaml` | gift caps, help %, new-account gates (P4), stash trust rules (P3) | 9, 15 |
+| `social.yaml` | realm size and names, stash trust rules (P3), party size and XP share radius, fog reveal radius, waystone radii; gift caps, help %, new-account gates (P4) join in 15 | 9 ✔, 15 |
 | `festivals.yaml` | calendar festivals: dates, decorations, enemies, quests | 17 |
 | `presets.yaml` | emotes, quick messages, ping types | 9 |
 | `profanity.yaml` | blocked substrings plus leetspeak normalization map | 2 |
-| `tutorial.yaml` | steps, guide lines, triggers | 8 |
+| `tutorial.yaml` | Juniper's look, steps (lines, goal kind: confirm/buildings/stat/discovery, highlight, reward), the away card's min absence and quips | 8 ✔ |
 
 ---
 

@@ -15,6 +15,9 @@ import { Ambient } from "./ambient";
 import { CloudShadows, groundLighting } from "./atmosphere";
 import { AvatarWorld, type WorldHost } from "./avatarWorld";
 import { MerchantCart } from "./merchantFx";
+import { Explorer } from "./explorer";
+import { MateVillages } from "./mates";
+import { useRealm } from "../state/realm";
 import { useMarket } from "../state/market";
 import { CombatFx } from "./combatFx";
 import { ComboFx } from "./comboFx";
@@ -95,6 +98,7 @@ export class Game {
   private hitStopUntil = 0;
   private nodePrefixes: string[] = [];
   private comboFx: ComboFx | null = null;
+  private mates: MateVillages | null = null;
   private resonanceCd = 0;
   private resonanceKey = "";
 
@@ -174,6 +178,19 @@ export class Game {
     const v = useVillage.getState().village;
     if (v) this.onVillage(null, v, true);
     this.unsub.push(onVillageChange((prev, next) => this.onVillage(prev, next, false)));
+    // Phase 9: realm-mates' villages, drawn read-only; refreshed when the realm changes
+    this.mates = new MateVillages(this.objects, () => this.defs);
+    this.unsub.push(
+      useRealm.subscribe((s, p) => {
+        if (s.mates !== p.mates) this.mates?.sync(Object.values(s.mates));
+      }),
+    );
+    const onRealm = () => void this.refreshMap();
+    window.addEventListener("hf:realm-changed", onRealm);
+    this.unsub.push(() => window.removeEventListener("hf:realm-changed", onRealm));
+    void useRealm.getState().load();
+    void useRealm.getState().loadMates();
+    void useRealm.getState().loadOverview();
     this.unsub.push(
       useVillage.subscribe((s, p) => {
         if (s.placing !== p.placing) this.syncGhost();
@@ -200,6 +217,7 @@ export class Game {
     this.comboFx?.destroy();
     if (gridLink.grid === this.grid) gridLink.grid = null;
     this.unsub.forEach((u) => u());
+    this.mates?.destroy();
     this.unbind?.();
     try {
       this.app.destroy(true, { children: true });
@@ -225,7 +243,8 @@ export class Game {
     }
     const v = useVillage.getState().village;
     if (!v) return;
-    const margin = 28 * T;
+    // with realm-mates you can pan over to see their villages next door (Phase 9)
+    const margin = (Object.keys(useRealm.getState().mates).length ? 70 : 28) * T;
     const x0 = this.origin[0] * T - margin;
     const y0 = this.origin[1] * T - margin;
     const x1 = (this.origin[0] + v.frame) * T + margin;
@@ -361,7 +380,11 @@ export class Game {
     if (c) {
       const me = useSession.getState().me!;
       this.avatar = new AvatarWorld(this.worldHost, c, me.avatar.appearance);
-      this.avatar.extras.push(new CombatFx(this.worldHost, this.avatar), new MerchantCart(this.worldHost, this.avatar));
+      this.avatar.extras.push(
+        new CombatFx(this.worldHost, this.avatar),
+        new MerchantCart(this.worldHost, this.avatar),
+        new Explorer(this.worldHost, this.avatar),
+      );
       useVillage.getState().startPlacing(null);
       useVillage.getState().select(null);
       this.cam.vx = this.cam.vy = 0;
@@ -659,6 +682,19 @@ export class Game {
       if (TREE_PREFIXES.some((p) => name.startsWith(p))) this.treeSpots.push({ x: wx, y: wy - s.height * 0.6 });
       else if (name.startsWith("obj.flowers") || name.startsWith("obj.flower_bush")) this.flowerSpots.push({ x: wx, y: wy - 4 });
     }
+  }
+
+  /** Members came or went: refetch plot owners and rebuild the world's objects (wild growth vs villages). */
+  async refreshMap(): Promise<void> {
+    const m = await useVillage.getState().fetchMap(true);
+    if (this.destroyed || !this.map) return;
+    this.map = m;
+    for (const c of this.chunks.values()) if (c !== "loading") c.destroy({ children: true });
+    this.chunks.clear();
+    for (const sp of this.objectSprites.values()) safeDestroy(sp);
+    this.objectSprites.clear();
+    this.treeSpots.length = 0;
+    this.flowerSpots.length = 0;
   }
 
   private plotOwnerAt(tx: number, ty: number): string | null {
@@ -1348,7 +1384,9 @@ export class Game {
       useMarket.getState().set({ merchantOpen: false });
     } else if (k === "e" || k === "f") {
       const m = useMarket.getState();
+      const r = useRealm.getState();
       if (m.near) m.set({ merchantOpen: !m.merchantOpen });
+      else if (r.nearWaystone !== null) r.set({ mapOpen: !r.mapOpen, travelMode: true });
     } else if (k === "h") leaveAvatar();
     else if (k === "+" || k === "=") this.zoomAvatar(1);
     else if (k === "-") this.zoomAvatar(-1);

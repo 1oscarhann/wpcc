@@ -6,6 +6,8 @@ import { itemName, STATION_KEYS } from "../../game/items";
 import { enterAvatar } from "../../net/room";
 import { useMarket } from "../../state/market";
 import { useTutorial } from "../../state/tutorial";
+import { useRealm } from "../../state/realm";
+import { MiniMap } from "./WorldMap";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
@@ -340,6 +342,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
       <TopBar v={v} now={now} onSettings={onSettings} />
       <div className="village-name"><span className="ribbon">{v.name}</span></div>
       <ClearHint v={v} />
+      <div className="minimap-slot"><MiniMap small={touch} /></div>
       {!wsConnected && <div className="panel-dark hud-offline small">Reconnecting… (updates every few seconds)</div>}
       <div className="hud-bottom">
         {placing ? (
@@ -356,6 +359,9 @@ export function BuildHud({ onSettings, touch, onZoom }: {
             </button>
             <button className="btn secondary" onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant" data-tut-target="market">
               <Icon name="market" /> <span className="hide-narrow">Market</span>
+            </button>
+            <button className="btn secondary icon-only" onClick={() => useRealm.getState().set({ panel: "members" })} aria-label="Realm" title="Realm: friends, stash, activity">
+              <Icon name="banner" />
             </button>
             <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag and bank" title="Bag and bank">
               <Icon name="queue" />

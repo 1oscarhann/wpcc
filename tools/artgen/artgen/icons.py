@@ -540,6 +540,25 @@ def u_scroll(c: Canvas) -> None:  # a recipe hint
     c.put(12, 10, RED[2])
 
 
+def u_banner(c: Canvas) -> None:  # the realm: a little pennant on a pole
+    c.vline(3, 1, 15, WOOD[2])
+    c.put(3, 0, GOLD[3])
+    c.rect(4, 2, 9, 7, TEAL[2])
+    c.hline(4, 12, 2, TEAL[3])
+    c.poly([(4, 9), (13, 9), (8.5, 12.5)], TEAL[1])
+    c.rect(7, 4, 3, 3, GOLD[3])
+    c.put(8, 5, GOLD[4])
+
+
+def u_party(c: Canvas) -> None:  # two friends
+    for cx, col, hair in ((5, RED[2], WOOD[1]), (11, TEAL[2], GOLD[2])):
+        c.ellipse(cx, 5, 2.4, 2.4, ramp("cloth_cream")[3])
+        c.hline(cx - 2, cx + 2, 3, hair)
+        c.rect(cx - 3, 9, 6, 6, col)
+        c.hline(cx - 3, cx + 2, 9, col)
+    c.put(8, 11, GOLD[3])
+
+
 def u_trend_up(c: Canvas) -> None:
     c.poly([(8, 3), (13, 9), (3, 9)], LEAF[3])
     c.rect(6, 9, 4, 4, LEAF[2])
@@ -561,7 +580,7 @@ ICONS: dict[str, Callable[[Canvas], None]] = {
     "timer": u_timer, "lock": u_lock, "check": u_check, "info": u_info, "star": u_star, "home": u_home,
     "avatar": u_avatar, "queue": u_queue, "plus": u_plus, "map": u_map, "book": u_book, "anvil": u_anvil,
     "market": u_market, "chest": u_chest, "cart": u_cart, "scroll": u_scroll,
-    "trend_up": u_trend_up, "trend_down": u_trend_down,
+    "trend_up": u_trend_up, "trend_down": u_trend_down, "banner": u_banner, "party": u_party,
     "leather_armour": armour_icon(TIER_RAMPS[0], TIER_TRIM[0], True),
     "plate_armour": armour_icon(TIER_RAMPS[1], TIER_TRIM[1], False),
 }

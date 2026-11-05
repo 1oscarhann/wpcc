@@ -46,7 +46,7 @@ interface VillageStore {
   busy: boolean;
   wsConnected: boolean;
   fetch: () => Promise<void>;
-  fetchMap: () => Promise<MapMeta>;
+  fetchMap: (force?: boolean) => Promise<MapMeta>;
   apply: (v: VillageState) => void;
   select: (id: string | null) => void;
   startPlacing: (p: Placing | null) => void;
@@ -127,9 +127,9 @@ export const useVillage = create<VillageStore>((set, get) => {
       get().apply(r.village);
     },
 
-    async fetchMap() {
+    async fetchMap(force = false) {
       const existing = get().map;
-      if (existing) return existing;
+      if (existing && !force) return existing;
       const map = await api<MapMeta>("/api/realm/map");
       set({ map });
       return map;

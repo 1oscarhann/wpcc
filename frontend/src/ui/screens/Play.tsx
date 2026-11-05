@@ -12,6 +12,10 @@ import { CraftPanel, DiscoveryCard, RecipeBook, RevealCard } from "../hud/Crafti
 import { BuildHud } from "../hud/BuildHud";
 import { MarketPanel, MerchantPanel } from "../hud/Market";
 import { AwayCardModal, Guide } from "../hud/Guide";
+import { RealmPanel } from "../hud/Realm";
+import { MapModal } from "../hud/WorldMap";
+import { PartyInvite } from "../hud/Party";
+import { useRealm } from "../../state/realm";
 import { useTutorial } from "../../state/tutorial";
 import { useMarket } from "../../state/market";
 import { Panel } from "../components/kit";
@@ -75,7 +79,18 @@ export function PlayScreen() {
   useEffect(() => {
     void useTutorial.getState().load();
     void useTutorial.getState().loadAway();
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (e.key === "m" || e.key === "M") {
+        const r = useRealm.getState();
+        r.set({ mapOpen: !r.mapOpen, travelMode: false });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const realmPanel = useRealm((s) => s.panel);
 
   useEffect(() => {
     if (!host.current || !village || game.current) return;
@@ -118,6 +133,9 @@ export function PlayScreen() {
       {crafting.stationId && <CraftPanel stationId={crafting.stationId} onClose={() => crafting.set({ stationId: null })} />}
       {mode === "build" && market.marketOpen && <MarketPanel onClose={() => market.set({ marketOpen: false })} />}
       {mode === "avatar" && market.merchantOpen && <MerchantPanel onClose={() => market.set({ merchantOpen: false })} />}
+      {realmPanel && mode === "build" && <RealmPanel onClose={() => useRealm.getState().set({ panel: null })} />}
+      <MapModal />
+      {mode === "avatar" && <PartyInvite />}
       {village && <Guide />}
       <AwayCardModal />
       <DiscoveryCard />

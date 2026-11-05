@@ -1459,3 +1459,182 @@ body[data-tut="home"] [data-tut-target="home"] {
     min-height: 0;
   }
 }
+
+/* ── Phase 9: realm, minimap, party ─────────────────────────────────────── */
+.minimap-slot {
+  position: absolute;
+  top: 70px;
+  right: 12px;
+  z-index: 4;
+  pointer-events: auto;
+}
+.minimap {
+  display: block;
+  padding: 3px;
+  background: var(--wood);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  line-height: 0;
+}
+.minimap canvas,
+.full-map {
+  image-rendering: pixelated;
+}
+.map-body {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.full-map {
+  border: 3px solid var(--ink);
+  cursor: crosshair;
+}
+.way-dot,
+.leg {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  background: #7a8092;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.way-dot {
+  transform: rotate(45deg);
+}
+.way-dot.on {
+  background: #94cdeb;
+}
+.leg {
+  border-radius: 50%;
+}
+.leg.diamond {
+  border-radius: 0;
+  transform: rotate(45deg);
+  background: #94cdeb;
+}
+.party-frames {
+  position: absolute;
+  top: 116px;
+  left: 12px;
+  width: 200px;
+  gap: 6px;
+  padding: 8px 10px;
+  z-index: 4;
+}
+.party-invite {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 8px;
+  padding: 8px 12px;
+  z-index: 8;
+  width: min(440px, calc(100vw - 24px));
+}
+.party-pop-wrap {
+  position: relative;
+}
+.party-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 240px;
+  gap: 6px;
+  padding: 10px;
+  z-index: 9;
+}
+.realm-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.realm-card {
+  gap: 6px;
+  padding: 12px;
+}
+.wide-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.code-input,
+.code {
+  letter-spacing: 0.2em;
+  font-family: var(--font-head);
+}
+.invite-chip {
+  gap: 6px;
+  padding: 4px 8px;
+}
+.member-row {
+  gap: 10px;
+  padding: 4px 8px;
+}
+.member-face {
+  flex: none;
+  line-height: 0;
+  width: 32px;
+  overflow: hidden;
+}
+.online-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--paper-dark);
+  border: 1px solid var(--ink);
+}
+.online-dot.on {
+  background: var(--leaf-light);
+}
+.tag {
+  font-family: var(--font-body);
+  font-size: 11px;
+  padding: 0 6px;
+  border: 2px solid var(--ink);
+  background: var(--paper-light);
+}
+.tag.gold {
+  background: var(--gold-light);
+}
+.tag.muted {
+  opacity: 0.7;
+}
+.stash-rules {
+  padding: 6px 10px;
+}
+.stash-grid {
+  max-height: 220px;
+  overflow-y: auto;
+}
+.activity-list {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.activity-row {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--paper-dark);
+}
+@media (max-width: 640px) {
+  .minimap-slot {
+    top: 64px;
+    right: 8px;
+  }
+  .map-body {
+    grid-template-columns: 1fr;
+  }
+  .party-frames {
+    top: auto;
+    bottom: 230px;
+    width: 150px;
+  }
+  .member-actions .btn {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+.party-frames .link-btn {
+  color: var(--paper-mid);
+}

@@ -207,6 +207,8 @@ CREATE INDEX ON death_drops (realm_id) WHERE recovered_at IS NULL;
 
 Realm stash = a `containers` row with `kind='realm_stash'`, `realm_id` set. Its log = `transactions WHERE container_id = stash`.
 
+**As built (Phases 8–9, migration 0006):** `user_stats` exactly as §2; `users.away_snapshot jsonb` (the "While you were away" baseline); `realm_activity` and `fog_reveals` as above (activity's `created_at` comes from the app clock); `discovery_kind` gains `waystone`; existing realms move to mapgen v3 in place.
+
 ## 4. Villages (Phases 2, 3, 14)
 
 ```sql

@@ -68,6 +68,14 @@ const TOASTS: Record<string, string> = {
   storage_full: "Storage is full. Upgrade your Storehouse!",
   no_potions: "No potions left.",
   weapon_dull: "Your weapon has gone dull (−30% damage). Repair it at your Forge.",
+  party_no_player: "They've wandered off.",
+  party_party_full: "Your party is full.",
+  party_already_in: "They're already in your party.",
+  party_invite_expired: "That invite has expired.",
+  travel_ko: "You can't travel while knocked out.",
+  travel_in_combat: "Not mid-fight! Shake them off first.",
+  travel_not_attuned: "You haven't attuned that waystone yet. Walk up to it once.",
+  travel_not_at_waystone: "Stand next to a waystone to travel.",
 };
 
 export class RoomClient {
@@ -305,6 +313,7 @@ export class RoomClient {
         break;
       }
       case EV.RESPAWN:
+      case EV.TELEPORT:
         this.pending = [];
         break;
       case EV.DEPOSIT: {

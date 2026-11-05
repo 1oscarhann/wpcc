@@ -2,6 +2,7 @@
 // while it's down the HUD falls back to polling (see useVillageSync).
 import { decode, encode } from "@msgpack/msgpack";
 import protocol from "../../../shared/protocol.json";
+import { onRealmNotify, useRealm, type MateVillage } from "../state/realm";
 import type { VillageState } from "../api/types";
 import { gridLink } from "../sim/grid";
 import type { Rules } from "../sim/rules";
@@ -92,6 +93,7 @@ export class GameSocket {
       useVillage.getState().setWs(true);
       this.send("HELLO", protocol.version, "web", false);
       if (this.ownerId) this.send("SUB_VILLAGE", this.ownerId);
+      for (const id of Object.keys(useRealm.getState().mates)) this.send("SUB_VILLAGE", id); // realm-mates (Phase 9)
       // back in the world after a reconnect (the server keeps the avatar for a 5 s grace)
       const mode = useAvatar.getState().mode;
       if (mode === "avatar" || mode === "entering") this.send("ENTER_AVATAR");
@@ -115,8 +117,14 @@ export class GameSocket {
     const msg = decode(new Uint8Array(data)) as unknown[];
     const op = S2C_NAME[msg[0] as number];
     switch (op) {
-      case "VILLAGE_STATE":
-        useVillage.getState().apply(msg[3] as VillageState);
+      case "VILLAGE_STATE": {
+        const me = useSession.getState().me?.user.id;
+        if (!me || msg[1] === me) useVillage.getState().apply(msg[3] as VillageState);
+        else useRealm.getState().applyMate(msg[3] as MateVillage); // a realm-mate's village (Phase 9)
+        break;
+      }
+      case "NOTIFY":
+        if (msg[1] === "realm") void onRealmNotify(useRealm.getState().realm?.id ?? null);
         break;
       case "PONG": {
         const [clientMs, serverMs] = [msg[1] as number, msg[2] as number];
@@ -135,6 +143,7 @@ export class GameSocket {
         break;
       }
       case "ROOM_LEFT":
+        if (msg[1] === protocol.room_left.moved) toast("Your village moved realms. Taking you home…", "good", "home");
         setRoomClient(null);
         useAvatar.getState().set({ mode: "build", bagOpen: false });
         break;

@@ -293,3 +293,54 @@ Gear isn't sold to the NPC market (salvage it instead, D-054). Selling needs a M
 
 ### D-061: demo market history is a dev-only command
 **Decision.** `hf market seed --yes` writes 48 h of made-up realm sales, with a small story per item (a selling spree, a drought, or calm), and recalcs at every step, so sparklines and trend arrows have something to show in screenshots. It refuses without `--yes` and on `HF_ENV=prod`.
+
+### D-062: the tutorial is server-checked and skippable
+**Decision.** `config/tutorial.yaml` holds Juniper's eight steps: welcome → Lumber Camp + Quarry → chop 8 wood → bop 2 slimes → build a Market and sell → Forge beside the Lumber Camp (the combo) → forge a spear → done. `users.tutorial_step` is the current index (−1 = finished or skipped).
+- **Server-checked.** The client only ever asks `POST /api/tutorial/check`. The server compares each goal against real state (buildings placed, `user_stats` counters, discoveries) and pays step rewards into storage through the ledger (`tutorial.reward`). Several steps can complete in one check.
+- **Skippable.** Skipping works at any step and is final.
+- **Budget.** The Playwright e2e plays the whole thing through the real UI in **3.5–4.1 minutes** (bot speed, under the 5-minute budget). A human reading the lines will be closer to 5; see the tuning notes.
+
+### D-063: user_stats counters
+**Decision.** A generic `user_stats (user_id, stat_key, value)` table. Increments are upserts, so they can't lose a count.
+- **Room counters.** `gather.<item>`, `kill.<monster>` and `kill.any` ride the room's write-behind flush.
+- **Service counters.** `sell.<item>`, `sell.any`, `sell.coins`, `forge.<gear>`, `forge.<rarity>` and `forge.any`.
+- **Who reads them.** The tutorial now; quests and achievements in Phase 16.
+
+### D-064: "While you were away" is a diff, not a log
+**Decision.** When a player's last socket closes, we snapshot their settled village: resources, coins, building levels. Coming back after `away.min_absence` (10 min), `GET /api/away-summary` settles again and reports:
+- what was gained, and which stores are full;
+- buildings finished, goods crafted, gear waiting;
+- the coin change, whether the merchant moved, and one of Juniper's quips.
+
+The card clears on acknowledge. Fast-forward ages the snapshot too, so test accounts see it. **Known gap:** an instant reload can open the new socket before the old one closes, so no snapshot is taken. That only skips the card for an absence that was too short to show one anyway.
+
+### D-065: realms as built
+**Decision.**
+- **Found.** Founding turns your solo realm into a shared one, adding a name, a 6-character invite code (no 0/O/1/I) and a stash.
+- **Join.** Joining moves your whole village to the lowest free plot. Buildings are plot-frame relative, so nothing inside moves; only `realm_members`, `villages.realm_id` and the avatar's realm change. Your empty solo realm is archived.
+- **Leave or kick.** Either brings back your archived solo realm (or a fresh one) on plot 0.
+- **Owner.** The owner can't leave while others remain; they hand over first. The last member leaving just makes the realm solo again.
+- **After any move.** Moved players are evicted from the room (`ROOM_LEFT moved`), the room reloads every village's collision, and every member gets a `NOTIFY realm` so their client refetches. A client whose own realm changed reloads the page, because the whole world (seed) is different.
+- **Known gap.** A relocated village keeps its old plot's debris layout, so the new plot's path may run under it.
+
+### D-066: the stash trust rules (P3) as built
+**Decision.** One `realm_stash` container per shared realm (60 slots). Only from Build Mode, like the bank.
+- **Deposit.** Anyone, always.
+- **Withdraw.** Unlimited for the owner and trusted members. Up to 400 coins' worth per UTC day for others, valued at market base, 10 per unit for unpriced items, or tier × 60 for gear. Members in their first 48 h can only deposit.
+- **Logging.** Every move is in the ledger (`stash.deposit` / `stash.withdraw` against the stash container) and the activity feed. Today's withdrawn value is computed from the ledger, so there's no counter to drift.
+
+### D-067: exploration (fog, waystones, maps)
+**Decision.**
+- **Fog.** One bit per 16×16 chunk per player per realm (`fog_reveals`, 288 bytes). The room reveals a 5×5-chunk square around you as you move, and the client applies the same rule locally so the map updates instantly. Hub and claimed plots always show.
+- **Waystones (P12).** 11 per realm, placed by layout maths alone, in the same places in every realm: Wellside by the well, then a meadow stone and a forest stone beside each forest trail, each with a little clearing. Walk within 2.5 tiles to attune (a `waystone` discovery). Then from any attuned stone you can travel to any other: not mid-fight, not while KO'd, with a second of i-frames on arrival. Mapgen bumped to v3; the migration moves existing realms in place because the change is additive.
+- **Maps.** `GET /api/realm/overview` sends one byte per chunk (water, grass, forest, path, hub, plot), your fog and the waystones. The corner mini-map is a local window around you. The full map (M) shows the whole realm, with plot owners, waystones, the merchant and your party, and doubles as the travel picker at a stone.
+
+### D-068: parties are in memory
+**Decision.** As D-025 planned, parties live in the RoomManager (lost on restart, simply re-formed).
+- **Forming.** Up to 4. Invite a player in the room, and they accept within 60 s.
+- **Updates.** Party frames go out once a second as a `PARTY` event: HP, level, position for map dots.
+- **Shared XP.** Party members within 16 tiles of a kill get its XP even if they didn't swing. Loot stays per player.
+- **Deferred.** Co-op monster HP scaling waits for Phase 13 with the bosses.
+
+### D-069: seeing your realm-mates
+**Decision.** `GET /api/realm/villages` returns mates' village states. The client draws their buildings, debris and a name sign read-only, and subscribes to each mate's `VILLAGE_STATE` (now allowed for same-realm members), so their upgrades appear live. Collision already covered every member's village. Build Mode's camera can pan 70 tiles past your plot once you have mates (28 when solo).

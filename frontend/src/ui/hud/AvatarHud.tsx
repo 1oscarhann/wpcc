@@ -8,6 +8,8 @@ import { itemIcon } from "../../game/items";
 import { Icon } from "../components/kit";
 import { Bag } from "./Bag";
 import { TradePrompt } from "./Market";
+import { MiniMap, WaystonePrompt } from "./WorldMap";
+import { PartyButton, PartyFrames } from "./Party";
 import { useTutorial } from "../../state/tutorial";
 
 const KO_FLAG = 2;
@@ -223,6 +225,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
               <Icon name="wood" scale={1.5} /> {carrying}
             </span>
           )}
+          <PartyButton />
           <button className="btn secondary icon-only" onClick={() => set({ bagOpen: !bagOpen })} aria-label="Bag" title="Bag (B)">
             <Icon name="queue" />
           </button>
@@ -239,8 +242,11 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       {(flags & KO_FLAG) !== 0 && (
         <div className="av-ko center"><div className="panel head" style={{ fontSize: 24 }}>Knocked out! Waking up at home…</div></div>
       )}
+      <div className="minimap-slot"><MiniMap small={touch} /></div>
+      <PartyFrames />
       <div className="hud-bottom">
         <TradePrompt touch={touch} />
+        <WaystonePrompt touch={touch} />
         <Hotbar touch={touch} />
       </div>
       {touch && <TouchControls />}
