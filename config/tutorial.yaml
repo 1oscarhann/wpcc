@@ -1,0 +1,84 @@
+# The first-session tutorial (PLAN Phase 8): Juniper walks you through the core loop in under five
+# minutes, and you can skip at any step. The server checks each goal; the client just asks it to.
+#
+# goal kinds:
+#   confirm    the player presses the step's button
+#   buildings  every listed building is placed (any state: constructing counts)
+#   stat       a user_stats counter reaches at_least (gather.<item>, kill.<monster>, sell.any, forge.<gear>)
+#   discovery  the player has found this combo
+# reward: coins and/or resources into storage (may exceed the cap, like refunds)
+# highlight: which HUD control pulses (build, explore, market, craft, home)
+
+guide:
+  name: Juniper
+  look: { body: slim, skin: tan, hair_style: bun, hair_color: platinum, eyes: keen, eye_color: amber, outfit: cloak, outfit_color: forest }
+
+away:
+  min_absence: 10m              # shorter breaks don't get a "While you were away" card
+  quips:
+    - "Nobody burned anything down. I checked twice."
+    - "A duck tried to move into the storehouse. We talked it out."
+    - "The villagers kept working. Mostly. There was a long lunch."
+    - "I watered the flowers. Some of them were weeds. Now they're thriving weeds."
+
+steps:
+  - key: welcome
+    title: Welcome home
+    lines:
+      - "Oh! A new face. I'm Juniper. I used to be an adventurer; now I mostly tell people where to put things."
+      - "This clearing is yours. Let's turn it into a proper village."
+    goal: { kind: confirm }
+    button: "Let's go!"
+
+  - key: production
+    title: Wood and stone
+    lines:
+      - "Everything here runs on wood and stone. Build a Lumber Camp and a Quarry: tap Build."
+    goal: { kind: buildings, all: [lumber_camp, quarry] }
+    highlight: build
+    reward: { stone: 60 }
+
+  - key: chop
+    title: Get your hands dirty
+    lines:
+      - "New workers are slow. Step outside with Explore and chop a few trees yourself. Walk home to store it."
+    goal: { kind: stat, key: gather.wood, at_least: 8 }
+    highlight: explore
+
+  - key: slimes
+    title: Slime trouble
+    lines:
+      - "Slimes keep nibbling the fences. They hop about in the meadow outside. Bop two of them!"
+    goal: { kind: stat, key: kill.slime, at_least: 2 }
+    reward: { coins: 50 }
+
+  - key: market
+    title: Coin for your trouble
+    lines:
+      - "Back home, build a Market and sell something. Slime gel, spare stone, anything!"
+      - "Prices move with what everyone sells, so watch the little arrows."
+    goal: { kind: stat, key: sell.any, at_least: 1 }
+    highlight: build
+    reward: { wood: 80, stone: 80, ore: 20 }
+
+  - key: combo
+    title: Buildings that work together
+    lines:
+      - "Here's an old smith's secret: put a Forge right beside your Lumber Camp. Edge to edge, mind."
+    goal: { kind: discovery, combo: forge_lumber }
+    highlight: build
+
+  - key: spear
+    title: Your first spear
+    lines:
+      - "Now tap the Forge, press Craft and make a spear. Collect it when the hammering stops."
+    goal: { kind: stat, key: forge.spear, at_least: 1 }
+    highlight: craft
+    reward: { coins: 150 }
+
+  - key: done
+    title: You're a natural
+    lines:
+      - "That's the whole loop: build, explore, fight, sell, forge. Plenty of combos are still secret. Go find them!"
+    goal: { kind: confirm }
+    button: "Thanks, Juniper!"

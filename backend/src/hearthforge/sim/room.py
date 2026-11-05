@@ -82,10 +82,16 @@ class Pending:
     recovered: Counter[str] = field(default_factory=Counter)  # items picked back up from a KO marker
     death_drops: list[tuple[uuid.UUID, float, float, dict[str, int], float]] = field(default_factory=list)
     recovered_ids: set[uuid.UUID] = field(default_factory=set)
+    stats: Counter[str] = field(default_factory=Counter)  # user_stats increments (kills, gathering…)
+    fog: bool = False  # newly revealed map chunks to save (Phase 9)
+    waystones: set[int] = field(default_factory=set)  # newly attuned waystones (Phase 9)
 
     def empty(self) -> bool:
         return not (
-            self.recovered
+            self.stats
+            or self.fog
+            or self.waystones
+            or self.recovered
             or self.durability
             or self.death_drops
             or self.recovered_ids
@@ -112,6 +118,9 @@ class Pending:
         self.death_drops = o.death_drops + self.death_drops
         self.recovered_ids |= o.recovered_ids
         self.durability |= o.durability
+        self.stats.update(o.stats)
+        self.fog |= o.fog
+        self.waystones |= o.waystones
 
 
 @dataclass
@@ -160,6 +169,10 @@ class Player:
     linkdead: int = 0  # ticks left of the reconnect grace (frozen + invulnerable)
     starved: int = 0  # ticks in a row with no input
     last_save: float = field(default_factory=time.monotonic)
+    fog: bytearray | None = None  # revealed chunks in this realm (Phase 9)
+    fog_chunk: tuple[int, int] = (-1, -1)
+    attuned: set[int] = field(default_factory=set)  # waystones this player can travel to
+    party: str | None = None  # party id (in memory, D-025)
 
     @property
     def w(self) -> str:
@@ -633,6 +646,7 @@ class RealmRoom:
                     p.pending.recovered[d.key] += fit
                 else:
                     p.pending.grants[d.key] += fit
+                    p.pending.stats[f"gather.{d.key}"] += fit
                 p.ev.append([EV["INVENTORY"], p.inv])
                 if fit < d.qty:
                     d.qty -= fit

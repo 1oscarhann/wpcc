@@ -603,6 +603,35 @@ def merchant_cart() -> Canvas:
     return c
 
 
+def waystone() -> Canvas:
+    """A tall rune-carved standing stone on a little plinth; the rune glows (P12 fast travel)."""
+    glow = ramp("water")
+    c = Canvas(20, 34)
+    c.drop_shadow(10, 31, 8, 2.4, alpha=80)
+    c.rect(3, 27, 14, 4, STONE[2])  # plinth
+    c.hline(3, 16, 27, STONE[3])
+    c.hline(3, 16, 30, STONE[1])
+    # the stone: slightly tapered, lit from the top-left
+    for y in range(3, 28):
+        half = 4 + (y - 3) // 10
+        for x in range(10 - half, 10 + half):
+            c.put(x, y, STONE[3] if x < 10 else STONE[2])
+    for x in range(7, 13):
+        c.put(x, 2, STONE[3])
+    c.vline(6, 4, 26, STONE[4])
+    # moss at the foot
+    for x in (5, 6, 12, 13, 14):
+        c.put(x, 26, LEAF[2])
+    c.put(6, 25, LEAF[3])
+    # the rune: a little glowing spiral-and-bar
+    for x, y in ((10, 9), (9, 10), (11, 10), (10, 11), (10, 12), (10, 13), (9, 14), (11, 14), (10, 16), (9, 17), (11, 17)):
+        c.put(x, y, glow[4])
+    for x, y in ((10, 10), (10, 17)):
+        c.put(x, y, glow[5])
+    c.outline(INK)
+    return c
+
+
 def generate_extra() -> dict[str, Canvas]:
     out: dict[str, Canvas] = {}
     for v in range(2):
@@ -625,6 +654,7 @@ def generate_extra() -> dict[str, Canvas]:
     out["obj.lamp.0"] = lamp_post()
     out["obj.signpost.0"] = signpost()
     out["npc.merchant_cart"] = merchant_cart()  # placed by the client (not a map object)
+    out["obj.waystone.0"] = waystone()
     for k in ("h", "v", "post", "gate"):
         out[f"obj.fence.{k}"] = fence(k)
     for name, frames in (("duck", duck_frames()), ("smoke", smoke_frames()), ("glint", glint_frames()),

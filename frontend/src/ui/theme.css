@@ -1358,3 +1358,104 @@ a {
     display: none;
   }
 }
+
+/* ── Phase 8: Juniper, tutorial highlights, away card ─────────────────── */
+.guide-card {
+  position: absolute;
+  left: 12px;
+  bottom: 96px;
+  width: min(380px, calc(100vw - 24px));
+  z-index: 6;
+  padding: 10px 12px;
+}
+.guide-portrait {
+  flex: none;
+  background: var(--paper-mid);
+  border: 2px solid var(--ink);
+  padding: 2px 4px 0;
+  line-height: 0;
+}
+.guide-name {
+  color: var(--wood);
+  font-size: 18px;
+}
+.guide-text {
+  margin: 0;
+  min-height: 3.6em;
+  line-height: 1.3;
+}
+.guide-mini {
+  position: absolute;
+  left: 12px;
+  bottom: 96px;
+  z-index: 6;
+  padding: 2px 4px 0;
+  background: var(--paper-light);
+  border: 3px solid var(--ink);
+  cursor: pointer;
+  line-height: 0;
+}
+.guide-dot {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  line-height: 20px;
+  background: var(--gold);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  color: var(--ink);
+  animation: trade-bob 1.2s ease-in-out infinite;
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+@keyframes tut-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(247 214 106 / 0.95), var(--shadow); }
+  50% { box-shadow: 0 0 0 7px rgb(247 214 106 / 0), var(--shadow); }
+}
+body[data-tut="build"] [data-tut-target="build"],
+body[data-tut="explore"] [data-tut-target="explore"],
+body[data-tut="market"] [data-tut-target="market"],
+body[data-tut="craft"] [data-tut-target="craft"],
+body[data-tut="home"] [data-tut-target="home"] {
+  animation: tut-pulse 1.3s ease-out infinite;
+  position: relative;
+  z-index: 7;
+}
+:root[data-reduce-motion="1"] body[data-tut] [data-tut-target] {
+  animation: none;
+  outline: 3px solid var(--gold-light);
+}
+.away-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.away-chip {
+  gap: 4px;
+  padding: 2px 8px;
+}
+@media (max-width: 640px) {
+  .guide-card,
+  .guide-mini {
+    left: 8px;
+    right: 8px;
+    bottom: auto;
+    top: 64px;
+    width: auto;
+  }
+  .guide-mini {
+    right: auto;
+  }
+  .guide-text {
+    min-height: 0;
+  }
+}

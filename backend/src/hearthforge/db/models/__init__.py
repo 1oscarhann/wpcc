@@ -36,7 +36,15 @@ from hearthforge.db.models.market import (
     MarketSalesBucket,
     MerchantPurchase,
 )
-from hearthforge.db.models.realm import Realm, RealmMember, RealmRole, RealmVisibility
+from hearthforge.db.models.progress import UserStat
+from hearthforge.db.models.realm import (
+    FogReveal,
+    Realm,
+    RealmActivity,
+    RealmMember,
+    RealmRole,
+    RealmVisibility,
+)
 from hearthforge.db.models.village import BuildingState, Presence, Resource, Village, VillageBuilding
 from hearthforge.db.models.world import DeathDrop, NodeHarvest
 
@@ -70,7 +78,9 @@ __all__ = [
     "Notification",
     "Presence",
     "Rarity",
+    "FogReveal",
     "Realm",
+    "RealmActivity",
     "RealmMember",
     "RealmRole",
     "RealmVisibility",
@@ -80,6 +90,7 @@ __all__ = [
     "Session",
     "Transaction",
     "User",
+    "UserStat",
     "UserRole",
     "UserSettings",
     "Village",

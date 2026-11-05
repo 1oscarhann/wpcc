@@ -289,6 +289,9 @@ async def collect(
         session.add(Discovery(user_id=user_id, kind=DiscoveryKind.recipe, key=key, data={}))
     else:
         found.count += 1
+    from hearthforge.services import stats
+
+    await stats.bump(session, user_id, {f"forge.{j.recipe_key}": 1, "forge.any": 1, f"forge.{f.rarity}": 1})
     village_svc.touch(ld, now)
     await session.flush()
     return ld, item_view(cfg, inst)

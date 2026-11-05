@@ -8,7 +8,7 @@
   "solid_objects": [
     "obj.oak.", "obj.big_oak.", "obj.birch.", "obj.pine.", "obj.apple.",
     "obj.rock.", "obj.rock_big.", "obj.mossy_rock.",
-    "obj.well.", "obj.lamp.", "obj.signpost.", "obj.stump.", "obj.log."
+    "obj.well.", "obj.lamp.", "obj.signpost.", "obj.stump.", "obj.log.", "obj.waystone."
   ],
   "buttons": { "light": 1, "heavy": 2, "ability": 4, "dodge": 8, "potion": 16 },
   "input_max": 127,

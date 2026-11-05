@@ -38,6 +38,8 @@ FILES: dict[str, type[BaseModel]] = {
     "forging": s.ForgingCfg,
     "market": s.MarketCfg,
     "merchant": s.MerchantCfg,
+    "tutorial": s.TutorialCfg,
+    "social": s.SocialCfg,
 }
 
 
@@ -103,6 +105,8 @@ class GameConfig:
     forging: s.ForgingCfg
     market: s.MarketCfg
     merchant: s.MerchantCfg
+    tutorial: s.TutorialCfg
+    social: s.SocialCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -237,6 +241,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     forging: s.ForgingCfg = parsed["forging"]
     market: s.MarketCfg = parsed["market"]
     merchant: s.MerchantCfg = parsed["merchant"]
+    tutorial: s.TutorialCfg = parsed["tutorial"]
+    social: s.SocialCfg = parsed["social"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -460,6 +466,45 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if mapgen.map_size % mapgen.chunk_size:
         errors.append("mapgen.yaml:map_size: must be a multiple of chunk_size")
 
+    # ── tutorial (Phase 8) ────────────────────────────────────────────────────
+    seen_steps: set[str] = set()
+    for ti, step in enumerate(tutorial.steps):
+        where = f"tutorial.yaml:steps.{ti}"
+        if step.key in seen_steps:
+            errors.append(f"{where}.key: duplicate step '{step.key}'")
+        seen_steps.add(step.key)
+        g = step.goal
+        if g.kind == "buildings":
+            if not g.all:
+                errors.append(f"{where}.goal.all: list the buildings to place")
+            for bk in g.all:
+                if bk not in bcfg.buildings:
+                    errors.append(f"{where}.goal.all: unknown building '{bk}'")
+        elif g.kind == "stat" and not g.key:
+            errors.append(f"{where}.goal.key: a stat goal needs a counter key")
+        elif g.kind == "discovery" and g.combo not in combos.combos:
+            errors.append(f"{where}.goal.combo: unknown combo '{g.combo}'")
+        elif g.kind == "confirm" and not step.button:
+            errors.append(f"{where}.button: a confirm step needs a button label")
+        for rk in step.reward:
+            if rk != "coins" and rk not in res.resources:
+                errors.append(f"{where}.reward: '{rk}' must be coins or a resource")
+    for fld in ("body", "skin", "hair_style", "hair_color", "eyes", "eye_color", "outfit", "outfit_color"):
+        opts = {
+            "body": cr.bodies,
+            "skin": cr.skin_tones,
+            "hair_style": cr.hair_styles,
+            "hair_color": cr.hair_colors,
+            "eyes": cr.eye_styles,
+            "eye_color": cr.eye_colors,
+            "outfit": cr.outfits,
+            "outfit_color": cr.outfit_colors,
+        }[fld]
+        if getattr(tutorial.guide.look, fld) not in opts:
+            errors.append(f"tutorial.yaml:guide.look.{fld}: not an allowed option")
+    if social.realm.max_members > mapgen.plot.count:
+        errors.append("social.yaml:realm.max_members: more members than plots on the ring")
+
     # ── containers / market / merchant (Phase 7) ──────────────────────────────
     for ckind, exp in game.containers.items():
         start = starter.containers.get(ckind, 0)
@@ -536,6 +581,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         forging=forging,
         market=market,
         merchant=merchant,
+        tutorial=tutorial,
+        social=social,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

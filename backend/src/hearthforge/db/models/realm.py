@@ -10,6 +10,9 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     ForeignKey,
+    Identity,
+    Index,
+    LargeBinary,
     SmallInteger,
     String,
     Text,
@@ -65,3 +68,28 @@ class RealmMember(Base):
     plot_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     stash_trusted: Mapped[bool] = mapped_column(Boolean, default=False)
     joined_at: Mapped[datetime] = created_at_col()
+
+
+class RealmActivity(Base):
+    """The realm's feed: joins, leaves, stash moves, discoveries, great forgings (Phase 9)."""
+
+    __tablename__ = "realm_activity"
+    __table_args__ = (Index("ix_realm_activity_realm_created", "realm_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    realm_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"))
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(nullable=False)
+
+
+class FogReveal(Base):
+    """Which 16×16 chunks a player has seen in a realm: one bit per chunk."""
+
+    __tablename__ = "fog_reveals"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    realm_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"), primary_key=True)
+    bits: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(nullable=False)

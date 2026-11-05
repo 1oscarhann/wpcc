@@ -94,6 +94,7 @@ OBJECT_NAMES: list[str] = [
     "obj.fern.0",
     "obj.fern.1",
     "obj.web.0",
+    "obj.waystone.0",  # Phase 9 (P12): append only, ids are part of the chunk format
 ]
 OBJECT_ID = {n: i for i, n in enumerate(OBJECT_NAMES)}
 assert len(TILE_NAMES) < 256
@@ -152,6 +153,37 @@ def layout(cfg: MapgenCfg) -> Layout:
     )
 
 
+@dataclass(frozen=True)
+class Waystone:
+    index: int
+    x: int
+    y: int
+    name: str
+
+
+_COMPASS = ["North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"]
+
+
+def waystones(cfg: MapgenCfg) -> list[Waystone]:
+    """Fast-travel stones (P12): one by the well, then a meadow stone and a forest stone beside each
+    forest trail. Pure layout maths, no seed: every realm has them in the same places."""
+    lay = layout(cfg)
+    c = lay.center
+    out = [Waystone(0, c + 3, c + 9, "Wellside")]
+    n_trails = max(1, cfg.plot.count // 2)
+    for band, (r, label) in enumerate(((150, "Meadow"), (cfg.forest.radius + 30, "Forest"))):
+        for i in range(n_trails):
+            a = -math.pi / 2 + 2 * math.pi * (2 * i + 0.5) / cfg.plot.count
+            # two tiles to the side of the trail so it never blocks the path
+            px, py = -math.sin(a), math.cos(a)
+            x = round(c + r * math.cos(a) + 2.5 * px)
+            y = round(c + r * math.sin(a) + 2.5 * py)
+            deg = (math.degrees(a) + 90) % 360
+            name = f"{_COMPASS[round(deg / 45) % 8]} {label}"
+            out.append(Waystone(1 + band * n_trails + i, x, y, name))
+    return out
+
+
 def _seg_dist(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
     vx, vy = bx - ax, by - ay
     wx, wy = px - ax, py - ay
@@ -194,6 +226,11 @@ class Generator:
                 (c + r0 * math.cos(a), c + r0 * math.sin(a), c + r1 * math.cos(a), c + r1 * math.sin(a))
             )
         self._chunks: dict[tuple[int, int], dict] = {}
+        self.waystones = waystones(self.cfg)
+        self.waystone_at = {(w.x, w.y): w for w in self.waystones}
+
+    def near_waystone(self, x: int, y: int, r: float) -> bool:
+        return any((w.x - x) ** 2 + (w.y - y) ** 2 <= r * r for w in self.waystones)
 
     # ── classification ─────────────────────────────────────────────────────
     def plot_at(self, x: int, y: int, margin: int = 0) -> int | None:
@@ -263,7 +300,7 @@ class Generator:
         return "grass"
 
     def _natural_pond(self, x: int, y: int, rd: float) -> bool:
-        if rd < 4 or self.plot_at(x, y, 4) is not None:
+        if rd < 4 or self.plot_at(x, y, 4) is not None or self.near_waystone(x, y, 6):
             return False
         c = self.lay.center
         if math.hypot(x - c, y - c) < self.lay.hub_radius + 8:
@@ -324,6 +361,10 @@ class Generator:
         s = self.seed
         if (x, y) == (c, c):
             return ("obj.well.0", 0)
+        if (x, y) in self.waystone_at:
+            return ("obj.waystone.0", 0)
+        if self.near_waystone(x, y, 2.3):
+            return None  # a little clearing around every waystone
         if k == "water":
             # lily pads on open water (not on the bank)
             if rand01(s, x, y, 21) < 0.08 and all(

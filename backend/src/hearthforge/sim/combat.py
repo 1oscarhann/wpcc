@@ -581,6 +581,8 @@ class Combat:
             p = room.players.get(eid)
             if p is None or (p.m.x - m.x) ** 2 + (p.m.y - m.y) ** 2 > 24**2:
                 continue
+            p.pending.stats[f"kill.{m.key}"] += 1
+            p.pending.stats["kill.any"] += 1
             # every player who helped gets their own rolls (BALANCE §6.4)
             if spec is not None:
                 lo, hi = spec.coins

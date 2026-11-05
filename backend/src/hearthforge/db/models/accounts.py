@@ -36,6 +36,8 @@ class User(Base):
     banned_at: Mapped[datetime | None]
     tutorial_step: Mapped[int] = mapped_column(SmallInteger, default=0)
     is_test_account: Mapped[bool] = mapped_column(Boolean, default=False)
+    # what your village looked like when your last socket closed: the "While you were away" baseline
+    away_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class UserSettings(Base):

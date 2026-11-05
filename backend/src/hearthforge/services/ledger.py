@@ -41,6 +41,9 @@ GEAR_SALVAGE = "gear.salvage"
 MARKET_SELL = "market.sell"
 MERCHANT_BUY = "merchant.buy"
 CONTAINER_EXPAND = "container.expand"
+TUTORIAL_REWARD = "tutorial.reward"
+STASH_DEPOSIT = "stash.deposit"
+STASH_WITHDRAW = "stash.withdraw"
 
 
 async def lock_wallet(session: AsyncSession, user_id: uuid.UUID) -> Wallet:

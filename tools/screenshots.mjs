@@ -2,7 +2,7 @@
 // Saves desktop (1440×900) and mobile (390×844) shots to docs/screenshots/phase-N/.
 // Needs the API + Vite dev server running (see README).
 import { execSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -462,6 +462,165 @@ PHASES[7] = async (page, kind) => {
     await page.getByText(/Found \d of \d combos/).waitFor();
     await shot(page, "11-hint-in-book", kind, { wait: 600 });
   }
+};
+
+// ── Phase 8: the whole tutorial, end to end (and timed) ──────────────────
+async function freeSpot(page, key, near, extra) {
+  return page.evaluate(
+    async ([k, n, ex]) => {
+      const ok = async (kk, x, y) => (await (await fetch(`/api/village/preview?key=${kk}&x=${x}&y=${y}`)).json()).valid;
+      const cands = [];
+      for (let y = 9; y <= 36; y++) for (let x = 9; x <= 36; x++) cands.push([x, y]);
+      if (n) cands.sort((a, b) => Math.hypot(a[0] - n[0], a[1] - n[1]) - Math.hypot(b[0] - n[0], b[1] - n[1]));
+      for (const [x, y] of cands) {
+        if (!(await ok(k, x, y))) continue;
+        if (ex && !(await ok(ex.key, x + ex.dx, y + ex.dy))) continue;
+        return [x, y];
+      }
+      return null;
+    },
+    [key, near, extra],
+  );
+}
+
+async function placeViaUI(page, kind, key, label, x, y) {
+  const [fw, fh] = await page.evaluate((k) => window.__hfGame.defs[k].footprint, key);
+  // tuck Juniper away so her card can't swallow the click (she pops back up when a step completes)
+  if (await page.getByRole("button", { name: "Hide guide" }).count()) await page.getByRole("button", { name: "Hide guide" }).click();
+  await page.evaluate(([tx, ty]) => window.__hfGame.devFocusTile?.(tx, ty), [x + fw / 2, y + fh / 2]);
+  await page.waitForTimeout(250);
+  await page.getByRole("button", { name: /^Build/ }).click();
+  const tab = { lumber_camp: "Production", quarry: "Production", market: "Core", forge: "Crafting" }[key];
+  if (tab) await page.locator(".build-menu").getByRole("tab", { name: tab, exact: true }).click();
+  await page.locator(".build-menu").getByRole("button", { name: new RegExp(`^${label}`) }).first().click();
+  // the pointer holds the footprint's centre tile: origin + floor((size − 1) / 2)
+  const at = await tapTile(page, x + Math.floor((fw - 1) / 2) + 0.5, y + Math.floor((fh - 1) / 2) + 0.5);
+  if (kind === "mobile") {
+    await page.mouse.click(at.x, at.y);
+    await page.getByRole("button", { name: "Place here" }).click();
+  } else {
+    await page.mouse.move(at.x, at.y);
+    await page.waitForTimeout(150);
+    await page.mouse.click(at.x, at.y);
+  }
+  await page.waitForTimeout(400);
+}
+
+const guideTitle = (page) => page.locator(".guide-card .head").nth(1).textContent().catch(() => "");
+async function waitStep(page, title, ms = 60000) {
+  await page.locator(".guide-card", { hasText: title }).waitFor({ timeout: ms });
+}
+
+PHASES[8] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  const t0 = Date.now();
+  const times = {};
+  const mark = (k) => {
+    times[k] = Math.round((Date.now() - t0) / 1000);
+    console.log(`[${kind}] ${k} at ${times[k]}s`);
+  };
+  const name = await signupFlow(page, kind);
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  const tStart = Date.now();
+  await page.locator(".guide-card").waitFor();
+  await shot(page, "05-juniper", kind, { wait: 1800 });
+  while (await page.getByRole("button", { name: "Next ›" }).count()) await page.getByRole("button", { name: "Next ›" }).click();
+  await page.getByRole("button", { name: "Let's go!" }).click();
+  await waitStep(page, "Wood and stone");
+  await shot(page, "06-step-build", kind, { wait: 1500 });
+  if (mobile) {
+    // the phone run only checks the guide's layout; the full flow is timed on desktop
+    await page.getByRole("button", { name: "Hide guide" }).click();
+    await shot(page, "07-guide-minimized", kind, { wait: 400 });
+    hf(`test-account ${name}`);
+    return;
+  }
+  // 1. lumber camp (with room for a forge right beside it) and a quarry
+  const lc = await freeSpot(page, "lumber_camp", [27, 21], { key: "forge", dx: 3, dy: 0 });
+  await placeViaUI(page, kind, "lumber_camp", "Lumber Camp", lc[0], lc[1]);
+  const q = await freeSpot(page, "quarry", [20, 27]);
+  await placeViaUI(page, kind, "quarry", "Quarry", q[0], q[1]);
+  await waitStep(page, "Get your hands dirty");
+  mark("built camp + quarry");
+  // 2. chop trees
+  await enterAvatar(page);
+  await shot(page, "08-explore-step", kind, { wait: 500 });
+  for (let i = 0; i < 8 && (await guideTitle(page)) === "Get your hands dirty"; i++) {
+    await chop(page, "tree", { mouse: true, ms: 1500 });
+  }
+  await waitStep(page, "Slime trouble", 30000);
+  mark("chopped wood");
+  // 3. two slimes
+  const radii = [62, 52, 72, 44, 82, 58, 68, 48, 78, 62, 52, 72];
+  for (let i = 0; i < radii.length && (await guideTitle(page)) === "Slime trouble"; i++) {
+    const m = await findMonster(page, 3000);
+    const me = await page.evaluate(() => { const c = window.__hfGame.avatar.client; return [c.me.x.toFixed(1), c.me.y.toFixed(1), window.__hfGame.avatar.client.ents.size]; });
+    console.log(`[${kind}] slime hunt ${i}: me=${me} monster=${m ? `${m.key}@${m.x.toFixed(1)},${m.y.toFixed(1)} d=${m.d.toFixed(1)}` : "none"}`);
+    if (m) {
+      // path around the trees first; the fight autopilot only charges in a straight line
+      await Promise.race([walk(page, Math.floor(m.x), Math.floor(m.y)), page.waitForTimeout(6000)]);
+      await page.evaluate(() => window.__hfGame.devFight(8000));
+      await page.waitForTimeout(1500); // let the room write the kill counter
+      continue;
+    }
+    const spot = await ringSpot(page, radii[i]);
+    if (spot) await walk(page, spot[0], spot[1]);
+  }
+  await waitStep(page, "Coin for your trouble", 30000);
+  mark("slimes");
+  await shot(page, "09-step-market", kind, { wait: 400 });
+  for (let i = 0; i < 12 && (await page.evaluate(() => Boolean(window.__hfGame?.avatar))); i++) {
+    await page.keyboard.press("h"); // refused for a few seconds after a fight (combat lock)
+    await page.waitForTimeout(1500);
+  }
+  await page.waitForFunction(() => !window.__hfGame?.avatar, null, { timeout: 15000 });
+  await page.waitForTimeout(1000);
+  // 4. build a market and sell something
+  const mk = await freeSpot(page, "market", [16, 14]);
+  await placeViaUI(page, kind, "market", "Market", mk[0], mk[1]);
+  await page.waitForTimeout(11000);
+  await page.getByRole("button", { name: "Market", exact: true }).click();
+  await page.locator(".sell-box").getByRole("button", { name: /^Sell / }).click();
+  await page.keyboard.press("Escape");
+  await waitStep(page, "Buildings that work together", 20000);
+  mark("sold");
+  // 5. the forge beside the lumber camp: the combo
+  await placeViaUI(page, kind, "forge", "Forge", lc[0] + 3, lc[1]);
+  await page.getByText("Combo discovered!").first().waitFor({ timeout: 30000 });
+  await shot(page, "10-discovery", kind, { wait: 600 });
+  await page.getByRole("button", { name: "Amazing!" }).click();
+  await waitStep(page, "Your first spear", 20000);
+  mark("combo");
+  // 6. forge a spear
+  const fc = await tapTile(page, lc[0] + 4.5, lc[1] + 1.5);
+  await page.mouse.click(fc.x, fc.y);
+  await page.getByRole("button", { name: /^Craft/ }).click();
+  await page.getByRole("button", { name: /Forge!/ }).click();
+  await page.waitForTimeout(6000);
+  await page.getByRole("button", { name: /Collect/ }).click();
+  await page.getByText("Fresh from the forge").waitFor();
+  await page.getByRole("button", { name: "Nice!" }).click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await waitStep(page, "You're a natural", 20000);
+  mark("spear");
+  await shot(page, "11-done", kind, { wait: 1800 });
+  await page.getByRole("button", { name: "Thanks, Juniper!" }).click();
+  await page.locator(".guide-card").waitFor({ state: "detached" });
+  const total = Math.round((Date.now() - tStart) / 1000);
+  times.total_tutorial_s = total;
+  writeFileSync(join(OUT, "e2e-timings.json"), JSON.stringify(times, null, 2));
+  console.log(`[${kind}] tutorial finished in ${total}s`);
+  if (total >= 300) throw new Error(`tutorial took ${total}s (budget 300s)`);
+
+  // the away card: snapshot as if we'd left 3 hours ago
+  hf(`test-account ${name}`);
+  await page.goto("about:blank"); // leaving closes the socket, which snapshots the village
+  await page.waitForTimeout(1500);
+  hf(`fast-forward ${name} 3h`);
+  await page.goto(`${BASE}/play`);
+  await page.getByText("While you were away").waitFor({ timeout: 15000 });
+  await shot(page, "12-away-card", kind, { wait: 700 });
 };
 
 const browser = await playwright.chromium.launch();

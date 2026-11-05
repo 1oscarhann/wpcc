@@ -5,6 +5,7 @@ import { PLACEMENT_TEXT, localPlacementError } from "../../game/placement";
 import { itemName, STATION_KEYS } from "../../game/items";
 import { enterAvatar } from "../../net/room";
 import { useMarket } from "../../state/market";
+import { useTutorial } from "../../state/tutorial";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
@@ -214,7 +215,7 @@ function SelectionPanel({ v, b, now }: { v: VillageState; b: BuildingState; now:
           </button>
         )}
         {STATION_KEYS.has(b.key) && b.level >= 1 && (
-          <button className="btn gold small" onClick={() => useCrafting.getState().set({ stationId: b.id })}>
+          <button className="btn gold small" onClick={() => useCrafting.getState().set({ stationId: b.id })} data-tut-target="craft">
             <Icon name="anvil" scale={1.5} /> Craft
             {v.jobs.some((j) => j.station_id === b.id && j.kind === "gear" && j.completes_at_ms <= now) && " (ready!)"}
           </button>
@@ -310,7 +311,8 @@ function ClearHint({ v }: { v: VillageState }) {
       }
     }
   }, [v.debris.length, startCount, seen]);
-  if (seen || v.debris.length === 0) return null;
+  const tutorial = useTutorial((s) => s.tut?.active);
+  if (seen || v.debris.length === 0 || tutorial) return null; // Juniper does the talking for now
   return (
     <div className="hud-hint hud-bar small">
       <Icon name="demolish" scale={1.5} /> Tap trees, rocks and bushes on your land to clear them for wood, stone and food.
@@ -346,13 +348,13 @@ export function BuildHud({ onSettings, touch, onZoom }: {
           <SelectionPanel v={v} b={selected} now={now} />
         ) : (
           <div className="row hud-actions">
-            <button className="btn gold" onClick={() => setMenu(true)} aria-label="Build">
+            <button className="btn gold" onClick={() => setMenu(true)} aria-label="Build" data-tut-target="build">
               <Icon name="build" /> Build
             </button>
             <button className="btn secondary" onClick={() => useCrafting.getState().set({ bookOpen: true })} aria-label="Recipe Book" title="Recipe Book">
               <Icon name="book" /> <span className="hide-narrow">Recipes</span>
             </button>
-            <button className="btn secondary" onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant">
+            <button className="btn secondary" onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant" data-tut-target="market">
               <Icon name="market" /> <span className="hide-narrow">Market</span>
             </button>
             <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag and bank" title="Bag and bank">
@@ -368,7 +370,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
               <button className="btn secondary small icon-only" onClick={() => onZoom(-1)} aria-label="Zoom out">−</button>
               <button className="btn secondary small icon-only" onClick={() => onZoom(1)} aria-label="Zoom in">+</button>
             </div>
-            <button className="btn gold" onClick={enterAvatar} aria-label="Explore" title="Step outside as your hero">
+            <button className="btn gold" onClick={enterAvatar} aria-label="Explore" title="Step outside as your hero" data-tut-target="explore">
               <Icon name="avatar" /> <span className="hide-narrow">Explore</span>
             </button>
           </div>

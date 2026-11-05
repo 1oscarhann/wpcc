@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from hearthforge.db.models import Avatar, AvatarLocation, DeathDrop, ItemInstance, NodeHarvest
 from hearthforge.realtime.protocol import EV
-from hearthforge.services import inventory, ledger
+from hearthforge.services import inventory, ledger, stats
 from hearthforge.services import village as village_svc
 
 if TYPE_CHECKING:
@@ -103,6 +103,12 @@ async def flush_player(room: RealmRoom, p: Player, ops: Pending) -> FlushResult:
                 av.realm_id = room.realm_id
                 av.location = AvatarLocation.wild
                 av.updated_at = now
+        if ops.stats:
+            await stats.bump(s, p.user_id, ops.stats)
+        if ops.fog or ops.waystones:
+            from hearthforge.services import world as world_svc
+
+            await world_svc.persist_room_progress(s, room, p, ops)
         if ops.harvests:
             rows = [
                 {

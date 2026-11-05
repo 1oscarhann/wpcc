@@ -1,0 +1,25 @@
+# Co-op rules (Phase 9). Gifts, likes and visits (P4) join in Phase 15.
+
+realm:
+  max_members: 10                  # one per plot on the ring
+  name_min: 3
+  name_max: 24
+
+stash:                             # the shared realm stash (P3: nobody can just empty it)
+  capacity: 60
+  newcomer_deposit_only: 48h       # members in their first 48 h can only deposit
+  untrusted_daily_value: 400       # coins' worth an untrusted member may take out per UTC day
+  default_item_value: 10           # per unit, for items the market doesn't price
+  gear_value_per_tier: 60          # forged gear counts as tier × this
+
+party:
+  max_size: 4
+  xp_share_radius: 16              # tiles: party members this close to a kill get its XP too
+  invite_ttl: 60s
+
+fog:
+  reveal_radius: 2                 # chunks around your avatar that get revealed (5×5 = 80 tiles across)
+
+waystone:
+  attune_radius: 2.5               # walk this close to attune a waystone
+  use_radius: 2.5                  # and this close to travel from one

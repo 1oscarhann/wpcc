@@ -1764,6 +1764,9 @@
   "obj.tall_grass.1": {
    "atlas": "world"
   },
+  "obj.waystone.0": {
+   "atlas": "world"
+  },
   "obj.web.0": {
    "atlas": "world"
   },

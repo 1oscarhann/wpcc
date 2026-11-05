@@ -11,6 +11,8 @@ import { Bag } from "../hud/Bag";
 import { CraftPanel, DiscoveryCard, RecipeBook, RevealCard } from "../hud/Crafting";
 import { BuildHud } from "../hud/BuildHud";
 import { MarketPanel, MerchantPanel } from "../hud/Market";
+import { AwayCardModal, Guide } from "../hud/Guide";
+import { useTutorial } from "../../state/tutorial";
 import { useMarket } from "../../state/market";
 import { Panel } from "../components/kit";
 import { SettingsModal } from "./Settings";
@@ -70,6 +72,10 @@ export function PlayScreen() {
   const crafting = useCrafting();
   const market = useMarket();
   useVillageSync(me.user.id);
+  useEffect(() => {
+    void useTutorial.getState().load();
+    void useTutorial.getState().loadAway();
+  }, []);
 
   useEffect(() => {
     if (!host.current || !village || game.current) return;
@@ -112,6 +118,8 @@ export function PlayScreen() {
       {crafting.stationId && <CraftPanel stationId={crafting.stationId} onClose={() => crafting.set({ stationId: null })} />}
       {mode === "build" && market.marketOpen && <MarketPanel onClose={() => market.set({ marketOpen: false })} />}
       {mode === "avatar" && market.merchantOpen && <MerchantPanel onClose={() => market.set({ merchantOpen: false })} />}
+      {village && <Guide />}
+      <AwayCardModal />
       <DiscoveryCard />
       <RevealCard />
       {settings && <SettingsModal onClose={() => setSettings(false)} />}

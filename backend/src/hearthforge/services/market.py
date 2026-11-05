@@ -369,6 +369,9 @@ async def sell(
     await ledger.change_coins(
         session, ld.wallet, pay.coins, ledger.MARKET_SELL, ref_type="market", ref_id=key
     )
+    from hearthforge.services import stats
+
+    await stats.bump(session, user_id, {f"sell.{key}": qty, "sell.any": qty, "sell.coins": pay.coins})
     bucket = dom.bucket_start(now, m.recalc_interval)
     stmt = insert(MarketSalesBucket).values(item_key=key, bucket_start=bucket, units=qty)
     await session.execute(

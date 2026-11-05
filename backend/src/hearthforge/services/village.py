@@ -880,6 +880,13 @@ async def fast_forward(session: AsyncSession, user_id: uuid.UUID, seconds: float
     village = (
         await session.execute(select(Village).where(Village.user_id == user_id).with_for_update())
     ).scalar_one()
+    from hearthforge.db.models import User
+
+    user = await session.get(User, user_id, with_for_update=True)
+    if user is not None and user.away_snapshot:  # the away card should see the skipped time too
+        snap = dict(user.away_snapshot)
+        snap["at_ms"] = int(snap["at_ms"]) - int(seconds * 1000)
+        user.away_snapshot = snap
     await session.execute(
         update(Resource)
         .where(Resource.village_id == village.id)

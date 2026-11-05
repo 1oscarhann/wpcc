@@ -701,3 +701,80 @@ class MerchantCfg(Strict):
     spots: list[tuple[int, int]] = Field(min_length=1)
     greetings: list[str] = Field(min_length=1)
     stock: dict[str, MerchantStock]
+
+
+# ── tutorial.yaml ────────────────────────────────────────────────────────────
+
+
+class TutorialGoal(Strict):
+    kind: Literal["confirm", "buildings", "stat", "discovery"]
+    all: list[str] = []
+    key: str | None = None
+    at_least: int = Field(default=1, ge=1)
+    combo: str | None = None
+
+
+class TutorialStep(Strict):
+    key: str
+    title: str
+    lines: list[str] = Field(min_length=1)
+    goal: TutorialGoal
+    button: str | None = None
+    highlight: Literal["build", "explore", "market", "craft", "home"] | None = None
+    reward: dict[str, int] = {}
+
+
+class GuideCfg(Strict):
+    name: str
+    look: Appearance
+
+
+class AwayCfg(Strict):
+    min_absence: Duration
+    quips: list[str] = Field(min_length=1)
+
+
+class TutorialCfg(Strict):
+    guide: GuideCfg
+    away: AwayCfg
+    steps: list[TutorialStep] = Field(min_length=1)
+
+
+# ── social.yaml ──────────────────────────────────────────────────────────────
+
+
+class RealmRules(Strict):
+    max_members: int = Field(ge=2, le=10)
+    name_min: int = Field(ge=1)
+    name_max: int = Field(le=40)
+
+
+class StashRules(Strict):
+    capacity: int = Field(ge=1, le=255)
+    newcomer_deposit_only: Duration
+    untrusted_daily_value: int = Field(ge=0)
+    default_item_value: int = Field(ge=0)
+    gear_value_per_tier: int = Field(ge=0)
+
+
+class PartyRules(Strict):
+    max_size: int = Field(ge=2, le=10)
+    xp_share_radius: float = Field(gt=0)
+    invite_ttl: Duration
+
+
+class FogRules(Strict):
+    reveal_radius: int = Field(ge=0, le=6)
+
+
+class WaystoneRules(Strict):
+    attune_radius: float = Field(gt=0, le=8)
+    use_radius: float = Field(gt=0, le=8)
+
+
+class SocialCfg(Strict):
+    realm: RealmRules
+    stash: StashRules
+    party: PartyRules
+    fog: FogRules
+    waystone: WaystoneRules

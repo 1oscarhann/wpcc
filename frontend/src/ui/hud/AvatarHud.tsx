@@ -8,6 +8,7 @@ import { itemIcon } from "../../game/items";
 import { Icon } from "../components/kit";
 import { Bag } from "./Bag";
 import { TradePrompt } from "./Market";
+import { useTutorial } from "../../state/tutorial";
 
 const KO_FLAG = 2;
 
@@ -166,6 +167,11 @@ function TouchControls() {
 }
 
 function FirstHint({ touch }: { touch: boolean }) {
+  const tutorial = useTutorial((s) => s.tut?.active);
+  return tutorial ? null : <FirstHintInner touch={touch} />;
+}
+
+function FirstHintInner({ touch }: { touch: boolean }) {
   const [show, setShow] = useState(() => {
     try {
       return localStorage.getItem("hf.hint.avatar") !== "1";
@@ -220,7 +226,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
           <button className="btn secondary icon-only" onClick={() => set({ bagOpen: !bagOpen })} aria-label="Bag" title="Bag (B)">
             <Icon name="queue" />
           </button>
-          <button className="btn gold" onClick={leaveAvatar} disabled={inCombat || mode === "leaving"} aria-label="Back to village"
+          <button className="btn gold" onClick={leaveAvatar} disabled={inCombat || mode === "leaving"} aria-label="Back to village" data-tut-target="home"
             title={inCombat ? "Not while fighting!" : "Back to Build Mode (H)"}>
             <Icon name="home" /> <span className="hide-narrow">Village</span>
           </button>

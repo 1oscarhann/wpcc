@@ -1,5 +1,5 @@
 # Realm map generation (PLAN §2.6). Bump `version` whenever output would change for an existing seed.
-version: 2
+version: 3            # v3 (Phase 9): waystones with small clearings around them
 map_size: 768          # tiles per side
 chunk_size: 16
 hub_radius: 18

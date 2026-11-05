@@ -22,6 +22,18 @@ router = APIRouter()
 MAX_MSGS_PER_SEC = 30  # everything except INPUT (pings, subscriptions, actions)
 MAX_STRIKES = 3
 MAX_INPUT_STRIKES = 25
+LIVE: dict[str, int] = {}  # user id → open sockets in this process
+
+
+async def _last_socket_closed(st: AppState, uid: uuid.UUID) -> None:
+    """Snapshot the village for the 'While you were away' card (Phase 8)."""
+    from hearthforge.services import away
+
+    try:
+        async with st.sessionmaker() as s, s.begin():
+            await away.snapshot(s, st.config, uid, st.clock.now())
+    except Exception:  # noqa: BLE001 - a missed snapshot only means no away card next time
+        log.exception("away snapshot failed for %s", uid)
 
 
 @router.websocket("/ws")
@@ -49,6 +61,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
     assert hub is not None and rooms is not None
     conn = Conn(ws, user_id)
     uid = uuid.UUID(user_id)
+    LIVE[user_id] = LIVE.get(user_id, 0) + 1
     player = None
     room = None
     window_start, count, strikes, input_strikes = time.monotonic(), 0, 0, 0
@@ -125,3 +138,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
         conn.closed = True
         hub.unsubscribe_all(conn)
         rooms.disconnected(conn)
+        LIVE[user_id] = LIVE.get(user_id, 1) - 1
+        if LIVE[user_id] <= 0:
+            LIVE.pop(user_id, None)
+            await _last_socket_closed(st, uid)
