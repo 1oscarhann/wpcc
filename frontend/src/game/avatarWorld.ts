@@ -7,6 +7,8 @@ import { ANIM, ENT, EV, type Ent, type RoomClient, type RoomEvent } from "../net
 import { currentMove } from "../sim/motion";
 import { ATK_ABILITY, ATK_HEAVY, ATK_NONE, moveLength, type MoveRule } from "../sim/rules";
 import { useSession } from "../state/session";
+import { useAvatar } from "../state/avatar";
+import { manifest } from "../assets/manifest";
 import { appearanceKey, composeAvatar, frameFor } from "./avatarComposer";
 import { safeDestroy } from "./safe";
 import { weaponSprite } from "./items";
@@ -116,7 +118,7 @@ export class AvatarWorld {
     const shadow = new Graphics().ellipse(0, 0, 5.5, 2.2).fill({ color: INK, alpha: 0.28 });
     const body = new Sprite();
     body.anchor.set(0.5, 1);
-    const weapon = new Sprite(tex(`wpn.${weaponType === "spear" ? "spear" : "sword"}`));
+    const weapon = new Sprite(tex(weaponSprite(weaponType, null, 1)));
     weapon.anchor.set(0.15, 0.5);
     weapon.visible = false;
     root.addChild(shadow, body, weapon);
@@ -178,7 +180,7 @@ export class AvatarWorld {
     v.swing?.kill();
     w.visible = true;
     const wi = local ? this.client.info.weapon : null;
-    w.texture = tex(wi ? weaponSprite(weaponType, wi.key, wi.tier) : `wpn.${weaponType === "spear" ? "spear" : "sword"}`);
+    w.texture = tex(wi ? weaponSprite(weaponType, wi.key, wi.tier) : weaponSprite(weaponType, null, 1));
     w.position.set(0, -9);
     w.alpha = 1;
     const tl = gsap.timeline({ onComplete: () => void (w.visible = false) });
@@ -202,7 +204,27 @@ export class AvatarWorld {
         .to(back, { d: 0, duration: rec, ease: "power1.inOut", onUpdate: place })
         .to(w, { alpha: 0, duration: 0.08 });
       tl.call(() => this.thrust(v, angle, mv), [], wind);
-    } else if (mv.shape === "spin") {
+    } else if (mv.shape === "shot" || mv.shape === "barrier" || mv.shape === "starfall") {
+      // draw back, release: the projectile (or wall, or stars) comes from the server
+      w.rotation = angle;
+      const at = (d: number) => ({ x: Math.cos(angle) * d, y: -9 + Math.sin(angle) * d });
+      w.position.set(at(3).x, at(3).y);
+      tl.to(w, { ...at(-2), duration: Math.max(0.05, wind), ease: "power1.out" })
+        .to(w, { ...at(4), duration: 0.06, ease: "power3.out" })
+        .to(w, { alpha: 0, duration: Math.max(0.08, rec), ease: "power1.in" });
+      if (mv.shape !== "shot") tl.call(() => this.host.sparkles(v.root.x + Math.cos(angle) * 14, v.root.y - 10 + Math.sin(angle) * 14), [], wind);
+      if (kind === ATK_HEAVY && wind > 0.3) {
+        // a charged shot: glint while you hold it
+        tl.call(() => this.host.sparkles(v.root.x, v.root.y - 12), [], wind * 0.6);
+      }
+    } else if (mv.shape === "circle" && mv.hits <= 1) {
+      // overhead slam: up, then down hard in front of you
+      w.rotation = -Math.PI / 2;
+      tl.to(w, { rotation: -Math.PI / 2 - 0.4, y: -14, duration: wind, ease: "power1.out" })
+        .to(w, { rotation: angle + 0.2, y: -6, duration: Math.max(0.06, act * 0.5), ease: "power4.in" })
+        .to(w, { alpha: 0, duration: rec, ease: "power1.in" });
+      tl.call(() => gsap.fromTo(v.body.scale, { y: 0.8 }, { y: 1, duration: 0.25, ease: "back.out(3)" }), [], wind + act * 0.5);
+    } else if (mv.shape === "spin" || mv.shape === "circle") {
       w.rotation = angle;
       tl.to(w, { rotation: angle + Math.PI * 2 * mv.hits, duration: wind + act, ease: "none" }).to(w, { alpha: 0, duration: rec });
       for (let k = 0; k < mv.hits; k++) tl.call(() => this.spinRing(v, mv), [], wind + (k * mv.interval * 50) / 1000);
@@ -262,6 +284,28 @@ export class AvatarWorld {
     }
   }
 
+  private shieldSprite: Sprite | null = null;
+
+  /** Holding F with a shield: raise it on the side you're facing. */
+  private updateShield(c: RoomClient): void {
+    const st = useAvatar.getState();
+    const show = st.blocking && st.offhand.type === "shield" && !c.ko;
+    if (!show) {
+      if (this.shieldSprite) this.shieldSprite.visible = false;
+      return;
+    }
+    if (!this.shieldSprite) {
+      this.shieldSprite = new Sprite(tex(manifest.sprites[`wpn.shield.t${st.offhand.tier ?? 1}`] ? `wpn.shield.t${st.offhand.tier ?? 1}` : "wpn.shield"));
+      this.shieldSprite.anchor.set(0.5, 0.6);
+      this.local.root.addChild(this.shieldSprite);
+    }
+    const sh = this.shieldSprite;
+    sh.visible = true;
+    sh.position.set(c.me.fx * 6, -9 + c.me.fy * 4);
+    sh.zIndex = c.me.fy < -0.3 ? -1 : 2;
+    sh.scale.x = c.me.fx < -0.2 ? -1 : 1;
+  }
+
   private afterimage(v: AvatarView): void {
     if (!v.body.texture || v.body.texture === Texture.EMPTY) return;
     const g = new Sprite(v.body.texture);
@@ -288,6 +332,7 @@ export class AvatarWorld {
       this.local.ghostCd = 40;
     }
     if ((c.flags & 1) !== 0 && c.me.dodge === 0) this.local.body.alpha = Math.floor(this.time / 80) % 2 ? 0.45 : 1;
+    this.updateShield(c);
     // the swing animation can't outlive the predicted attack (e.g. a dodge cancelled it)
     if (c.me.atk === ATK_NONE && this.local.swing && this.local.swing.progress() < 0.6 && c.me.dodge > 0) {
       this.local.swing.kill();

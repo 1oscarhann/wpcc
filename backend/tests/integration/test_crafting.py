@@ -50,7 +50,7 @@ async def test_discover_forge_and_upkeep(
     assert [c["key"] for c in v["combos"]] == ["forge_lumber"] and v["combos"][0]["tier"] == 1
     book = (await client.get("/api/crafting/book")).json()
     found = next(c for c in book["combos"] if c["discovered"])
-    assert found["name"] == "Spearwright" and found["unlocks"] == ["spear"]
+    assert found["name"] == "Spearwright" and found["unlocks"] == ["spear", "bow"]
 
     # the station offers a copper spear; add an ironbark for luck and a guaranteed modifier
     opts = (await client.get(f"/api/crafting/stations/{forge['id']}")).json()
@@ -142,7 +142,7 @@ async def test_preview_names_discovered_combos_and_cancel_refunds(
     assert r.status_code == 200, r.text
     assert r.json()["village"]["combos"] == []
     r = await client.get(f"/api/village/preview?key=lumber_camp&x=30&y=12&move_id={lc['id']}")
-    assert r.json()["combos"] == [{"key": "forge_lumber", "name": "Spearwright", "unlocks": ["spear"]}]
+    assert r.json()["combos"] == [{"key": "forge_lumber", "name": "Spearwright", "unlocks": ["spear", "bow"]}]
     assert r.json()["mystery"] == 0
     # no combo, no spear
     r = await client.post("/api/crafting/jobs", json={"station_id": forge["id"], "recipe": "spear"})
@@ -156,3 +156,49 @@ async def test_preview_names_discovered_combos_and_cancel_refunds(
     r = await client.post(f"/api/crafting/jobs/{job['id']}/cancel")
     assert r.status_code == 200 and r.json()["refunded"] == {"ore": 9}
     assert abs(r.json()["village"]["resources"]["ore"]["amount"] - (ore0 - 3)) < 0.01
+
+
+async def test_brew_potions_at_the_apothecary(
+    client: AsyncClient, player: dict[str, Any], st: Any, clock: Any
+) -> None:
+    """Phase 11: Alchemist + Herb Garden is the Apothecary; potions brew in batches into your bag."""
+    from hearthforge.db.models import VillageBuilding
+    from tests.integration.test_village import set_resource
+
+    async with st.sessionmaker() as s, s.begin():
+        await s.execute(
+            update(VillageBuilding).where(VillageBuilding.building_key == "town_hall").values(level=2)
+        )
+    for k, n in (("wood", 900), ("stone", 900), ("herbs", 300)):
+        await set_resource(st, k, n)
+    assert (await place(client, "alchemist", 27, 12)).status_code == 200
+    assert (await place(client, "herb_garden", 29, 12)).status_code == 200
+    clock.advance(11)
+    v = await get_village(client)
+    assert "alchemist_herb" in v["discovered"]
+    alc = by_key(v, "alchemist")[0]
+    opts = (await client.get(f"/api/crafting/stations/{alc['id']}")).json()
+    brews = {b["recipe"]: b for b in opts["consumables"]}
+    assert set(brews) == {"small_healing_potion", "healing_potion", "stamina_potion"}
+    assert brews["healing_potion"]["needs_tier"] == 3 and brews["small_healing_potion"]["needs_tier"] is None
+    assert [i["recipe"] for i in opts["intermediates"]] == ["potion_base"]
+
+    r = await client.post(
+        "/api/crafting/jobs", json={"station_id": alc["id"], "recipe": "healing_potion", "quantity": 1}
+    )
+    assert r.json()["error"]["code"] == "tier_too_low"
+    await set_resource(st, "potion_base", 10)
+    r = await client.post(
+        "/api/crafting/jobs", json={"station_id": alc["id"], "recipe": "small_healing_potion", "quantity": 3}
+    )
+    assert r.status_code == 200, r.text
+    job = r.json()["job"]
+    assert (await client.post(f"/api/crafting/jobs/{job['id']}/collect")).json()["error"][
+        "code"
+    ] == "not_ready"
+    clock.advance(13)
+    r = await client.post(f"/api/crafting/jobs/{job['id']}/collect")
+    assert r.status_code == 200, r.text
+    assert r.json()["item"]["item"] == "small_healing_potion" and r.json()["item"]["quantity"] == 3
+    slots = (await client.get("/api/inventory")).json()["inventory"]["slots"]
+    assert any(sl["item"] == "small_healing_potion" and sl["qty"] == 3 for sl in slots)

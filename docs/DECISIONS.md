@@ -407,3 +407,66 @@ The card clears on acknowledge. Fast-forward ages the snapshot too, so test acco
 
 ### D-078: dev teleport
 **Decision.** `POST /api/dev/teleport {x, y}` exists only when `HF_ENV=dev`. It moves your avatar to the nearest open tile, heals you and gives 10 s of i-frames. It's for screenshots and playtesting the far rings. In any other environment it returns 404.
+
+## Phase 11: the full weapon roster
+
+### D-079: per-player movement rules instead of new Motion fields
+**Decision.** Plate armour (−5% speed, −10% dodge distance), swift food (+8% speed) and the stamina potion (×1.5 regen) change *your* movement.
+- **How.** The shared Motion state and the golden vectors stay untouched. The server keeps a per-player copy of the rules (`rules.scaled`: three multiplications of `speed_tick`, `dodge_step` and `st_regen`) and sends the three multipliers as `MOVE_MODS`. The client rebuilds the identical object with the same multiplications, so prediction stays bit-exact.
+- **Cost.** A buff starting or ending mispredicts for at most one round trip, which reconciliation smooths out.
+
+### D-080: one move schema for every weapon
+**Decision.** Light, heavy and ability moves share one schema. The shapes are `arc`, `line`, `circle` (around you, with `hits`/`interval` repeats), `shot` (projectiles with `speed`, `pierce`, `aoe`, `homing`, `count`/`spread` fans), `starfall` and `barrier`.
+- **Client.** It only ever needs the timings, dash and costs for prediction. Everything else is server-side, plus a `sprite`/`impact` hint for visuals.
+- **Weapon behaviour.**
+  - **Hammers and maces:** slam in circles; their quakes stun (elites take 40%).
+  - **Bows:** fan volleys and fire charged piercing shots.
+  - **Crystal staff:** bursting orbs, plus a crystal wall that eats monster shots.
+  - **Harpoon:** pulls monsters in, never past you.
+  - **Arcane bow:** homes and calls down starfall.
+- **Spear throw** is now just a `shot`.
+
+### D-081: monster statuses
+**Decision.** Burn and poison deal a share of the hit that applied them, as damage over time (poison stacks ×3). Slow is ×0.65 speed. Stun freezes the AI and breaks a wind-up.
+- **Kill credit.** Damage over time ticks once a second and credits whoever applied it, so a burn that finishes a monster still gives you the kill.
+- **Sources.** Weapon moves (`status` + `proc`), the tome, and the Phase 10 rare materials as forging modifiers: Venom (swamp venom), Frost (frost shard), Fire (ember core) and Lifesteal (moonpetal). Chain Lightning arrives with Ancient Runes.
+
+### D-082: offhands on F (P19)
+**Decision.** A new input bit (`offhand`, 32). All offhand work is server-side, so no prediction changes.
+- **Shield.** Always adds defence by tier. Holding F with no attack or dodge running blocks 60% of a frontal hit (120° cone) for 10 stamina; the hit shows "blocked!".
+- **Barrel Bombs.** Lob 3.5 tiles (stopping at walls), 1.2 s fuse, 45 damage in r2. Three charges that refill one by one, every 6 s.
+- **Elemental Tome.** A homing spell every 7 s. Its element comes from the rare material forged into it (frost slows, venom poisons, anything else burns).
+- **State.** Charges and cooldowns reach the HUD as `OFFHAND` events.
+
+### D-083: consumables brew at stations; quick-slots 1–4
+**Decision.** Potions and food are combo-unlocked recipes like gear, brewed in batches and collected into your bag (`kind = consumable`). The healing potion needs the Apothecary at level 3.
+- **Quick-slots.** Equipment slots 4–7 are quick-slots used with 1–4 (`USE_QUICK`). R still drinks the first healing potion.
+- **Cooldowns.** Shared per group: potions 8 s, stamina 15 s. Only one food buff at a time.
+- **Display.** Buffs show as chips under the minimap.
+
+### D-084: the thirteen combos
+**Decision.** Three new buildings (Alchemist at TH2, Wizard Tower and Tavern at TH3) complete the 13 combos from BALANCE §5.4–5.6. Bread (Tavern) and potion base (Alchemist) are new intermediates.
+
+| Combo | Buildings | Unlocks |
+|---|---|---|
+| Spearwright | forge + lumber camp | spear, bow |
+| Bladesmith | forge + mine | sword, shield |
+| Hammerhall | forge + quarry | warhammer, mace |
+| Crystalcutter | wizard tower + quarry | crystal staff |
+| Runesmith | forge + wizard tower | enchanted sword |
+| Harpooner | fishing dock + forge | harpoon |
+| Starbow Loft | forge + lumber camp + wizard tower | arcane bow |
+| Powder Cellar | tavern + workshop | barrel bombs |
+| Grimoire Garden | wizard tower + alchemist + herb garden | elemental tome |
+| Apothecary | alchemist + herb garden | potions |
+| Hearth Kitchen | alchemist + farm | stew, porridge, tart |
+| Leatherworks | tannery + workshop | leather armour |
+| Armoury | forge + mine + tannery | plate armour |
+
+- **Legendary.** The arcane bow and tome (both 3-combos) are Legendary-eligible.
+- **Arcane bow copper bill.** The arcane bow got a copper bill after all (a 3-combo at level 1 is tier 1).
+
+### D-085: `LOADOUT` and the dev kit
+**Decision.**
+- **`LOADOUT`.** Equipping over REST now sends the room client a `LOADOUT` event (weapon, offhand, defence), so the predictor switches movesets and the HUD updates without a reload.
+- **Dev kit.** `POST /api/dev/kit` exists only when `HF_ENV=dev`. It sets the Town Hall level, fills storage and hands you one of every weapon and offhand plus potions, for playtests and screenshots.

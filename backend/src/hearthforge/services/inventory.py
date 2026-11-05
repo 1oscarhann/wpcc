@@ -337,14 +337,40 @@ async def loadout(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) ->
             "modifiers": inst.modifiers if inst else [],
         }
     armour = 0
+    armour_key: str | None = None
     a = eq.slots.get(2)
     if a is not None and a.instance_id and a.item_key in cfg.forging.armour:
         ainst = await session.get(ItemInstance, a.instance_id)
         if ainst is not None:
             armour = cfg.forging.armour[a.item_key][ainst.tier - 1]
+            armour_key = a.item_key
+    offhand: dict[str, Any] = {}
+    o = eq.slots.get(1)
+    if o is not None and o.instance_id:
+        oit = cfg.items_cfg.items.get(o.item_key)
+        oinst = await session.get(ItemInstance, o.instance_id)
+        if oit is not None and oinst is not None and oit.offhand_type:
+            offhand = {
+                "key": o.item_key,
+                "type": oit.offhand_type,
+                "tier": oinst.tier,
+                "rarity": oinst.rarity.value,
+                "instance_id": str(oinst.id),
+                "modifiers": oinst.modifiers,
+            }
+            if oit.offhand_type == "shield":  # a shield's defence counts all the time (P19)
+                armour += cfg.combat.offhands.shield.defence[oinst.tier - 1]
     quick = {s.slot: [s.item_key, s.quantity] for s in eq.slots.values() if 4 <= s.slot < 8}
     stacks = [[s.slot, s.item_key, s.quantity, s.instance_id is not None] for s in inv.slots.values()]
-    return {"weapon": weapon, "armour": armour, "quick": quick, "inv": stacks, "inv_capacity": inv.c.capacity}
+    return {
+        "weapon": weapon,
+        "armour": armour,
+        "armour_key": armour_key,
+        "offhand": offhand,
+        "quick": quick,
+        "inv": stacks,
+        "inv_capacity": inv.c.capacity,
+    }
 
 
 # ── gear upkeep (Phase 6) ────────────────────────────────────────────────────

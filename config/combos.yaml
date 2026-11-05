@@ -6,12 +6,12 @@ combos:
   forge_lumber:
     name: Spearwright
     buildings: [forge, lumber_camp]
-    unlocks: [spear]
+    unlocks: [spear, bow]
     hint: Something that burns, beside something that grows tall.
   forge_mine:
     name: Bladesmith
     buildings: [forge, mine]
-    unlocks: [sword]
+    unlocks: [sword, shield]
     hint: Fire, right beside the dark where metal sleeps.
   tannery_workshop:
     name: Leatherworks
@@ -24,3 +24,51 @@ combos:
     unlocks: [plate_armour]
     legendary_eligible: true
     hint: Fire, ore and leather, all touching.
+  # Phase 11: the rest of the thirteen
+  forge_quarry:
+    name: Hammerhall
+    buildings: [forge, quarry]
+    unlocks: [warhammer, mace]
+    hint: Fire beside the place where stone is broken.
+  wizard_quarry:
+    name: Crystalcutter
+    buildings: [wizard_tower, quarry]
+    unlocks: [crystal_staff]
+    hint: A tower of study, leaning on raw stone.
+  forge_wizard:
+    name: Runesmith
+    buildings: [forge, wizard_tower]
+    unlocks: [enchanted_sword]
+    hint: Where the anvil rings, let a scholar listen.
+  dock_forge:
+    name: Harpooner
+    buildings: [fishing_dock, forge]
+    unlocks: [harpoon]
+    hint: Hot iron, cooled in the same water the fish swim in.
+  forge_lumber_wizard:
+    name: Starbow Loft
+    buildings: [forge, lumber_camp, wizard_tower]
+    unlocks: [arcane_bow]
+    legendary_eligible: true
+    hint: Fire, tall timber and a tower, all touching.
+  tavern_workshop:
+    name: Powder Cellar
+    buildings: [tavern, workshop]
+    unlocks: [barrel_bombs]
+    hint: Barrels from the bar, tools from the bench.
+  wizard_alchemist_herb:
+    name: Grimoire Garden
+    buildings: [wizard_tower, alchemist, herb_garden]
+    unlocks: [elemental_tome]
+    legendary_eligible: true
+    hint: A tower, a brewer and a garden, all touching.
+  alchemist_herb:
+    name: Apothecary
+    buildings: [alchemist, herb_garden]
+    unlocks: [small_healing_potion, healing_potion, stamina_potion]
+    hint: The brewer wants fresh leaves within reach.
+  alchemist_farm:
+    name: Hearth Kitchen
+    buildings: [alchemist, farm]
+    unlocks: [warrior_stew, guard_porridge, swift_tart]
+    hint: A brewer next to the fields cooks something hearty.

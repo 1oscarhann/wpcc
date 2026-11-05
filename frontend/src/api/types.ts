@@ -43,7 +43,18 @@ export interface ConfigBundle {
   };
   resources: Record<string, { name: string; kind: string; icon: string }>;
   hud_order: string[];
-  items: Record<string, { name: string; category: string; stackable: boolean; icon: string }>;
+  items: Record<
+    string,
+    {
+      name: string;
+      category: string;
+      stackable: boolean;
+      icon: string;
+      weapon_type?: string;
+      offhand_type?: string;
+      use?: { heal: number; stamina: number; regen: number; buff: string | null; value: number; duration: number; cooldown: number; group: string };
+    }
+  >;
   buildings: Record<string, BuildingDef>;
   avatar: {
     creator: {
@@ -70,11 +81,16 @@ export interface ConfigBundle {
   debris: Record<string, { sprites: string[]; yields: Record<string, number> }>;
   sim: unknown; // sim/rules.ts Rules
   nodes: Record<string, { objects: string[]; biome: string | null; hits: number; yields: Record<string, [number, number]>; sound: string }>;
-  combat: { combat_lock_s: number; weapons: Record<string, { ability: string; ability_cd_s: number }> };
+  combat: {
+    combat_lock_s: number;
+    weapons: Record<string, { ability: string; ability_cd_s: number }>;
+    offhands: { shield: { block: number }; bombs: { charges: number; recharge_s: number }; tome: { cooldown_s: number } };
+  };
   enemies: Record<string, { name: string; elite_name: string; archetype: string; radius: number }>;
   recipes: {
     intermediates: Record<string, { station: string; inputs: Record<string, number>; seconds_per_unit: number; max_batch: number }>;
     gear: Record<string, { station: string }>;
+    consumables: Record<string, { station: string }>;
   };
   forging: {
     tiers: { name: string; durability: number }[];
@@ -166,7 +182,7 @@ export interface ActiveCombo {
 export interface CraftJobView {
   id: string;
   station_id: string;
-  kind: "intermediate" | "gear";
+  kind: "intermediate" | "gear" | "consumable";
   recipe: string;
   quantity: number;
   tier: number | null;

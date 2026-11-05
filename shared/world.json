@@ -13,7 +13,7 @@
     "obj.snow_pine.", "obj.ice_rock.", "obj.frost_spire.", "obj.charred_tree.", "obj.obsidian.", "obj.lava_vent.",
     "obj.ruins.", "obj.chest.", "obj.shrine.", "obj.lore_stone.", "obj.cave.", "obj.trader."
   ],
-  "buttons": { "light": 1, "heavy": 2, "ability": 4, "dodge": 8, "potion": 16 },
+  "buttons": { "light": 1, "heavy": 2, "ability": 4, "dodge": 8, "potion": 16, "offhand": 32 },
   "input_max": 127,
   "deadzone2": 0.0016
 }

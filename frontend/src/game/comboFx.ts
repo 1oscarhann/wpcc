@@ -124,6 +124,7 @@ export class ComboFx {
     this.moteCd -= dms;
     const spawn = this.moteCd <= 0;
     if (spawn) this.moteCd = 140;
+    const placed: { x: number; y: number; w: number; h: number }[] = [];
     for (const c of v.combos) {
       const ss = this.comboSeams(c, v);
       const id = `${c.key}:${c.buildings.join(",")}`;
@@ -135,7 +136,17 @@ export class ComboFx {
         const cx = ((x0 + x1) / 2) * T;
         const top = Math.min(...tops.map((t) => t!.top), y0 * T);
         const p = this.host.toScreen(cx, top - 8);
-        label.position.set(Math.round(p.x), Math.round(p.y));
+        // combos that share a building would print on top of each other: stack them
+        let y = p.y;
+        const w = label.width;
+        const h = label.height + 2;
+        for (let guard = 0; guard < 6; guard++) {
+          const hit = placed.find((o) => Math.abs(o.x - p.x) < (o.w + w) / 2 && Math.abs(o.y - y) < h);
+          if (!hit) break;
+          y = hit.y - h;
+        }
+        placed.push({ x: p.x, y, w, h });
+        label.position.set(Math.round(p.x), Math.round(y));
         label.visible = this.host.zoom() >= 2.5;
         label.alpha = 0.85 + Math.sin(performance.now() / 500) * 0.15;
       }

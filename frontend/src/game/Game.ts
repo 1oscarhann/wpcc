@@ -619,7 +619,10 @@ export class Game {
       c.input.mx = q(touchInput.mx);
       c.input.my = q(touchInput.my);
     }
-    c.input.held = (this.mouseLight || this.keys.has("j") ? BTN.light : 0) | touchInput.held;
+    c.input.held =
+      (this.mouseLight || this.keys.has("j") ? BTN.light : 0) | (this.keys.has("f") ? BTN.offhand : 0) | touchInput.held;
+    const blocking = (c.input.held & BTN.offhand) !== 0 && useAvatar.getState().offhand.type === "shield";
+    if (blocking !== useAvatar.getState().blocking) useAvatar.getState().set({ blocking });
     c.input.latched |= touchInput.latched;
     touchInput.latched = 0;
   }
@@ -1482,7 +1485,8 @@ export class Game {
       c.input.latched |= BTN.dodge;
     } else if (k === "q") c.input.latched |= BTN.ability;
     else if (k === "k") c.input.latched |= BTN.heavy;
-    else if (k === "1" || k === "r") c.input.latched |= BTN.potion;
+    else if (k === "r") c.input.latched |= BTN.potion;
+    else if (k === "1" || k === "2" || k === "3" || k === "4") c.useQuick(Number(k) - 1);
     else if (k === "b" || k === "i" || k === "tab") {
       e.preventDefault();
       av.set({ bagOpen: !av.bagOpen });
@@ -1490,7 +1494,7 @@ export class Game {
       av.set({ bagOpen: false });
       useMarket.getState().set({ merchantOpen: false });
       useRealm.getState().set({ wildMerchant: null, lore: null });
-    } else if (k === "e" || k === "f") {
+    } else if (k === "e") {
       const m = useMarket.getState();
       const r = useRealm.getState();
       if (m.near) m.set({ merchantOpen: !m.merchantOpen });

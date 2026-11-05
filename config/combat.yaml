@@ -29,3 +29,68 @@ weapons:
     combo_window: 0ms
     heavy: { dmg: 30, windup: 220ms, active: 230ms, recover: 260ms, stamina: 30, shape: line, range: 1.7, width: 0.9, dash: 3.0, knockback: 1.5 }
     ability: { kind: throw, dmg: 26, speed: 14, range: 7, cooldown: 6s, knockback: 0.8, windup: 150ms, recover: 300ms }
+
+  # ── Phase 11: the rest of the roster (BALANCE §5.4) ────────────────────────
+  # shapes: arc · line (melee) · circle (around you; hits/interval repeat it) · shot (projectiles: speed,
+  # pierce, aoe, homing, count/spread fan) · starfall (impacts ahead of you) · barrier (a wall that eats shots)
+  warhammer:
+    light:
+      - { dmg: 26, windup: 300ms, active: 150ms, recover: 350ms, shape: arc, arc: 120, range: 1.6, knockback: 1.8 }
+    combo_window: 0ms
+    heavy: { dmg: 40, windup: 450ms, active: 150ms, recover: 400ms, stamina: 35, shape: circle, range: 2.2, knockback: 2.0, impact: slam }
+    ability: { kind: circle, dmg: 20, range: 3.5, stun: 1500ms, cooldown: 12s, windup: 300ms, recover: 450ms, knockback: 0.6, impact: quake }
+  mace:
+    light:
+      - { dmg: 19, windup: 150ms, active: 120ms, recover: 330ms, shape: arc, arc: 100, range: 1.45, knockback: 1.0 }
+      - { dmg: 19, windup: 150ms, active: 120ms, recover: 330ms, shape: arc, arc: 100, range: 1.45, knockback: 1.0 }
+    combo_window: 400ms
+    heavy: { dmg: 30, windup: 350ms, active: 150ms, recover: 350ms, stamina: 30, shape: circle, range: 1.8, knockback: 1.6, impact: slam }
+    ability: { kind: circle, dmg: 16, range: 3.0, stun: 1200ms, cooldown: 12s, windup: 300ms, recover: 400ms, knockback: 0.5, impact: quake }
+  bow:
+    light:
+      - { dmg: 9, windup: 100ms, active: 50ms, recover: 150ms, shape: shot, range: 9, speed: 14, knockback: 0.3, sprite: arrow }
+    combo_window: 0ms
+    heavy: { dmg: 28, windup: 800ms, active: 50ms, recover: 200ms, stamina: 20, shape: shot, range: 10, speed: 18, pierce: true, knockback: 0.9, sprite: arrow }
+    ability: { kind: shot, dmg: 8, range: 8, speed: 14, count: 6, spread: 50, cooldown: 10s, windup: 200ms, recover: 300ms, knockback: 0.3, sprite: arrow }
+  crystal_staff:
+    light:
+      - { dmg: 11, windup: 120ms, active: 50ms, recover: 230ms, shape: shot, range: 8, speed: 10, knockback: 0.3, sprite: crystal }
+    combo_window: 0ms
+    heavy: { dmg: 34, windup: 500ms, active: 50ms, recover: 300ms, stamina: 25, shape: shot, range: 8, speed: 8, aoe: 1.5, knockback: 1.0, sprite: orb }
+    ability: { kind: barrier, dmg: 1, range: 2.0, width: 3.0, duration: 3s, cooldown: 14s, windup: 150ms, recover: 250ms }
+  enchanted_sword:
+    light:
+      - { dmg: 11, windup: 60ms, active: 110ms, recover: 170ms, shape: arc, arc: 120, range: 1.55, knockback: 0.5, status: burn, proc: 0.15 }
+      - { dmg: 11, windup: 60ms, active: 110ms, recover: 170ms, shape: arc, arc: 120, range: 1.55, knockback: 0.5, status: burn, proc: 0.15 }
+      - { dmg: 17, windup: 90ms, active: 120ms, recover: 300ms, shape: arc, arc: 150, range: 1.75, knockback: 1.3, status: burn, proc: 0.3 }
+    combo_window: 450ms
+    heavy: { dmg: 26, windup: 250ms, active: 50ms, recover: 300ms, stamina: 25, shape: shot, range: 6, speed: 12, pierce: true, knockback: 0.8, sprite: wave, status: burn, proc: 0.5 }
+    ability: { kind: circle, dmg: 40, range: 2.5, cooldown: 10s, windup: 200ms, recover: 300ms, knockback: 1.4, status: burn, proc: 1.0, impact: burst }
+  harpoon:
+    light:
+      - { dmg: 15, windup: 110ms, active: 120ms, recover: 270ms, shape: line, range: 2.6, width: 0.7, knockback: 0.7 }
+    combo_window: 0ms
+    heavy: { dmg: 12, windup: 250ms, active: 150ms, recover: 300ms, stamina: 25, shape: line, range: 4.0, width: 0.9, pull: 2.8, knockback: 0 }
+    ability: { kind: circle, dmg: 8, range: 3.0, hits: 6, interval: 300ms, pull: 0.5, cooldown: 12s, windup: 150ms, recover: 300ms, knockback: 0, impact: whirl }
+  arcane_bow:
+    light:
+      - { dmg: 11, windup: 100ms, active: 50ms, recover: 150ms, shape: shot, range: 9, speed: 14, homing: 0.15, knockback: 0.3, sprite: arcane }
+    combo_window: 0ms
+    heavy: { dmg: 34, windup: 700ms, active: 50ms, recover: 200ms, stamina: 20, shape: shot, range: 10, speed: 18, pierce: true, knockback: 0.9, sprite: arcane, status: burn, proc: 0.5 }
+    ability: { kind: starfall, dmg: 10, range: 5, aoe: 1.3, hits: 8, interval: 150ms, cooldown: 10s, windup: 200ms, recover: 300ms, knockback: 0.4 }
+
+# Offhands go on F (P19). Shield: hold to block from the front. Bombs: tap to lob one (charges refill one
+# by one). Tome: tap to cast a homing spell; its element comes from the rare material forged into it.
+offhands:
+  shield: { defence: [6, 9, 13, 18, 24], block: 0.6, block_stamina: 10, block_arc: 120 }
+  bombs:  { dmg: 45, radius: 2.0, fuse: 1200ms, charges: 3, recharge: 6s, throw: 3.5, knockback: 1.4 }
+  tome:   { dmg: 30, cooldown: 7s, speed: 10, range: 8, homing: 0.2 }
+
+# Status effects on monsters (from weapon moves, tomes and modifiers). DoTs are a share of the hit.
+statuses:
+  burn:   { share: 0.3, duration: 3s }
+  poison: { share: 0.4, duration: 5s, stacks: 3 }
+  slow:   { mult: 0.65, duration: 2s }
+
+armour_move:                     # heavy armour slows you a little (applied through your own movement rules)
+  plate_armour: { speed: 0.95, dodge: 0.9 }

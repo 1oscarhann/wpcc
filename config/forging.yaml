@@ -19,6 +19,10 @@ max_rare_inputs: 3             # each adds +1 luck and guarantees its modifier (
 modifiers:                     # rare material → modifier it guarantees
   ironbark:  { key: heavy, name: Heavy, effect: knockback, range: [0.4, 0.8] }
   starstone: { key: keen,  name: Keen,  effect: crit,      range: [0.04, 0.10] }
+  swamp_venom: { key: venom,     name: Venom,     effect: venom,     range: [0.20, 0.35] }   # proc: poison
+  frost_shard: { key: frost,     name: Frost,     effect: frost,     range: [0.20, 0.35] }   # proc: slow
+  ember_core:  { key: fire,      name: Fire,      effect: fire,      range: [0.25, 0.40] }   # proc: burn
+  moonpetal:   { key: lifesteal, name: Lifesteal, effect: lifesteal, range: [0.03, 0.08] }   # heal % of damage
 polished: 0.03                 # an empty modifier slot: +3% damage
 
 dull_damage: 0.7               # at 0 durability (P2): −30% damage, modifiers off, never breaks

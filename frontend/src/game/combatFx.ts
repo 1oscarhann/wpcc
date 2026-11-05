@@ -43,6 +43,7 @@ interface MonsterView {
 export class CombatFx {
   private monsters = new Map<number, MonsterView>();
   private projectiles = new Map<number, Sprite>();
+  private statusTint = new Map<number, { color: number; until: number }>();
   private root: Graphics | null = null;
   private telegraphs = new Map<number, { g: Graphics; tween: gsap.core.Tween }>();
   private time = 0;
@@ -168,6 +169,8 @@ export class CombatFx {
       v.body.x = 0;
       v.body.tint = v.night ? 0xe6dcff : 0xffffff;
     }
+    const st = this.statusTint.get(ent.id);
+    if (st && st.until > this.time && s.anim !== ANIM.windup) v.body.tint = st.color;
     if (v.flash > 0) {
       v.flash -= dms;
       v.body.tint = 0xfff4d8;
@@ -193,11 +196,20 @@ export class CombatFx {
     if (!s) return;
     let sp = this.projectiles.get(ent.id);
     const monster = (s.flags & MONSTER_SHOT) !== 0;
+    const bomb = (s.flags & 2) !== 0;
     if (!sp) {
-      sp = new Sprite(tex(monster ? `fx.shot.${ent.type}` : "wpn.spear"));
-      sp.anchor.set(monster ? 0.7 : 0.6, 0.5);
+      const name = bomb ? "fx.bomb.0" : ent.type === "spear" ? "wpn.spear" : `fx.shot.${ent.type}`;
+      sp = new Sprite(tex(name));
+      sp.anchor.set(bomb ? 0.5 : monster ? 0.7 : 0.6, bomb ? 0.9 : 0.5);
       this.host.objects.addChild(sp);
       this.projectiles.set(ent.id, sp);
+      if (bomb) gsap.fromTo(sp, { y: s.y * T - 18 }, { y: s.y * T + 2, duration: 0.25, ease: "bounce.out" });
+    }
+    if (bomb) {
+      sp.texture = tex(`fx.bomb.${Math.floor(this.time / 120) % 2}`);
+      sp.x = s.x * T;
+      sp.zIndex = s.y * T + 2;
+      return;
     }
     sp.position.set(s.x * T, s.y * T - (monster ? 7 : 8));
     sp.zIndex = s.y * T + 8;
@@ -233,6 +245,22 @@ export class CombatFx {
         const [, mid, x, y, , how] = ev as [number, number, number, number, string, number];
         if (how === 2) this.fade(mid, x, y);
         else this.death(mid, x, y, (ev[4] as string) ?? "", Boolean(how));
+        break;
+      }
+      case EV.IMPACT: {
+        const [, x, y, r, kind] = ev as [number, number, number, number, string];
+        this.impact(x * T, y * T, r * T, kind);
+        break;
+      }
+      case EV.BARRIER: {
+        const [, , x0, y0, x1, y1, ms] = ev as number[];
+        this.barrier(x0 * T, y0 * T - 6, x1 * T, y1 * T - 6, ms);
+        break;
+      }
+      case EV.STATUS: {
+        const [, mid, kind] = ev as [number, number, string];
+        const color = kind === "burn" ? 0xffb07a : kind === "slow" ? 0xa6dcff : kind === "poison" ? 0xb4f08c : 0xffffff;
+        this.statusTint.set(mid, { color, until: this.time + 1200 });
         break;
       }
       case EV.ZAP: {
@@ -358,6 +386,10 @@ export class CombatFx {
       this.host.floatText(x, y, "dodged!", 0x94cdeb, 0, 14);
       return;
     }
+    if (kind === 4) {
+      this.host.floatText(x, y - 10, "blocked!", 0xf7d66a, 0, 13);
+      if (dst === c.eid) sfx("clang");
+    }
     this.host.floatText(x, y, `-${dmg}`, kind === 1 ? 0x8fc95c : 0xe2735a, 0, dst === c.eid ? 17 : 13);
     gsap.fromTo(av.body, { tint: kind === 1 ? 0x9cff9c : 0xff6a5a }, { tint: 0xffffff, duration: 0.25 });
     if (dst === c.eid) {
@@ -378,6 +410,58 @@ export class CombatFx {
       gsap.to(v.root, { y: v.root.y - 6, duration: 0.8 });
     }
     this.host.sparkles(x * T, y * T - 8);
+  }
+
+  /** Phase 11: slams, quakes, bursts, whirlpools, bomb blasts and falling stars. */
+  private impact(x: number, y: number, r: number, kind: string): void {
+    const color =
+      kind === "burst" ? 0xc993e8 : kind === "whirl" ? 0x94cdeb : kind === "boom" ? 0xffc04d : kind === "star" ? 0xfff1b0 : 0xe0cfab;
+    const g = new Graphics();
+    g.position.set(x, y);
+    g.zIndex = y + 1;
+    const ring = { r: r * 0.2, a: 0.9 };
+    const draw = () => {
+      g.clear();
+      g.ellipse(0, 0, ring.r, ring.r * 0.55).stroke({ width: kind === "quake" ? 3 : 2, color, alpha: ring.a });
+      if (kind === "boom" || kind === "star" || kind === "burst") g.ellipse(0, 0, ring.r * 0.6, ring.r * 0.33).fill({ color, alpha: ring.a * 0.35 });
+    };
+    draw();
+    this.host.objects.addChild(g);
+    const dur = kind === "whirl" ? 0.5 : kind === "quake" ? 0.55 : 0.32;
+    gsap.to(ring, { r, a: 0, duration: dur, ease: "power2.out", onUpdate: draw, onComplete: () => safeDestroy(g) });
+    if (kind === "star") {
+      const s = new Graphics().rect(-1, -40, 2, 40).fill({ color: 0xfff1b0, alpha: 0.9 });
+      s.position.set(x, y);
+      s.zIndex = y + 2;
+      this.host.objects.addChild(s);
+      gsap.fromTo(s, { y: y - 30, alpha: 1 }, { y, alpha: 0, duration: 0.18, ease: "power2.in", onComplete: () => safeDestroy(s) });
+    }
+    const me = this.world.client.me;
+    const near = (x / T - me.x) ** 2 + (y / T - me.y) ** 2 < 20 * 20;
+    if (near) {
+      if (kind === "boom" || kind === "quake") this.host.shake(kind === "boom" ? 3 : 2.5, 160);
+      else if (kind === "slam") this.host.shake(1.5, 100);
+      this.host.dust(x, y);
+      sfx(kind === "boom" ? "boom" : kind === "whirl" ? "splash" : kind === "star" ? "zap" : "slam");
+    }
+  }
+
+  /** The crystal staff's wall: shimmering until it fades. */
+  private barrier(x0: number, y0: number, x1: number, y1: number, ms: number): void {
+    const g = new Graphics();
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    g.position.set(x0, y0);
+    g.rotation = Math.atan2(y1 - y0, x1 - x0);
+    g.zIndex = Math.max(y0, y1) + 8;
+    g.rect(0, -2, len, 4).fill({ color: 0x94cdeb, alpha: 0.35 });
+    for (let i = 0; i < len; i += 5) {
+      const h = 7 + ((i * 7) % 4);
+      g.poly([i, 0, i + 2.5, -h, i + 5, 0, i + 2.5, h * 0.5]).fill({ color: 0xa6cfe6, alpha: 0.9 }).stroke({ width: 1, color: 0xd5f0fa });
+    }
+    this.host.objects.addChild(g);
+    gsap.fromTo(g.scale, { y: 0.2 }, { y: 1, duration: 0.2, ease: "back.out(3)" });
+    gsap.to(g, { alpha: 0, duration: 0.4, delay: Math.max(0, ms / 1000 - 0.4), onComplete: () => safeDestroy(g) });
+    sfx("shimmer");
   }
 
   /** Chain lightning: a jagged bolt that flickers twice. */

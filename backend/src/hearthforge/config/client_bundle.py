@@ -28,7 +28,15 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
         },
         "hud_order": cfg.resources.hud_order,
         "items": {
-            k: {"name": i.name, "category": i.category, "stackable": i.stackable, "icon": i.icon}
+            k: {
+                "name": i.name,
+                "category": i.category,
+                "stackable": i.stackable,
+                "icon": i.icon,
+                **({"weapon_type": i.weapon_type} if getattr(i, "weapon_type", None) else {}),
+                **({"offhand_type": i.offhand_type} if getattr(i, "offhand_type", None) else {}),
+                **({"use": i.use.model_dump()} if getattr(i, "use", None) else {}),
+            }
             for k, i in cfg.items.items()
         },
         "buildings": {
@@ -77,6 +85,14 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
                 k: {"ability": w.ability.kind, "ability_cd_s": w.ability.cooldown}
                 for k, w in cfg.combat.weapons.items()
             },
+            "offhands": {
+                "shield": {"block": cfg.combat.offhands.shield.block},
+                "bombs": {
+                    "charges": cfg.combat.offhands.bombs.charges,
+                    "recharge_s": cfg.combat.offhands.bombs.recharge,
+                },
+                "tome": {"cooldown_s": cfg.combat.offhands.tome.cooldown},
+            },
         },
         # Phase 6 (public parts only: combos.yaml is secret, P17)
         "recipes": {
@@ -90,6 +106,7 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
                 for k, r in cfg.recipes.intermediates.items()
             },
             "gear": {k: {"station": g.station} for k, g in cfg.recipes.gear.items()},
+            "consumables": {k: {"station": c.station} for k, c in cfg.recipes.consumables.items()},
         },
         "forging": {
             "tiers": [{"name": t.name, "durability": t.durability} for t in cfg.forging.tiers],

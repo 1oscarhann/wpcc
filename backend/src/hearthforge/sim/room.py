@@ -22,8 +22,18 @@ from typing import TYPE_CHECKING, Any
 from hearthforge.domain import worldclock
 from hearthforge.realtime.protocol import ANIM, ENT, EV, ROOM_LEFT, SELF_FLAG, encode
 from hearthforge.sim import motion as mo
+from hearthforge.sim import rules as rules_mod
 from hearthforge.sim.grid import WorldGrid
-from hearthforge.sim.rules import ATK_ABILITY, ATK_HEAVY, ATK_LIGHT, ATK_NONE, BTN_POTION, MoveRule, Rules
+from hearthforge.sim.rules import (
+    ATK_ABILITY,
+    ATK_HEAVY,
+    ATK_LIGHT,
+    ATK_NONE,
+    BTN_OFFHAND,
+    BTN_POTION,
+    MoveRule,
+    Rules,
+)
 from hearthforge.sim.stats import Stats, add_xp, stats_for, xp_to_next
 
 if TYPE_CHECKING:
@@ -182,6 +192,19 @@ class Player:
     attuned: set[int] = field(default_factory=set)  # waystones this player can travel to
     pois: dict[str, float] = field(default_factory=dict)  # POIs used: key "x,y" → epoch s (Phase 10)
     blessing: tuple[str, int] | None = None  # shrine blessing key, tick it ends
+    # Phase 11
+    offhand: dict[str, Any] = field(default_factory=dict)  # {key, type, tier, rarity, modifiers}
+    armour_key: str | None = None
+    blocking: bool = False
+    prev_buttons: int = 0
+    charges: int = 0  # bombs
+    recharge_at: int = 0  # tick the next bomb charge comes back
+    offhand_ready: int = 0  # tick the tome can cast again
+    food: tuple[str, float, int] | None = None  # buff, value, tick it ends
+    regen_until: int = 0  # stamina potion's regen boost
+    use_ready: dict[str, int] = field(default_factory=dict)  # cooldown group → tick it's ready
+    mods: tuple[float, float, float] = (1.0, 1.0, 1.0)  # speed, dodge, stamina regen
+    rules: Rules | None = None  # per-player movement rules when mods aren't all 1
     party: str | None = None  # party id (in memory, D-025)
 
     @property
@@ -377,6 +400,8 @@ class RealmRoom:
             "attack": p.stats.attack,
             "defence": p.stats.defence + p.armour,
             "weapon": p.weapon,
+            "offhand": p.offhand,
+            "mods": list(p.mods),
             "quick": {str(k): v for k, v in p.quick.items()},
             "inv": p.inv,
             "inv_capacity": p.inv_cap,
@@ -496,10 +521,11 @@ class RealmRoom:
             p.dirty.set()
 
     def step_player(self, p: Player, mx: int, my: int, ax: int, ay: int, b: int, solid: mo.Solid) -> None:
-        w = self.rules.weapons[p.w]
+        r = p.rules or self.rules
+        w = r.weapons[p.w]
         if p.rooted > 0:
             mx = my = 0  # rooted: you can still swing, aim and drink, just not walk
-        started = mo.step(p.m, mx, my, ax, ay, b, self.rules, w, solid)
+        started = mo.step(p.m, mx, my, ax, ay, b, r, w, solid)
         if started:
             p.atk_serial += 1
             p.hits_done.clear()
@@ -515,10 +541,12 @@ class RealmRoom:
                 self.resolve_attack(p, mv)
         if b & BTN_POTION:
             self.use_potion(p)
+        self.offhand_input(p, b)
+        p.prev_buttons = b
 
     @staticmethod
     def is_hit_tick(mv: MoveRule, t: int) -> bool:
-        if mv.shape == "spin":
+        if mv.hits > 1:
             k = t - mv.windup
             return 0 <= k < mv.hits * mv.interval and k % mv.interval == 0
         return t == mv.windup
@@ -530,6 +558,8 @@ class RealmRoom:
             p.potion_cd -= 1
         if p.rooted > 0:
             p.rooted -= 1
+        if t % self.hz == 0:
+            self.tick_buffs(p, t)
         if p.poison > 0:
             p.poison -= 1
             if t % self.hz == 0 and self.combat is not None:
@@ -704,7 +734,7 @@ class RealmRoom:
     def resolve_attack(self, p: Player, mv: MoveRule) -> None:
         if self.combat is not None and self.combat.player_attack(p, mv):
             return
-        if mv.shape in ("arc", "line"):
+        if mv.shape in ("arc", "line", "circle"):
             self.gather(p, mv)
 
     def in_shape(self, p: Player, mv: MoveRule, tx: float, ty: float, pad: float) -> bool:
@@ -713,7 +743,7 @@ class RealmRoom:
         reach = mv.range + pad
         if d2 > reach * reach:
             return False
-        if mv.shape in ("spin", "throw") or d2 < 1e-9:
+        if mv.shape in ("spin", "throw", "circle") or d2 < 1e-9:
             return True
         along = dx * p.m.ax + dy * p.m.ay
         if mv.shape == "line":
@@ -911,21 +941,131 @@ class RealmRoom:
         p.ev.append([EV["XP"], amount, p.level, p.xp, xp_to_next(self.cfg, p.level), gained, p.stats.hp_max])
 
     def use_potion(self, p: Player) -> None:
-        if p.potion_cd > 0 or p.ko > 0:
-            return
+        """The potion button: the first healing potion in your quick-slots."""
+        items = self.cfg.items_cfg.items
         for slot in sorted(p.quick):
-            key, qty = p.quick[slot]
-            if qty > 0 and key == "small_healing_potion":
-                heal = round(p.stats.hp_max * 0.35)
-                p.hp = min(float(p.stats.hp_max), p.hp + heal)
-                p.quick[slot] = [key, qty - 1]
-                if qty - 1 <= 0:
-                    del p.quick[slot]
-                p.pending.consumed[key] += 1
-                p.potion_cd = 8 * self.hz
-                p.ev.append([EV["HEAL"], p.eid, heal, {str(k): v for k, v in p.quick.items()}])
+            it = items.get(p.quick[slot][0])
+            if it is not None and it.use is not None and it.use.heal > 0:
+                self.use_quick(p, slot - 4)
                 return
         self.toast(p, "no_potions")
+
+    def use_quick(self, p: Player, idx: int) -> None:
+        """Quick-slot 1–4 (equipment slots 4–7): drink or eat what's there (Phase 11)."""
+        slot = 4 + idx
+        if p.ko > 0 or slot not in p.quick:
+            return
+        key, qty = p.quick[slot]
+        it = self.cfg.items_cfg.items.get(key)
+        if it is None or it.use is None or qty <= 0:
+            return
+        u = it.use
+        t = self.tick_no
+        if p.use_ready.get(u.group, 0) > t:
+            return
+        if u.heal and p.hp >= p.stats.hp_max:
+            self.toast(p, "full_hp")
+            return
+        p.use_ready[u.group] = t + int(u.cooldown * self.hz)
+        if u.group == "potion":
+            p.potion_cd = int(u.cooldown * self.hz)
+        p.quick[slot] = [key, qty - 1]
+        if qty - 1 <= 0:
+            del p.quick[slot]
+        p.pending.consumed[key] += 1
+        quick = {str(k): v for k, v in p.quick.items()}
+        if u.heal:
+            heal = round(p.stats.hp_max * u.heal)
+            p.hp = min(float(p.stats.hp_max), p.hp + heal)
+            p.ev.append([EV["HEAL"], p.eid, heal, quick])
+            return
+        if u.stamina:
+            p.m.st = min(p.m.st_max, p.m.st + p.m.st_max * u.stamina)
+            p.regen_until = t + int(u.duration * self.hz)
+        if u.buff:
+            p.food = (u.buff, u.value, t + int(u.duration * self.hz))
+        p.ev.append([EV["BUFF"], key, u.buff or "stamina", u.value, int(u.duration * 1000), quick])
+        self.recompute_mods(p)
+
+    def food(self, p: Player, stat: str) -> float:
+        f = p.food
+        return f[1] if f is not None and f[0] == stat and f[2] > self.tick_no else 0.0
+
+    def recompute_mods(self, p: Player) -> None:
+        """Plate armour, swift food and stamina potions change your own movement rules. The client gets
+        the same three numbers (MOVE_MODS) and builds identical rules, so prediction stays exact."""
+        am = self.cfg.combat.armour_move.get(p.armour_key or "")
+        speed = (am.speed if am else 1.0) * (1 + self.food(p, "speed"))
+        dodge = am.dodge if am else 1.0
+        regen = 1.5 if p.regen_until > self.tick_no else 1.0
+        mods = (speed, dodge, regen)
+        if mods != p.mods:
+            p.mods = mods
+            p.rules = rules_mod.scaled(self.rules, *mods) if mods != (1.0, 1.0, 1.0) else None
+            p.ev.append([EV["MOVE_MODS"], *mods])
+
+    def tick_buffs(self, p: Player, t: int) -> None:
+        changed = False
+        if p.food is not None and p.food[2] <= t:
+            p.food = None
+            changed = True
+        if p.regen_until and p.regen_until <= t:
+            p.regen_until = 0
+            changed = True
+        if changed:
+            self.recompute_mods(p)
+        if p.offhand.get("type") == "bombs":
+            full = self.cfg.combat.offhands.bombs.charges
+            if p.charges < full and p.recharge_at and p.recharge_at <= t:
+                p.charges += 1
+                p.recharge_at = (
+                    t + int(self.cfg.combat.offhands.bombs.recharge * self.hz) if p.charges < full else 0
+                )
+                self.offhand_state(p)
+
+    # ── offhands (Phase 11, the F key) ───────────────────────────────────────
+    def set_offhand(self, p: Player, offhand: dict[str, Any]) -> None:
+        if offhand.get("instance_id") != p.offhand.get("instance_id"):
+            p.charges = self.cfg.combat.offhands.bombs.charges if offhand.get("type") == "bombs" else 0
+            p.recharge_at = 0
+            p.offhand_ready = 0
+        p.offhand = offhand
+        self.offhand_state(p)
+
+    def offhand_state(self, p: Player) -> None:
+        ready = max(0, p.offhand_ready - self.tick_no) if p.offhand.get("type") == "tome" else 0
+        if p.offhand.get("type") == "bombs" and p.recharge_at:
+            ready = max(0, p.recharge_at - self.tick_no)
+        p.ev.append([EV["OFFHAND"], p.offhand.get("type") or "", p.charges, int(ready * 1000 / self.hz)])
+
+    def offhand_input(self, p: Player, b: int) -> None:
+        kind = p.offhand.get("type")
+        held = bool(b & BTN_OFFHAND)
+        pressed = held and not p.prev_buttons & BTN_OFFHAND
+        if kind == "shield":
+            p.blocking = held and p.m.atk == ATK_NONE and p.m.dodge == 0 and p.ko == 0
+            return
+        p.blocking = False
+        if not pressed or p.ko > 0 or self.combat is None or p.m.dodge > 0:
+            return
+        t = self.tick_no
+        if kind == "bombs":
+            if p.charges <= 0:
+                self.toast(p, "no_bombs")
+                return
+            self.combat.throw_bomb(p)
+            p.charges -= 1
+            if not p.recharge_at:
+                p.recharge_at = t + int(self.cfg.combat.offhands.bombs.recharge * self.hz)
+            p.last_combat = t
+            self.offhand_state(p)
+        elif kind == "tome":
+            if p.offhand_ready > t:
+                return
+            self.combat.cast_tome(p)
+            p.offhand_ready = t + int(self.cfg.combat.offhands.tome.cooldown * self.hz)
+            p.last_combat = t
+            self.offhand_state(p)
 
     def respawn(self, p: Player) -> None:
         p.m = mo.Motion(x=p.home_door[0], y=p.home_door[1], st=p.stats.st_max, st_max=p.stats.st_max)

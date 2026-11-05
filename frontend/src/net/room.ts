@@ -53,6 +53,8 @@ export interface RoomInfo {
   xp_next: number;
   hp_max: number;
   weapon: Weapon;
+  offhand?: { key?: string; type?: string; tier?: number };
+  mods?: [number, number, number];
   quick: Record<string, [string, number]>;
   inv: InvSlot[];
   inv_capacity: number;
@@ -76,6 +78,8 @@ const TOASTS: Record<string, string> = {
   travel_in_combat: "Not mid-fight! Shake them off first.",
   travel_not_attuned: "You haven't attuned that waystone yet. Walk up to it once.",
   travel_not_at_waystone: "Stand next to a waystone to travel.",
+  no_bombs: "Out of bombs: they come back one by one.",
+  full_hp: "You're already at full health.",
   poi_too_far: "A little closer…",
   chest_empty: "You've already emptied this chest.",
   shrine_resting: "The shrine is resting. Come back later.",
@@ -103,13 +107,15 @@ export class RoomClient {
   private base: number | null = null; // local ms of server tick 0 (smoothed)
   private listeners = new Set<(ev: RoomEvent) => void>();
   private snapshots = 0;
+  private baseRules: Rules;
 
   constructor(
     private send: Send,
     joined: unknown[],
     readonly grid: ClientGrid,
-    readonly rules: Rules,
+    public rules: Rules,
   ) {
+    this.baseRules = rules;
     const [, , tick, eid, self, info, blocks, claimed, depleted, roster] = joined as [
       number, string, number, number, number[], RoomInfo, number[][], number[], [number, number][], unknown[][],
     ];
@@ -119,6 +125,7 @@ export class RoomClient {
     this.prev = { ...this.me };
     this.hp = self[MOTION_LEN];
     this.weapon = rules.weapons[info.weapon.type] ?? rules.weapons.sword;
+    if (info.mods) this.applyMods(...info.mods);
     grid.setBlocks(blocks, claimed);
     const now = performance.now();
     for (const [nid, ms] of depleted) this.depleted.set(nid, now + ms);
@@ -138,7 +145,24 @@ export class RoomClient {
       inv: info.inv,
       invCap: info.inv_capacity,
       abCdMax: this.weapon.ability.cooldown,
+      offhand: { ...(info.offhand ?? {}), type: info.offhand?.type ?? "", charges: 0, readyAt: 0 },
+      buffs: [],
     });
+  }
+
+  /** Plate armour, swift food, stamina potions: the server's MOVE_MODS, applied with the same three
+   * multiplications it uses, so the predicted movement stays bit-identical (D-079). */
+  applyMods(speed: number, dodge: number, regen: number): void {
+    const b = this.baseRules;
+    this.rules =
+      speed === 1 && dodge === 1 && regen === 1
+        ? b
+        : { ...b, speed_tick: b.speed_tick * speed, dodge_step: b.dodge_step * dodge, st_regen: b.st_regen * regen };
+  }
+
+  /** Quick-slot 1–4 (Phase 11). */
+  useQuick(i: number): void {
+    this.send("USE_QUICK", i);
   }
 
   on(fn: (ev: RoomEvent) => void): () => void {
@@ -300,6 +324,39 @@ export class RoomClient {
       case EV.TOAST:
         toast(TOASTS[ev[1] as string] ?? String(ev[1]), "bad");
         break;
+      case EV.LOADOUT: {
+        // you equipped something: new moveset timings for the predictor, new icons for the HUD
+        const [, weapon, offhand] = ev as [number, Weapon, { key?: string; type?: string; tier?: number }];
+        this.info.weapon = weapon;
+        this.weapon = this.rules.weapons[weapon.type] ?? this.rules.weapons.sword;
+        patch.weapon = weapon;
+        patch.abCdMax = this.weapon.ability.cooldown;
+        const cur = useAvatar.getState().offhand;
+        patch.offhand = { ...cur, ...offhand, type: offhand?.type ?? "" };
+        break;
+      }
+      case EV.MOVE_MODS: {
+        const [, s, d, r] = ev as number[];
+        this.applyMods(s, d, r);
+        break;
+      }
+      case EV.OFFHAND: {
+        const [, type, charges, ms] = ev as [number, string, number, number];
+        const cur = useAvatar.getState().offhand;
+        patch.offhand = { ...cur, type, charges, readyAt: performance.now() + ms };
+        break;
+      }
+      case EV.BUFF: {
+        const [, key, kind, value, ms, quick] = ev as [number, string, string, number, number, Record<string, [string, number]>];
+        patch.quick = quick;
+        const until = performance.now() + ms;
+        const keep = useAvatar.getState().buffs.filter((b) => b.until > performance.now() && b.kind !== kind && !(kind !== "stamina" && b.kind !== "stamina"));
+        patch.buffs = [...keep, { key, kind, value, until }];
+        const name = useSession.getState().config?.items[key]?.name ?? key;
+        const what = kind === "stamina" ? "stamina refilled" : `+${Math.round(value * 100)}% ${kind}`;
+        toast(`${name}: ${what}`, "good", "star");
+        break;
+      }
       case EV.PLAYER: {
         this.addRoster(ev.slice(1));
         const r = this.roster.get(ev[1] as number);

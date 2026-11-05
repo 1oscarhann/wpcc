@@ -111,7 +111,16 @@ def salvage_returns(
 
 def weapon_effects(mods: list[dict[str, Any]], dull: bool) -> dict[str, float]:
     """Combat bonuses from modifiers (all off while Dull)."""
-    out = {"damage": 0.0, "crit": 0.0, "knockback": 0.0}
+    out = {
+        "damage": 0.0,
+        "crit": 0.0,
+        "knockback": 0.0,
+        "venom": 0.0,
+        "frost": 0.0,
+        "fire": 0.0,
+        "lifesteal": 0.0,
+        "chain": 0.0,
+    }
     if dull:
         return out
     for m in mods:

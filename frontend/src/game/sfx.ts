@@ -151,6 +151,15 @@ const SOUNDS: Record<string, (c: AudioContext, o: AudioNode, t: number) => void>
     noise(c, o, t, 1.6, 0.5, "lowpass", 260, 60, 0.7);
     noise(c, o, t + 0.15, 1.1, 0.35, "lowpass", 160, 50, 0.9);
   },
+  boom: (c, o, t) => {
+    noise(c, o, t, 0.6, 0.6, "lowpass", 900, 80, 0.8);
+    tone(c, o, "sine", 120, 40, t, 0.4, 0.2);
+  },
+  slam: (c, o, t) => {
+    noise(c, o, t, 0.25, 0.45, "lowpass", 600, 90, 1);
+    tone(c, o, "triangle", 110, 55, t, 0.2, 0.15);
+  },
+  splash: (c, o, t) => noise(c, o, t, 0.4, 0.3, "bandpass", 1600, 400, 0.7),
   shoot: (c, o, t) => noise(c, o, t, 0.14, 0.22, "bandpass", 3200, 1200, 2.5),
   zap: (c, o, t) => {
     noise(c, o, t, 0.18, 0.3, "highpass", 6000, 2500, 0.8);

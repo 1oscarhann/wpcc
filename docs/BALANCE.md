@@ -355,6 +355,35 @@ Each rare material added guarantees its modifier, up to the item's slot count. E
 
 ---
 
+### 5.8 As built (Phase 11)
+
+The live numbers are in `config/combat.yaml`. They follow §5.4 with these choices:
+
+- **Warhammer.**
+  - Light: 26 over 0.8 s, 1.8 knockback.
+  - Heavy: slam r2.2 for 40 (35 stamina).
+  - Quake: r3.5, 20 damage, 1.5 s stun (40% on elites), 12 s cooldown.
+- **Mace.** Two-hit 19s, slam r1.8 for 30, quake r3 with a 1.2 s stun.
+- **Bow.**
+  - Light: 9 at 14 tiles/s.
+  - Heavy: an 0.8 s charged 28 that pierces.
+  - Volley: 6×8 over 50°.
+- **Crystal staff.**
+  - Light: 11 bolts.
+  - Heavy: an orb of 34 that bursts r1.5.
+  - Ability: a 3-tile crystal wall that lasts 3 s.
+- **Enchanted sword.** 11/11/17 with a 15–30% burn chance, a piercing elemental wave of 26, and a burst of 40 at r2.5 that always burns.
+- **Harpoon.** Thrust 15, a heavy that yanks up to 2.8 tiles, and a whirlpool of 6×8 that pulls.
+- **Arcane bow.** Light 11 that homes slightly, a piercing charged 34, and starfall 8×10 (r1.3).
+- **Statuses.**
+  - Burn: 30% of the hit over 3 s.
+  - Poison: 40% over 5 s, stacks to 3.
+  - Slow: ×0.65 for 2 s.
+- **Offhands.** As in §5.4. Shield defence is added to armour all the time.
+- **Consumables.**
+  - Healing potions are instant, not over 1 s.
+  - Food buffs last 5 min and you can only have one at a time.
+
 ### 5.7 As built (Phase 5)
 
 The live numbers are in `config/combat.yaml` and `config/enemies.yaml`. Changes from the tables above, all made to favour readability at 16 px and the player (D-009):

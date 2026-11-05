@@ -134,6 +134,16 @@ interface StationOptions {
     legendary_eligible: boolean;
     odds: number[][];
   }[];
+  consumables?: {
+    recipe: string;
+    name: string;
+    inputs: Record<string, number>;
+    makes: number;
+    seconds_per_unit: number;
+    max_batch: number;
+    combo_name: string;
+    needs_tier: number | null;
+  }[];
   rare_materials: Record<string, { modifier: string; range: [number, number] }>;
   jobs: { id: string; kind: string; recipe: string; quantity: number; tier: number | null; started_at_ms: number; completes_at_ms: number }[];
 }
@@ -190,9 +200,13 @@ export function CraftPanel({ stationId, onClose }: { stationId: string; onClose:
     try {
       const r = await api<{ village: VillageState; item?: ForgedItem; refunded?: Record<string, number> }>(path, { method: "POST", body });
       apply(r.village);
-      if (r.item) {
+      if (r.item && "instance_id" in r.item) {
         sfx("reveal");
         useCrafting.getState().set({ reveal: r.item });
+      } else if (r.item) {
+        const b = r.item as unknown as { name: string; quantity: number };
+        sfx("potion");
+        toast(`${b.quantity} × ${b.name} into your bag!`, "good", "star");
       }
       await load();
       return r;
@@ -226,7 +240,7 @@ export function CraftPanel({ stationId, onClose }: { stationId: string; onClose:
                         <div className="av-bar-fill" style={{ width: `${(1 - left / Math.max(1, total)) * 100}%`, background: "linear-gradient(#ffc04d, #d4542e)" }} />
                       </div>
                     </div>
-                    {done && j.kind === "gear" ? (
+                    {done && (j.kind === "gear" || j.kind === "consumable") ? (
                       <button className="btn gold small" disabled={busy} onClick={() => run(`/api/crafting/jobs/${j.id}/collect`)}>
                         <Icon name="star" scale={1.5} /> Collect
                       </button>
@@ -273,6 +287,42 @@ export function CraftPanel({ stationId, onClose }: { stationId: string; onClose:
             </div>
           )}
 
+          {(opts.consumables?.length ?? 0) > 0 && (
+            <div className="col" style={{ gap: 6 }}>
+              <h3 style={{ margin: 0 }}>Brew <span className="small muted">(collect into your bag, then drag to a quick-slot)</span></h3>
+              {opts.consumables!.map((r) => {
+                const n = qty[r.recipe] ?? 3;
+                return (
+                  <div key={r.recipe} className="row slot craft-row" style={{ gap: 8, flexWrap: "wrap", opacity: r.needs_tier ? 0.6 : 1 }}>
+                    <Icon name={itemIcon(r.recipe)} scale={2} />
+                    <div className="col" style={{ gap: 0, minWidth: 110 }}>
+                      <span className="head">{r.name}</span>
+                      <span className="small muted">{r.combo_name}</span>
+                    </div>
+                    {r.needs_tier ? (
+                      <span className="small"><Icon name="lock" scale={1} /> needs the combo at level {r.needs_tier}</span>
+                    ) : (
+                      <>
+                        <div className="row stepper" style={{ gap: 4 }}>
+                          <button className="btn secondary small icon-only" onClick={() => setQty({ ...qty, [r.recipe]: Math.max(1, n - 1) })} aria-label="Fewer">−</button>
+                          <span className="value head">{n}</span>
+                          <button className="btn secondary small icon-only" onClick={() => setQty({ ...qty, [r.recipe]: Math.min(r.max_batch, n + 1) })} aria-label="More">+</button>
+                        </div>
+                        <Cost cost={r.inputs} v={v} times={n} />
+                        <span className="small"><Icon name="timer" scale={1} /> {formatDuration(r.seconds_per_unit * n)}</span>
+                        <span className="grow" />
+                        <button className="btn small gold" disabled={busy || full} onClick={() => run("/api/crafting/jobs", { station_id: stationId, recipe: r.recipe, quantity: n })}>
+                          Brew
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {Object.values(config.recipes.gear).some((g) => g.station === station?.key) && (
           <div className="col" style={{ gap: 6 }}>
             <h3 style={{ margin: 0 }}>Forge gear</h3>
             {opts.gear.length === 0 ? (
@@ -331,6 +381,12 @@ export function CraftPanel({ stationId, onClose }: { stationId: string; onClose:
               })
             )}
           </div>
+          )}
+          {(opts.consumables?.length ?? 0) === 0 && Object.values(config.recipes.consumables ?? {}).some((c) => c.station === station?.key) && (
+            <p className="small muted" style={{ margin: 0 }}>
+              Brewing needs this station to <b>touch the right buildings</b>. The Recipe Book has hints.
+            </p>
+          )}
           {full && <p className="small muted" style={{ margin: 0 }}>This station is busy. It can run {opts.slots} job{opts.slots > 1 ? "s" : ""} at once.</p>}
         </div>
       )}

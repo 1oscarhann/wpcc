@@ -135,8 +135,8 @@ def test_node_for_missing_map_object_fails(cfg_dir: Path) -> None:
 
 
 def test_weapon_without_moveset_fails(cfg_dir: Path) -> None:
-    edit(cfg_dir, "items", lambda d: d["items"]["training_spear"].update(weapon_type="bow"))
-    with pytest.raises(ConfigError, match="bow"):
+    edit(cfg_dir, "items", lambda d: d["items"]["training_spear"].update(weapon_type="boomerang"))
+    with pytest.raises(ConfigError, match="boomerang"):
         load_config(cfg_dir)
 
 

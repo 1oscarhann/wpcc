@@ -140,6 +140,8 @@ class RoomManager:
             p = self._make_player(room, conn, user, avatar, member.plot_index, loadout)
             p.fog = fog
             p.attuned = attuned
+            room.set_offhand(p, loadout.get("offhand") or {})
+            room.recompute_mods(p)
             p.pois = poi_uses
             room.restore_blessing(p)
             wall = time.time()
@@ -189,6 +191,7 @@ class RoomManager:
             home_rect=(ox + lo, oy + lo, size, size),
             home_door=door,
             armour=int(loadout.get("armour", 0)),
+            armour_key=loadout.get("armour_key"),
         )
 
     async def leave(self, user_id: uuid.UUID, conn: Conn | None = None) -> None:
@@ -225,6 +228,9 @@ class RoomManager:
             )  # unflushed wear
         p.weapon = lo["weapon"]
         p.armour = int(lo.get("armour", 0))
+        p.armour_key = lo.get("armour_key")
+        room.set_offhand(p, lo.get("offhand") or {})
+        room.recompute_mods(p)
         p.quick = {int(k): v for k, v in lo["quick"].items()}
         p.inv = lo["inv"]
         p.inv_cap = lo["inv_capacity"]
@@ -236,6 +242,7 @@ class RoomManager:
         from hearthforge.realtime.protocol import EV
 
         p.ev.append([EV["INVENTORY"], p.inv])
+        p.ev.append([EV["LOADOUT"], p.weapon, p.offhand, p.stats.defence + p.armour])
         p.ev.append([EV["PLAYER"], *room.roster_entry(p)])
         for o in room.players.values():
             if o is not p:

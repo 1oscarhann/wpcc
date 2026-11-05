@@ -42,6 +42,7 @@ WOOD = ramp("wood")
 LEAF = ramp("leaf")
 GRASS = ramp("grass")
 VENOM = ramp("venom")
+VIOLET = ramp("flower_purple")
 WATER = ramp("water")
 YELLOW = ramp("flower_yellow")
 
@@ -671,6 +672,20 @@ def shot(kind: str) -> Canvas:
             c.put(5 - i * 2, 3 + (i % 2), rp[1 + (i == 0)])
         if kind == "ice":
             c.put(11, 3, WHITE[2])
+    elif kind in ("crystal", "orb", "arcane", "tome_burn", "tome_slow", "tome_poison"):
+        rp = {"crystal": ICE, "orb": VIOLET + [ICE[3]], "arcane": VIOLET + [GOLD[4]], "tome_burn": FIRE,
+              "tome_slow": ICE, "tome_poison": VENOM}[kind]
+        big = kind in ("orb",)
+        ell(c, 9, 3.5, 3.3 if big else 2.4, 3.0 if big else 2.0, rp)
+        for i in range(3):
+            c.put(5 - i * 2, 3 + (i % 2), rp[min(len(rp) - 1, 2 - (i > 0))])
+        c.put(9, 2, WHITE[2])
+    elif kind == "wave":
+        for y in range(7):
+            x = 11 - abs(3 - y)
+            c.put(x, y, VIOLET[2])
+            c.put(x - 1, y, ICE[3])
+            c.put(x - 3, y, VIOLET[1])
     elif kind == "bolt":
         pts = [(1, 3), (4, 1), (6, 4), (9, 2), (12, 4)]
         for (x0, y0), (x1, y1) in zip(pts, pts[1:], strict=False):
@@ -680,7 +695,8 @@ def shot(kind: str) -> Canvas:
     return c
 
 
-SHOTS = ("arrow", "spit", "sting", "ice", "fire", "bolt", "rock")
+SHOTS = ("arrow", "spit", "sting", "ice", "fire", "bolt", "rock", "crystal", "orb", "arcane", "wave",
+         "tome_burn", "tome_slow", "tome_poison")
 
 
 def generate() -> dict[str, Canvas]:

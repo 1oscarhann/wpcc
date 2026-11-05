@@ -7,13 +7,36 @@ intermediates:
   planks:  { station: workshop, inputs: { wood: 2 },  time: 2s, max_batch: 30 }
   bricks:  { station: workshop, inputs: { stone: 2 }, time: 2s, max_batch: 30 }
   leather: { station: tannery,  inputs: { hide: 2 },  time: 4s, max_batch: 30 }
+  bread:       { station: tavern,    inputs: { food: 3 },  time: 3s, max_batch: 30 }
+  potion_base: { station: alchemist, inputs: { herbs: 3 }, time: 4s, max_batch: 30 }
 
 job_slots:                     # parallel jobs per station, by the station's level 1..5
   default: [1, 1, 1, 1, 1]
   workshop: [1, 1, 2, 2, 2]
+  alchemist: [1, 1, 2, 2, 2]
 
 gear:                          # copper uses raw resources; iron+ uses `base` × the tier's multiplier
   spear:          { station: forge,   copper: { wood: 20, ore: 10 }, base: { planks: 4, ingots: 3 } }
   sword:          { station: forge,   copper: { wood: 10, ore: 20 }, base: { planks: 2, ingots: 5 } }
   leather_armour: { station: tannery, copper: { hide: 15 },          base: { leather: 6 } }
   plate_armour:   { station: forge,   copper: { ore: 30, hide: 10 }, base: { ingots: 8, leather: 3 } }
+  bow:             { station: forge,        copper: { wood: 20, ore: 10 },              base: { planks: 4, ingots: 3 } }
+  shield:          { station: forge,        copper: { wood: 10, ore: 20 },              base: { planks: 2, ingots: 5 } }
+  warhammer:       { station: forge,        copper: { wood: 10, stone: 15, ore: 15 },   base: { bricks: 4, ingots: 4 } }
+  mace:            { station: forge,        copper: { wood: 10, stone: 15, ore: 15 },   base: { bricks: 4, ingots: 4 } }
+  crystal_staff:   { station: wizard_tower, copper: { wood: 15, crystal: 10 },          base: { planks: 3, crystal: 4, ingots: 2 } }
+  enchanted_sword: { station: forge,        copper: { wood: 10, ore: 15, crystal: 8 },  base: { planks: 2, ingots: 4, crystal: 4 } }
+  harpoon:         { station: forge,        copper: { wood: 15, ore: 10, fish: 10 },    base: { planks: 3, ingots: 3, fish: 10 } }
+  arcane_bow:      { station: forge,        copper: { wood: 25, ore: 10, crystal: 12 }, base: { planks: 5, ingots: 3, crystal: 6 } }
+  barrel_bombs:    { station: workshop,     copper: { wood: 20, ore: 10, food: 15 },    base: { planks: 3, ingots: 2, bread: 2 } }
+  elemental_tome:  { station: wizard_tower, copper: { wood: 10, herbs: 20, crystal: 10 }, base: { planks: 2, potion_base: 3, crystal: 5 } }
+
+# Consumables (Phase 11): brewed in batches at a station that's part of the combo that unlocks them;
+# collect them into your bag. `min_tier`: the combo's level (lowest building in it) must reach this.
+consumables:
+  small_healing_potion: { station: alchemist, inputs: { potion_base: 1 },            time: 4s, makes: 1, max_batch: 10 }
+  healing_potion:       { station: alchemist, inputs: { potion_base: 2, fish: 1 },   time: 6s, makes: 1, max_batch: 10, min_tier: 3 }
+  stamina_potion:       { station: alchemist, inputs: { potion_base: 1, bread: 1 },  time: 5s, makes: 1, max_batch: 10 }
+  warrior_stew:         { station: alchemist, inputs: { bread: 2, herbs: 2 },        time: 6s, makes: 1, max_batch: 10 }
+  guard_porridge:       { station: alchemist, inputs: { bread: 2, herbs: 2 },        time: 6s, makes: 1, max_batch: 10 }
+  swift_tart:           { station: alchemist, inputs: { bread: 2, herbs: 2 },        time: 6s, makes: 1, max_batch: 10 }

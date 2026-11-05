@@ -3,7 +3,7 @@
 import world from "../../../shared/world.json";
 import { ATK_ABILITY, ATK_HEAVY, ATK_LIGHT, ATK_NONE, moveLength, type MoveRule, type Rules, type WeaponRule } from "./rules";
 
-export const BTN = world.buttons as { light: number; heavy: number; ability: number; dodge: number; potion: number };
+export const BTN = world.buttons as { light: number; heavy: number; ability: number; dodge: number; potion: number; offhand: number };
 export type Solid = (x: number, y: number) => boolean;
 
 export interface Motion {

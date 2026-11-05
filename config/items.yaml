@@ -24,6 +24,16 @@ items:
     stackable: false
     weapon_type: sword
     icon: icon.sword
+  bow:              { name: Bow,             category: weapon, stackable: false, weapon_type: bow,             icon: icon.bow }
+  warhammer:        { name: Warhammer,       category: weapon, stackable: false, weapon_type: warhammer,       icon: icon.warhammer }
+  mace:             { name: Mace,            category: weapon, stackable: false, weapon_type: mace,            icon: icon.mace }
+  crystal_staff:    { name: Crystal Staff,   category: weapon, stackable: false, weapon_type: crystal_staff,   icon: icon.crystal_staff }
+  enchanted_sword:  { name: Enchanted Sword, category: weapon, stackable: false, weapon_type: enchanted_sword, icon: icon.enchanted_sword }
+  harpoon:          { name: Harpoon,         category: weapon, stackable: false, weapon_type: harpoon,         icon: icon.harpoon }
+  arcane_bow:       { name: Arcane Bow,      category: weapon, stackable: false, weapon_type: arcane_bow,      icon: icon.arcane_bow }
+  shield:           { name: Shield,          category: offhand, stackable: false, offhand_type: shield, icon: icon.shield }
+  barrel_bombs:     { name: Barrel Bombs,    category: offhand, stackable: false, offhand_type: bombs,  icon: icon.bomb }
+  elemental_tome:   { name: Elemental Tome,  category: offhand, stackable: false, offhand_type: tome,   icon: icon.tome }
   leather_armour:
     name: Leather Armour
     category: armour
@@ -58,6 +68,42 @@ items:
     stackable: true
     max_stack: 20
     icon: icon.potion_red
+    use: { heal: 0.35, cooldown: 8s, group: potion }
+  healing_potion:
+    name: Healing Potion
+    category: consumable
+    stackable: true
+    max_stack: 20
+    icon: icon.potion_big
+    use: { heal: 0.6, cooldown: 8s, group: potion }
+  stamina_potion:
+    name: Stamina Potion
+    category: consumable
+    stackable: true
+    max_stack: 20
+    icon: icon.potion_green
+    use: { stamina: 1.0, regen: 1.5, duration: 10s, cooldown: 15s, group: stamina }
+  warrior_stew:
+    name: Warrior Stew
+    category: consumable
+    stackable: true
+    max_stack: 10
+    icon: icon.stew
+    use: { buff: damage, value: 0.10, duration: 5m, group: food }
+  guard_porridge:
+    name: Guard Porridge
+    category: consumable
+    stackable: true
+    max_stack: 10
+    icon: icon.porridge
+    use: { buff: defence, value: 0.10, duration: 5m, group: food }
+  swift_tart:
+    name: Swift Tart
+    category: consumable
+    stackable: true
+    max_stack: 10
+    icon: icon.tart
+    use: { buff: speed, value: 0.08, duration: 5m, group: food }
   ironbark:
     name: Ironbark
     category: rare_material

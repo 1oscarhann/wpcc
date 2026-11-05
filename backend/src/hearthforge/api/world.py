@@ -7,9 +7,11 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hearthforge.api.deps import Auth, current_user, get_db, get_state
+from hearthforge.db.models import Village
 from hearthforge.domain import worldclock
 from hearthforge.realtime.protocol import EV
 from hearthforge.services import realm as realm_svc
@@ -68,3 +70,94 @@ async def dev_teleport(
                 p.ev.append([EV["TELEPORT"], p.m.x, p.m.y, -1])
                 return {"x": x, "y": y, "biome": room.grid.gen.biome(x, y)}
     raise HTTPException(409, "no_open_tile")
+
+
+class KitIn(BaseModel):
+    town_hall: int = Field(default=3, ge=1, le=5)
+    tier: int = Field(default=2, ge=1, le=5)
+
+
+@router.post("/dev/kit")
+async def dev_kit(
+    body: KitIn,
+    auth: Auth = Depends(current_user),
+    st: AppState = Depends(get_state),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Dev only (HF_ENV=dev): a playtest kit. Town Hall level, full storage, one of every weapon and offhand
+    (rare, with a modifier), plate armour, potions and food in the bag."""
+    import secrets as _secrets
+    import uuid as _uuid
+
+    from sqlalchemy import update as _update
+
+    from hearthforge.db.models import (
+        ContainerSlot,
+        ItemInstance,
+        ItemOrigin,
+        Rarity,
+        Resource,
+        VillageBuilding,
+    )
+    from hearthforge.services import inventory
+
+    if not st.settings.is_dev:
+        raise HTTPException(404)
+    cfg = st.config
+    async with db.begin():
+        vid = (await db.execute(select(Village.id).where(Village.user_id == auth.user.id))).scalar_one()
+        await db.execute(
+            _update(VillageBuilding)
+            .where(VillageBuilding.village_id == vid, VillageBuilding.building_key == "town_hall")
+            .values(level=body.town_hall)
+        )
+        await db.execute(_update(Resource).where(Resource.village_id == vid).values(amount_milli=1_500_000))
+        bag = (await inventory.bags(db, auth.user.id, ("inventory",)))["inventory"]
+        bag.c.capacity = max(bag.c.capacity, 48)
+        free = bag.free
+        keys = [
+            k
+            for k, it in cfg.items_cfg.items.items()
+            if it.category in ("weapon", "offhand") and k in cfg.recipes.gear
+        ]
+        keys.append("plate_armour")
+        tier = body.tier
+        mods = {"elemental_tome": [{"key": "frost", "name": "Frost", "effect": "frost", "value": 0.3}]}
+        for k in keys:
+            if not free:
+                break
+            dur = cfg.forging.tiers[tier - 1].durability
+            inst = ItemInstance(
+                id=_uuid.uuid4(),
+                item_key=k,
+                tier=tier,
+                rarity=Rarity.rare,
+                modifiers=mods.get(k, []),
+                durability=dur,
+                max_durability=dur,
+                origin=ItemOrigin.reward,
+                roll_seed=_secrets.randbits(62),
+            )
+            db.add(inst)
+            await db.flush()
+            db.add(
+                ContainerSlot(
+                    container_id=bag.c.id, slot=free.pop(0), item_key=k, quantity=1, instance_id=inst.id
+                )
+            )
+        await inventory.grant(
+            db,
+            cfg,
+            auth.user.id,
+            {
+                "healing_potion": 5,
+                "stamina_potion": 3,
+                "warrior_stew": 2,
+                "swift_tart": 2,
+                "small_healing_potion": 5,
+            },
+            "admin.grant",
+        )
+    if st.rooms is not None:
+        await st.rooms.reload_loadout(auth.user.id)
+    return {"ok": True, "gear": keys}

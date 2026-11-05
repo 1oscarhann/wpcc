@@ -720,6 +720,187 @@ for _t in range(5):
     ICONS[f"plate_armour_{_t + 1}"] = armour_icon(TIER_RAMPS[_t], TIER_TRIM[_t], False)
 
 
+# ── Phase 11 icons ──────────────────────────────────────────────────────────
+ICE_R = ramp("ice")
+
+
+def hammer_icon(r: list, trim, mace: bool = False) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.line(2, 14, 9, 7, WOOD[3])
+        c.line(3, 14, 9, 8, WOOD[1])
+        if mace:
+            c.ellipse(11, 5, 3.4, 3.4, r[2])
+            c.ellipse(10.5, 4.5, 1.6, 1.6, r[3])
+            for x, y in ((11, 1), (15, 5), (11, 9), (8, 3)):
+                c.put(x, y, r[1])
+        else:
+            pts = [(7, 3), (11, 0), (15, 5), (11, 9)]
+            c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: r[3] if x + y < 13 else r[2])
+        c.line(7, 9, 9, 11, trim)
+
+    return draw
+
+
+def bow_icon(trim, arcane: bool = False) -> Callable[[Canvas], None]:  # noqa: ANN001
+    li = [PURPLE[0], PURPLE[1], PURPLE[2]] if arcane else [WOOD[1], WOOD[2], WOOD[3]]
+
+    def draw(c: Canvas) -> None:
+        for i in range(12):
+            t = (i - 5.5) / 5.5
+            x, y = 3 + i, 14 - i
+            off = int(3 * (1 - t * t))
+            c.put(x + off, y + off, li[2] if i < 6 else li[1])
+        c.line(3, 14, 14, 3, CLOTH[3])
+        c.put(9, 9, trim)
+        if arcane:
+            c.put(10, 10, GOLD[4])
+
+    return draw
+
+
+def staff_icon(trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.line(2, 14, 10, 6, WOOD[3])
+        c.line(3, 14, 10, 7, WOOD[1])
+        pts = [(10, 5), (12, 1), (15, 3), (13, 7)]
+        c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: ICE_R[3] if x < 13 else ICE_R[2])
+        c.put(9, 7, trim)
+
+    return draw
+
+
+def esword_icon(trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    base = sword_icon([PURPLE[0], PURPLE[1], PURPLE[2], ICE_R[3]], trim)
+
+    def draw(c: Canvas) -> None:
+        base(c)
+        c.put(8, 8, ICE_R[3])
+        c.put(10, 6, ICE_R[3])
+
+    return draw
+
+
+def harpoon_icon(r: list, trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.line(1, 15, 10, 6, WOOD[3])
+        c.line(2, 15, 10, 7, WOOD[1])
+        c.line(10, 6, 14, 2, r[3])
+        c.line(11, 6, 14, 3, r[1])
+        c.line(11, 4, 10, 2, r[2])
+        c.line(12, 7, 14, 6, r[2])
+        c.put(9, 6, trim)
+
+    return draw
+
+
+def shield_icon(r: list, trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        pts = [(2, 2), (14, 2), (14, 8), (8, 15), (2, 8)]
+        c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: WOOD[3] if x < 8 else WOOD[2])
+        c.hline(2, 13, 2, r[3])
+        c.vline(8, 3, 13, r[2])
+        c.put(8, 6, trim)
+
+    return draw
+
+
+def bomb_icon(trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.ellipse(7, 9.5, 5.5, 5, WOOD[2])
+        c.ellipse(6, 8, 3, 2.4, WOOD[3])
+        c.hline(2, 12, 8, STONE[1])
+        c.hline(2, 12, 11, STONE[1])
+        c.line(9, 4, 12, 1, CLOTH[2])
+        c.put(13, 0, FIRE[3])
+        c.put(12, 0, trim)
+
+    return draw
+
+
+def tome_icon(trim) -> Callable[[Canvas], None]:  # noqa: ANN001
+    def draw(c: Canvas) -> None:
+        c.rect(3, 2, 10, 12, PURPLE[1])
+        c.rect(3, 2, 9, 11, PURPLE[2])
+        c.vline(3, 2, 13, PURPLE[0])
+        c.hline(4, 12, 13, CLOTH[3])
+        c.put(8, 6, trim)
+        c.put(7, 7, GOLD[2])
+        c.put(9, 7, GOLD[2])
+        c.put(8, 8, GOLD[3])
+
+    return draw
+
+
+def i_potion_big(c: Canvas) -> None:
+    c.rect(6, 1, 4, 2, WOOD[2])
+    c.rect(7, 3, 2, 2, STONE[4])
+    c.ellipse(8, 10, 6, 5, STONE[4])
+    c.ellipse(8, 11, 5, 3.6, RED[2])
+    c.hline(4, 12, 9, RED[3])
+    c.put(5, 7, STONE[5])
+
+
+def i_potion_green(c: Canvas) -> None:
+    flask(c, LEAF)
+    c.put(8, 11, GOLD[3])
+
+
+def i_stew(c: Canvas) -> None:
+    c.ellipse(8, 10, 6.5, 4, WOOD[2])
+    c.ellipse(8, 8.5, 5.5, 2, FIRE[1])
+    c.put(6, 8, CROP[2])
+    c.put(9, 8, LEAF[3])
+    c.line(10, 3, 12, 8, STONE[4])
+    c.put(5, 4, STONE[4])
+    c.put(6, 3, STONE[4])
+
+
+def i_porridge(c: Canvas) -> None:
+    c.ellipse(8, 10, 6.5, 4, STONE[3])
+    c.ellipse(8, 8.5, 5.5, 2, CLOTH[3])
+    c.put(7, 8, CROP[2])
+    c.put(10, 9, CROP[2])
+    c.line(11, 3, 12, 8, WOOD[3])
+
+
+def i_tart(c: Canvas) -> None:
+    c.ellipse(8, 10, 6, 3.5, CROP[2])
+    c.ellipse(8, 9, 5, 2.2, RED[2])
+    for x in (5, 8, 11):
+        c.put(x, 8, RED[3])
+    c.hline(3, 13, 11, CROP[1])
+
+
+ICONS.update({
+    "warhammer": hammer_icon(TIER_RAMPS[1], TIER_TRIM[1]),
+    "mace": hammer_icon(TIER_RAMPS[1], TIER_TRIM[1], mace=True),
+    "bow": bow_icon(TIER_TRIM[0]),
+    "arcane_bow": bow_icon(GOLD[3], arcane=True),
+    "crystal_staff": staff_icon(TIER_TRIM[0]),
+    "enchanted_sword": esword_icon(GOLD[3]),
+    "harpoon": harpoon_icon(TIER_RAMPS[1], TIER_TRIM[1]),
+    "shield": shield_icon(TIER_RAMPS[1], TIER_TRIM[1]),
+    "bomb": bomb_icon(GOLD[3]),
+    "tome": tome_icon(GOLD[3]),
+    "potion_big": i_potion_big,
+    "potion_green": i_potion_green,
+    "stew": i_stew,
+    "porridge": i_porridge,
+    "tart": i_tart,
+})
+for _t in range(5):
+    ICONS[f"warhammer_{_t + 1}"] = hammer_icon(TIER_RAMPS[_t], TIER_TRIM[_t])
+    ICONS[f"mace_{_t + 1}"] = hammer_icon(TIER_RAMPS[_t], TIER_TRIM[_t], mace=True)
+    ICONS[f"bow_{_t + 1}"] = bow_icon(TIER_TRIM[_t])
+    ICONS[f"arcane_bow_{_t + 1}"] = bow_icon(TIER_TRIM[_t], arcane=True)
+    ICONS[f"crystal_staff_{_t + 1}"] = staff_icon(TIER_TRIM[_t])
+    ICONS[f"enchanted_sword_{_t + 1}"] = esword_icon(TIER_TRIM[_t])
+    ICONS[f"harpoon_{_t + 1}"] = harpoon_icon(TIER_RAMPS[_t], TIER_TRIM[_t])
+    ICONS[f"shield_{_t + 1}"] = shield_icon(TIER_RAMPS[_t], TIER_TRIM[_t])
+    ICONS[f"bomb_{_t + 1}"] = bomb_icon(TIER_TRIM[_t])
+    ICONS[f"tome_{_t + 1}"] = tome_icon(TIER_TRIM[_t])
+
+
 def generate() -> dict[str, Canvas]:
     out = {}
     for name, fn in ICONS.items():

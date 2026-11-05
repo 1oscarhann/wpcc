@@ -54,6 +54,7 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 | `0x24` | FISH_REEL | `bite_id:u32, client_tick:u32` | Fishing timing check. The server validates against the bite window with latency tolerance. |
 | `0x30` | PARTY | `kind:u8 (invite, accept, decline, leave, kick), user_id?` | Realm-scoped and in-memory. |
 | `0x31` | DUNGEON | `kind:u8 (enter, ready, leave), entrance_id?:u32` | |
+| `0x33` | USE_QUICK | `slot:u8 (0–3)` | **Phase 11.** Drink or eat what's in quick-slot 1–4 (equipment slots 4–7). |
 | `0x32` | INTERACT | `poi_index:u32` | **Phase 10.** Use the point of interest you're standing at (≤ 2.4 tiles). The answer is a POI event, or a TOAST (`poi_too_far`, `chest_empty`, `shrine_resting`, `villager_home`). |
 
 **`buttons` bitfield (u16):**
@@ -130,6 +131,19 @@ ents = [[id, kind, type, x*64, y*64, dx*100, dy*100, anim, anim_t, hp(0-255), fl
   - **Monster shots.** They are `projectile` entities whose `type` is the sprite (`arrow`, `spit`, `sting`, `ice`, `fire`, `bolt`, `rock`), with `flags` = 1.
   - **DEATH.** The flag 2 means "faded" (dawn, storm passed, summoner died): no loot, no poof.
   - **TELEPORT.** Index -1 means a dev hop.
+- **Phase 11 (protocol v5).**
+  - **New op.** C2S `USE_QUICK [slot 0–3]` (`0x33`).
+  - **New input bit.** `offhand` (32): hold for the shield, tap for bombs and tome.
+  - **New events.**
+    - IMPACT `[34, x, y, r, kind]`: slam, quake, burst, whirl, boom or star.
+    - MOVE_MODS `[35, speed, dodge, regen]`: rebuild your movement rules, D-079.
+    - OFFHAND `[36, type, charges, ready_ms]`.
+    - BARRIER `[37, id, x0, y0, x1, y1, ms]`.
+    - BUFF `[38, item, kind, value, ms, quick]`.
+    - LOADOUT `[39, weapon, offhand, defence]`.
+  - **STATUS.** `[3, mid, burn|slow|poison]` now covers monsters.
+  - **HIT.** kind 4 means a shield block.
+  - **Projectiles.** Player projectiles carry their sprite as `type` (`arrow`, `crystal`, `orb`, `wave`, `arcane`, `tome_<element>`, `spear`). Bombs are projectiles with `flags` = 2.
 
 ### 3.1 SNAPSHOT (target format)
 

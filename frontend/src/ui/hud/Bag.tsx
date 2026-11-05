@@ -13,8 +13,12 @@ import { Icon } from "../components/kit";
 
 const EQUIP = [
   { slot: 0, label: "Weapon" },
+  { slot: 1, label: "Offhand (F)" },
   { slot: 2, label: "Armour" },
-  { slot: 4, label: "Potion" },
+  { slot: 4, label: "Quick 1" },
+  { slot: 5, label: "Quick 2" },
+  { slot: 6, label: "Quick 3" },
+  { slot: 7, label: "Quick 4" },
 ];
 
 type Kind = "inventory" | "equipment" | "bank";
@@ -112,7 +116,12 @@ export function Bag({ onClose }: { onClose: () => void }) {
 
   const equip = (s: InvSlotView) => {
     const cat = config.items[s.item]?.category;
-    const dst = cat === "weapon" ? 0 : cat === "armour" ? 2 : cat === "consumable" ? 4 : null;
+    let dst = cat === "weapon" ? 0 : cat === "offhand" ? 1 : cat === "armour" ? 2 : null;
+    if (cat === "consumable") {
+      // stack onto a quick-slot holding the same thing, else the first empty one
+      const same = [4, 5, 6, 7].find((q) => eq.get(q)?.item === s.item);
+      dst = same ?? [4, 5, 6, 7].find((q) => !eq.get(q)) ?? 4;
+    }
     if (dst === null) return;
     void act("/api/inventory/move", { src: { kind: "inventory", slot: s.slot }, dst: { kind: "equipment", slot: dst } }, () => {
       sfx("pickup");

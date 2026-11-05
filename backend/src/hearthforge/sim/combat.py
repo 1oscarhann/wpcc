@@ -88,6 +88,11 @@ class Monster:
     minion_of: int | None = None  # summoned by this monster: no loot, a share of the XP
     next_summon: int = 0
     backoff: int = 0  # ticks spent backing away from a target (kiters give up and shoot after a while)
+    stun: int = 0  # ticks (Phase 11: hammers, maces)
+    slow: int = 0  # ticks
+    burn: tuple[float, int] = (0.0, 0)  # dps, ticks left
+    poison: tuple[float, int, int] = (0.0, 0, 0)  # dps, ticks left, stacks
+    dot_src: int = 0  # who applied the last DoT (gets the kill)
     scale: tuple[float, float, float] = (1.0, 1.0, 0.0)  # roaming spawns: the biome's hp/dmg/def scale
 
 
@@ -115,6 +120,30 @@ class Projectile:
     left: float
     mv: MoveRule
     hit: set[int] = field(default_factory=set)
+    sprite: str = "spear"
+    gear: dict[str, Any] | None = None  # the item whose stats it hits with (weapon by default, or the tome)
+
+
+@dataclass
+class Bomb:
+    id: int
+    owner: int
+    x: float
+    y: float
+    fuse: int  # tick it goes off
+    gear: dict[str, Any]
+
+
+@dataclass
+class Barrier:
+    """A crystal wall from the staff: monster shots that touch it shatter."""
+
+    id: int
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    until: int
 
 
 @dataclass
@@ -158,6 +187,10 @@ class Combat:
         self.ko_ticks = int(self.cfg.avatar.ko.respawn_delay * self.hz)
         self.decay = room.rules.kb_decay
         self.shots: dict[int, Shot] = {}
+        self.bombs: dict[int, Bomb] = {}
+        self.barriers: dict[int, Barrier] = {}
+        self.stt = self.cfg.combat.statuses
+        self.oh = self.cfg.combat.offhands
         self.wc = self.cfg.world_clock
         self.night = False
         self.weather = "clear"
@@ -388,6 +421,12 @@ class Combat:
         self._resolve_pending(t)
         self._projectiles(t)
         self._shots(t)
+        self._bombs(t)
+        if t % self.hz == 0:
+            self._dots()
+        if self.barriers:
+            for b in [b for b in self.barriers.values() if b.until <= t]:
+                del self.barriers[b.id]
 
     def _players_near(self, x: float, y: float, r: float) -> list[Player]:
         return [
@@ -425,6 +464,13 @@ class Combat:
             m.kby *= self.decay
             if m.kbx * m.kbx + m.kby * m.kby < 1e-5:
                 m.kbx = m.kby = 0.0
+        if m.slow > 0:
+            m.slow -= 1
+        if m.stun > 0:
+            m.stun -= 1
+            if m.state in ("windup", "active"):
+                m.state, m.st_t = "recover", 0  # a stun breaks the attack
+            return
         target = self.room.players.get(m.target) if m.target is not None else None
         if target is not None and (target.ko > 0 or target.linkdead > 0):
             target = None
@@ -506,7 +552,7 @@ class Combat:
         d = math.hypot(dx, dy)
         if d < 1e-6:
             return
-        sp = min(d, m.speed * frac)
+        sp = min(d, m.speed * frac * (self.stt.slow.mult if m.slow > 0 else 1.0))
         ux, uy = dx / d, dy / d
         m.dx, m.dy = ux, uy
         # keep a little space from other monsters
@@ -578,7 +624,9 @@ class Combat:
             if p.m.dodge > 0 or p.iframes > 0:  # dodge grace: a dodge that started in the window wins
                 p.ev.append([EV["HIT"], h.mid, p.eid, 0, 0, 2])
                 continue
-            self.damage_player(p, h.dmg, h.mid, kind=0)
+            src = self.monsters.get(h.mid)
+            frm = (src.x, src.y) if src is not None else (p.m.x - h.dx, p.m.y - h.dy)
+            self.damage_player(p, h.dmg, h.mid, kind=0, frm=frm)
             d = math.hypot(h.dx, h.dy) or 1.0
             imp = h.kb * self.cb.knockback.player_mult * (1 - self.decay)
             p.m.kbx += h.dx / d * imp
@@ -625,8 +673,12 @@ class Combat:
                 s.x += s.vx / 2
                 s.y += s.vy / 2
                 s.left -= math.hypot(s.vx, s.vy) / 2
-                if s.left <= 0 or solid(int(s.x), int(s.y)):
-                    done = True  # trees and rocks are cover
+                if (
+                    s.left <= 0
+                    or solid(int(s.x), int(s.y))
+                    or (self.barriers and self._blocked_by_barrier(s.x, s.y))
+                ):
+                    done = True  # trees, rocks and crystal barriers are cover
                     break
                 for p in self._players_near(s.x, s.y, s.radius + 0.3):
                     if p.eid in s.hit:
@@ -672,8 +724,23 @@ class Combat:
         if n > 0:
             self._broadcast(m.x, m.y, [EV["SFX"], "summon", m.x, m.y])
 
-    def damage_player(self, p: Player, raw: float, src: int, kind: int) -> None:
-        defence = (p.stats.defence + p.armour) * (1 + self.room.blessing(p, "defence"))
+    def damage_player(
+        self, p: Player, raw: float, src: int, kind: int, frm: tuple[float, float] | None = None
+    ) -> None:
+        defence = (p.stats.defence + p.armour) * (
+            1 + self.room.blessing(p, "defence") + self.room.food(p, "defence")
+        )
+        if frm is not None and p.blocking and kind == 0:
+            sh = self.oh.shield
+            fx, fy = frm[0] - p.m.x, frm[1] - p.m.y
+            fl = math.hypot(fx, fy) or 1.0
+            if (fx * p.m.fx + fy * p.m.fy) / fl >= math.cos(
+                math.radians(sh.block_arc / 2)
+            ) and p.m.st >= sh.block_stamina:
+                raw *= 1 - sh.block
+                p.m.st -= sh.block_stamina
+                p.m.st_delay = self.room.rules.st_delay
+                kind = 4  # blocked
         taken = raw * (1 - defence / (defence + self.cb.defence_k))
         taken = max(1, round(taken))
         p.hp -= taken
@@ -724,17 +791,26 @@ class Combat:
 
     # ── player attacks ───────────────────────────────────────────────────────
     def player_attack(self, p: Player, mv: MoveRule) -> bool:
-        if mv.shape == "throw":
-            self._throw(p, mv)
+        if mv.shape in ("throw", "shot"):
+            self._shoot(p, mv)
+            return True
+        if mv.shape == "starfall":
+            self._starfall(p, mv)
+            return True
+        if mv.shape == "barrier":
+            self._barrier(p, mv)
             return True
         t = self.room.tick_no
+        if mv.shape == "circle" and (mv.hits == 1 or p.m.atk_t == mv.windup):
+            self._broadcast(p.m.x, p.m.y, [EV["IMPACT"], p.m.x, p.m.y, mv.range, mv.impact or "slam"])
         view = max(t - self.lag_ticks, min(t, p.view_tick or t))
         hit_any = False
         for m in list(self.monsters.values()):
             if m.state == "hidden":
                 continue
             mx, my = self._pos_at(m, view)
-            key = (p.atk_serial * 64 + p.m.atk_t, m.id) if mv.shape == "spin" else (p.atk_serial, m.id)
+            multi = mv.hits > 1
+            key = (p.atk_serial * 64 + p.m.atk_t, m.id) if multi else (p.atk_serial, m.id)
             if key in p.hits_done:
                 continue
             if not self.room.in_shape(p, mv, mx, my, m.box.hw + 0.1):
@@ -758,15 +834,57 @@ class Combat:
     def effects(self, p: Player) -> dict[str, float]:
         return forging.weapon_effects(p.weapon.get("modifiers") or [], self.is_dull(p))
 
-    def damage_out(self, p: Player, mv: MoveRule, m: Monster) -> tuple[int, bool]:
+    # ── statuses (Phase 11) ──────────────────────────────────────────────────
+    def apply_status(self, m: Monster, kind: str, hit: float, src: int) -> None:
+        st = self.stt
+        if kind == "burn":
+            ticks = self._t(st.burn.duration)
+            m.burn = (max(m.burn[0], hit * st.burn.share / st.burn.duration), ticks)
+            m.dot_src = src
+        elif kind == "poison":
+            ticks = self._t(st.poison.duration)
+            stacks = min(st.poison.stacks, m.poison[2] + 1 if m.poison[1] > 0 else 1)
+            per = hit * st.poison.share / st.poison.duration
+            m.poison = (max(m.poison[0] / max(1, m.poison[2]), per) * stacks, ticks, stacks)
+            m.dot_src = src
+        elif kind == "slow":
+            m.slow = max(m.slow, self._t(st.slow.duration))
+        self._broadcast(m.x, m.y, [EV["STATUS"], m.id, kind])
+
+    def _dots(self) -> None:
+        for m in list(self.monsters.values()):
+            dmg = 0.0
+            if m.burn[1] > 0:
+                dmg += m.burn[0]
+                m.burn = (m.burn[0], max(0, m.burn[1] - self.hz))
+            if m.poison[1] > 0:
+                dmg += m.poison[0]
+                m.poison = (m.poison[0], max(0, m.poison[1] - self.hz), m.poison[2])
+            if dmg <= 0:
+                continue
+            n = max(1, round(dmg))
+            m.hp -= n
+            m.damagers[m.dot_src] = m.damagers.get(m.dot_src, 0) + n
+            self._broadcast(m.x, m.y, [EV["HIT"], m.dot_src, m.id, n, 0, 1])
+            src = self.room.players.get(m.dot_src)
+            if m.hp <= 0 and m.id in self.monsters:
+                if src is not None:
+                    self._kill(m, src)
+                else:
+                    self._fade(m)
+
+    def damage_out(
+        self, p: Player, mv: MoveRule, m: Monster, gear: dict[str, Any] | None = None
+    ) -> tuple[int, bool]:
         c = self.cb
-        tier = max(1, min(5, int(p.weapon.get("tier", 1))))
-        rarity = c.rarity_mult.get(p.weapon.get("rarity", "common"), 1.0)  # type: ignore[call-overload]
+        g = gear if gear is not None else p.weapon
+        tier = max(1, min(5, int(g.get("tier", 1))))
+        rarity = c.rarity_mult.get(g.get("rarity", "common"), 1.0)  # type: ignore[call-overload]
         eff = self.effects(p)
         crit = self.room.rng.random() < p.stats.crit + eff["crit"]
         dmg = mv.dmg * c.tier_mult[tier - 1] * (1 + p.stats.attack * c.attack_scaling) * rarity
-        dmg *= 1 + eff["damage"] + self.room.blessing(p, "damage")
-        if self.is_dull(p):
+        dmg *= 1 + eff["damage"] + self.room.blessing(p, "damage") + self.room.food(p, "damage")
+        if gear is None and self.is_dull(p):
             dmg *= self.cfg.forging.dull_damage  # P2: dull, never broken
         if crit:
             dmg *= c.crit_mult
@@ -783,9 +901,25 @@ class Combat:
         if w["durability"] == 0:
             self.room.toast(p, "weapon_dull")
 
-    def hit_monster(self, p: Player, m: Monster, mv: MoveRule, fx: float, fy: float) -> None:
-        dmg, crit = self.damage_out(p, mv, m)
+    def hit_monster(
+        self, p: Player, m: Monster, mv: MoveRule, fx: float, fy: float, gear: dict[str, Any] | None = None
+    ) -> None:
+        dmg, crit = self.damage_out(p, mv, m, gear)
         m.hp -= dmg
+        rng = self.room.rng
+        if mv.stun:
+            m.stun = max(m.stun, int(mv.stun * (0.4 if m.elite else 1.0)))
+        if mv.status and rng.random() < mv.proc:
+            self.apply_status(m, mv.status, dmg, p.eid)
+        if gear is None:
+            eff = self.effects(p)
+            for kind, key in (("poison", "venom"), ("slow", "frost"), ("burn", "fire")):
+                if eff.get(key, 0) and rng.random() < eff[key]:
+                    self.apply_status(m, kind, dmg, p.eid)
+            if eff.get("lifesteal", 0) and p.hp < p.stats.hp_max:
+                p.hp = min(float(p.stats.hp_max), p.hp + dmg * eff["lifesteal"])
+            if eff.get("chain", 0) and rng.random() < eff["chain"]:
+                self._chain(p, m, dmg)
         m.damagers[p.eid] = m.damagers.get(p.eid, 0) + dmg
         m.hurt = 3
         p.last_combat = self.room.tick_no
@@ -800,7 +934,10 @@ class Combat:
         d = math.hypot(dx, dy) or 1.0
         resist = self.en.elite.knockback_resist if m.elite else 0.0
         imp = mv.knockback * (1 + self.effects(p)["knockback"]) * (1 - resist) * (1 - self.decay)
-        self.wear(p)
+        if mv.pull:  # harpoon: yank it toward you (never past you)
+            imp = -min(mv.pull, max(0.0, d - 0.9)) * (1 - resist) * (1 - self.decay)
+        if gear is None:
+            self.wear(p)
         m.kbx += dx / d * imp
         m.kby += dy / d * imp
         self._broadcast(m.x, m.y, [EV["HIT"], p.eid, m.id, dmg, 1 if crit else 0, 3 if heavy else 0])
@@ -870,20 +1007,28 @@ class Combat:
                 if mm.minion_of == m.id:
                     self._fade(mm)
 
-    # ── projectiles (spear throw) ────────────────────────────────────────────
-    def _throw(self, p: Player, mv: MoveRule) -> None:
-        pr = Projectile(
-            self.room.new_id(),
-            p.eid,
-            p.m.x + p.m.ax * 0.4,
-            p.m.y + p.m.ay * 0.4,
-            p.m.ax * mv.speed,
-            p.m.ay * mv.speed,
-            mv.range,
-            mv,
-        )
-        self.projectiles[pr.id] = pr
-        self._broadcast(p.m.x, p.m.y, [EV["SFX"], "throw", p.m.x, p.m.y])
+    # ── player projectiles (spear throw, bows, staffs, tomes) ────────────────
+    def _shoot(self, p: Player, mv: MoveRule, gear: dict[str, Any] | None = None, sprite: str = "") -> None:
+        n = max(1, mv.count)
+        base = math.atan2(p.m.ay, p.m.ax)
+        spread = math.radians(mv.spread)
+        for i in range(n):
+            a = base + (spread * (i / (n - 1) - 0.5) if n > 1 else 0.0)
+            ux, uy = math.cos(a), math.sin(a)
+            pr = Projectile(
+                self.room.new_id(),
+                p.eid,
+                p.m.x + ux * 0.4,
+                p.m.y + uy * 0.4,
+                ux * mv.speed,
+                uy * mv.speed,
+                mv.range,
+                mv,
+                sprite=sprite or mv.sprite or "spear",
+                gear=gear,
+            )
+            self.projectiles[pr.id] = pr
+        self._broadcast(p.m.x, p.m.y, [EV["SFX"], "throw" if mv.shape == "throw" else "shoot", p.m.x, p.m.y])
 
     def _projectiles(self, t: int) -> None:
         solid = self.room.grid.solid
@@ -891,6 +1036,22 @@ class Combat:
             owner = self.room.players.get(pr.owner)
             steps = 3
             done = owner is None
+            mv = pr.mv
+            if not done and mv.homing > 0:  # arcane arrows and tome spells curl toward the nearest monster
+                best, bd = None, 25.0
+                for m in self.monsters.values():
+                    if m.id in pr.hit or m.state == "hidden":
+                        continue
+                    d2 = (m.x - pr.x) ** 2 + (m.y - pr.y) ** 2
+                    if d2 < bd:
+                        best, bd = m, d2
+                if best is not None:
+                    sp = math.hypot(pr.vx, pr.vy)
+                    tx, ty = best.x - pr.x, best.y - pr.y
+                    tl = math.hypot(tx, ty) or 1.0
+                    nx, ny = pr.vx / sp + tx / tl * mv.homing, pr.vy / sp + ty / tl * mv.homing
+                    nl = math.hypot(nx, ny) or 1.0
+                    pr.vx, pr.vy = nx / nl * sp, ny / nl * sp
             for _ in range(steps):
                 if done:
                     break
@@ -906,10 +1067,151 @@ class Combat:
                     if (m.x - pr.x) ** 2 + (m.y - pr.y) ** 2 <= (m.box.hw + 0.35) ** 2:
                         pr.hit.add(m.id)
                         assert owner is not None
-                        self.hit_monster(owner, m, pr.mv, pr.x, pr.y)
+                        self.hit_monster(owner, m, mv, pr.x, pr.y, pr.gear)
+                        if not mv.pierce and mv.shape != "throw":
+                            done = True
+                            break
             if done:
                 del self.projectiles[pr.id]
                 self._broadcast(pr.x, pr.y, [EV["PROJECTILE_END"], pr.id, pr.x, pr.y])
+                if mv.aoe > 0 and owner is not None:  # the staff's orb bursts where it lands
+                    self._blast(owner, pr.x, pr.y, mv.aoe, mv, pr.hit, pr.gear, "burst")
+
+    def _blast(
+        self,
+        p: Player,
+        x: float,
+        y: float,
+        r: float,
+        mv: MoveRule,
+        skip: set[int] | None = None,
+        gear: dict[str, Any] | None = None,
+        impact: str = "boom",
+    ) -> None:
+        self._broadcast(x, y, [EV["IMPACT"], x, y, r, impact])
+        for m in list(self.monsters.values()):
+            if m.state == "hidden" or (skip and m.id in skip):
+                continue
+            if (m.x - x) ** 2 + (m.y - y) ** 2 <= (r + m.box.hw) ** 2:
+                self.hit_monster(p, m, mv, x, y, gear)
+
+    def _starfall(self, p: Player, mv: MoveRule) -> None:
+        rng = self.room.rng
+        ax, ay = p.m.ax, p.m.ay
+        d = 1.5 + rng.random() * (mv.range - 1.5)
+        side = (rng.random() - 0.5) * 3.0
+        x = p.m.x + ax * d - ay * side
+        y = p.m.y + ay * d + ax * side
+        self._blast(p, x, y, mv.aoe, mv, impact="star")
+
+    def _barrier(self, p: Player, mv: MoveRule) -> None:
+        cx, cy = p.m.x + p.m.ax * mv.range, p.m.y + p.m.ay * mv.range
+        hx, hy = -p.m.ay * mv.width / 2, p.m.ax * mv.width / 2
+        b = Barrier(self.room.new_id(), cx - hx, cy - hy, cx + hx, cy + hy, self.room.tick_no + mv.duration)
+        self.barriers[b.id] = b
+        self._broadcast(
+            cx, cy, [EV["BARRIER"], b.id, b.x0, b.y0, b.x1, b.y1, int(mv.duration * 1000 / self.hz)]
+        )
+
+    def _blocked_by_barrier(self, x: float, y: float) -> bool:
+        for b in self.barriers.values():
+            vx, vy = b.x1 - b.x0, b.y1 - b.y0
+            wx, wy = x - b.x0, y - b.y0
+            t = max(0.0, min(1.0, (wx * vx + wy * vy) / (vx * vx + vy * vy or 1.0)))
+            if (wx - t * vx) ** 2 + (wy - t * vy) ** 2 <= 0.45**2:
+                return True
+        return False
+
+    def _chain(self, p: Player, first: Monster, dmg: int) -> None:
+        """Ancient Rune: lightning arcs to two more monsters within 3 tiles for half damage."""
+        prev, seen = first, {first.id}
+        for _ in range(2):
+            near = [
+                m
+                for m in self.monsters.values()
+                if m.id not in seen and m.state != "hidden" and (m.x - prev.x) ** 2 + (m.y - prev.y) ** 2 <= 9
+            ]
+            if not near:
+                return
+            nxt = min(near, key=lambda m: (m.x - prev.x) ** 2 + (m.y - prev.y) ** 2)
+            self._broadcast(prev.x, prev.y, [EV["ZAP"], prev.x, prev.y, nxt.x, nxt.y])
+            n = max(1, dmg // 2)
+            nxt.hp -= n
+            nxt.damagers[p.eid] = nxt.damagers.get(p.eid, 0) + n
+            self._broadcast(nxt.x, nxt.y, [EV["HIT"], p.eid, nxt.id, n, 0, 0])
+            if nxt.hp <= 0:
+                self._kill(nxt, p)
+            seen.add(nxt.id)
+            prev = nxt
+
+    # ── offhands (Phase 11) ──────────────────────────────────────────────────
+    def throw_bomb(self, p: Player) -> bool:
+        cfg = self.oh.bombs
+        solid = self.room.grid.solid
+        x, y = p.m.x, p.m.y
+        steps = 14
+        for i in range(1, steps + 1):  # lob it up to `throw` tiles; it stops at a wall
+            nx = p.m.x + p.m.ax * cfg.throw * i / steps
+            ny = p.m.y + p.m.ay * cfg.throw * i / steps
+            if solid(int(nx), int(ny)):
+                break
+            x, y = nx, ny
+        b = Bomb(self.room.new_id(), p.eid, x, y, self.room.tick_no + self._t(cfg.fuse), dict(p.offhand))
+        self.bombs[b.id] = b
+        self._broadcast(p.m.x, p.m.y, [EV["SFX"], "throw", p.m.x, p.m.y])
+        return True
+
+    def _bombs(self, t: int) -> None:
+        cfg = self.oh.bombs
+        for b in [b for b in self.bombs.values() if b.fuse <= t]:
+            del self.bombs[b.id]
+            self._broadcast(b.x, b.y, [EV["PROJECTILE_END"], b.id, b.x, b.y])
+            owner = self.room.players.get(b.owner)
+            if owner is None:
+                continue
+            mv = MoveRule(
+                dmg=cfg.dmg,
+                windup=0,
+                active=1,
+                recover=0,
+                shape="circle",
+                range=cfg.radius,
+                arc=360,
+                width=0,
+                knockback=cfg.knockback,
+                stamina=0,
+                dash_step=0,
+            )
+            self._blast(owner, b.x, b.y, cfg.radius, mv, gear=b.gear, impact="boom")
+            self._broadcast(b.x, b.y, [EV["SFX"], "boom", b.x, b.y])
+
+    def cast_tome(self, p: Player) -> bool:
+        cfg = self.oh.tome
+        element = "burn"
+        for mod in p.offhand.get("modifiers") or []:
+            e = {"frost": "slow", "venom": "poison", "fire": "burn"}.get(mod.get("effect", ""))
+            if e:
+                element = e
+                break
+        mv = MoveRule(
+            dmg=cfg.dmg,
+            windup=0,
+            active=1,
+            recover=0,
+            shape="shot",
+            range=cfg.range,
+            arc=0,
+            width=0,
+            knockback=0.5,
+            stamina=0,
+            dash_step=0,
+            speed=cfg.speed / self.hz,
+            homing=cfg.homing,
+            status=element,
+            proc=1.0,
+        )
+        self._shoot(p, mv, gear=p.offhand, sprite=f"tome_{element}")
+        return True
 
     # ── snapshots ────────────────────────────────────────────────────────────
     def entities(self, p: Player, x0: float, x1: float, y0: float, y1: float) -> list[list[Any]]:
@@ -963,6 +1265,11 @@ class Combat:
                         1,  # flag 1: a monster's shot
                     ]
                 )
+        for b in self.bombs.values():
+            if x0 <= b.x <= x1 and y0 <= b.y <= y1:
+                out.append(
+                    [b.id, ENT["projectile"], "bomb", round(b.x * Q), round(b.y * Q), 0, 100, 0, 0, 0, 2]
+                )
         for pr in self.projectiles.values():
             if x0 <= pr.x <= x1 and y0 <= pr.y <= y1:
                 d = math.hypot(pr.vx, pr.vy) or 1.0
@@ -970,7 +1277,7 @@ class Combat:
                     [
                         pr.id,
                         ENT["projectile"],
-                        "spear",
+                        pr.sprite,
                         round(pr.x * Q),
                         round(pr.y * Q),
                         round(pr.vx / d * 100),

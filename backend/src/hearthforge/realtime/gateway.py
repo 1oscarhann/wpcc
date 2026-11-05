@@ -167,6 +167,11 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 err = room.travel(player, fields[0])
                 if err:
                     room.toast(player, f"travel_{err}")
+            elif op == "USE_QUICK":
+                if player is None or room is None or not fields or not isinstance(fields[0], int):
+                    continue
+                if 0 <= fields[0] < 4:
+                    room.use_quick(player, fields[0])
             elif op == "INTERACT":
                 if player is None or room is None or not fields or not isinstance(fields[0], int):
                     continue

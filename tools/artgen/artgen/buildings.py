@@ -1006,6 +1006,166 @@ def scaffold(fw: int, fh: int) -> Art:
     return Art(c, top)
 
 
+# ── Phase 11: alchemy, arcana and ale ───────────────────────────────────────
+VIOLET = ramp("flower_purple")
+ICE_R = ramp("ice")
+
+
+def potion_shelf(c: Canvas, x: int, y: int, n: int) -> None:
+    """A window with little coloured bottles on the sill."""
+    window(c, x, y, 7 + (n > 3) * 2, 6, shutters=False)
+    cols = [GRASS[3], VIOLET[1], FRED[1], WATER[3], YELLOW[1]]
+    for i in range(n):
+        c.put(x + 1 + i * 2, y + 6, cols[i % len(cols)])
+        c.put(x + 1 + i * 2, y + 5, cols[i % len(cols)])
+
+
+def cauldron(c: Canvas, x: int, y: int, brew: list[Color]) -> None:
+    for yy in range(y, y + 6):
+        w = 7 if yy < y + 4 else 5
+        x0 = x + (7 - w) // 2
+        c.hline(x0, x0 + w - 1, yy, STONE[1] if yy > y else STONE[2])
+    c.hline(x + 1, x + 5, y, brew[2])
+    c.put(x + 2, y - 1, brew[3])
+    c.put(x + 4, y - 2, brew[2])
+    c.put(x + 3, y + 6, FIRE[3])
+    c.put(x + 2, y + 6, FIRE[2])
+    c.put(x + 4, y + 6, FIRE[2])
+
+
+def alchemist(lv: int) -> Art:
+    c, top = new(2, 2, 52)
+    B = c.h - 3
+    ground_shadow(c, 2, B - 20, 29, B)
+    wall_plaster(c, 3, B - 18, 24, 18, braces=True)
+    roof_plane(c, 1, B - 36, 29, B - 16, VIOLET + [PINK[2]], "tiles", curve=3)
+    smoke = chimney(c, 21, B - 44, 14)
+    c.put(smoke[0], smoke[1] - 1, GRASS[3])  # a green wisp
+    potion_shelf(c, 5, B - 15, 3)
+    door(c, 21, B, w=7, h=11)
+    # bubbling cauldron out front, a herb pot and a hanging sign
+    cauldron(c, 2, B - 5, [GRASS[0], GRASS[1], GRASS[3], GRASS[4]] if lv < 4 else VIOLET + [PINK[2]])
+    c.rect(12, B - 3, 4, 3, DIRT[2])
+    c.put(13, B - 4, LEAF[3])
+    c.put(14, B - 5, LEAF[4])
+    c.hline(26, 29, B - 15, WOOD[1])
+    c.rect(26, B - 14, 4, 4, WOOD[3])
+    c.put(27, B - 12, GRASS[3])
+    c.put(28, B - 13, GRASS[4])
+    adorn(c, lv, pennant_at=(6, B - 36), boxes=[(6, B - 8, 5)] if lv >= 3 else [], banners=[],
+          lanterns=[(17, B - 18)], trim=(1, 28, B - 17), color=VIOLET)
+    if lv >= 3:
+        plinth(c, 3, B - 3, 24)
+    c.outline(INK)
+    return Art(c, top, [smoke])
+
+
+def wizard_tower(lv: int) -> Art:
+    h = 70 + lv * 2
+    c, top = new(2, 2, h + 12)
+    B = c.h - 3
+    ground_shadow(c, 4, B - 22, 27, B)
+    wall_stone(c, 7, B - h + 20, 18, h - 20, seed=7)
+    # a broader base course
+    wall_stone(c, 5, B - 14, 22, 14, seed=8)
+    # conical roof with a star
+    rt = B - h - 10
+    for y in range(rt, B - h + 22):
+        t = (y - rt) / (B - h + 22 - rt)
+        half = int(1 + t * 12)
+        for x in range(16 - half, 16 + half + 1):
+            c.put(x, y, BLUE[3] if x < 16 else BLUE[2] if x < 16 + half - 1 else BLUE[1])
+    c.hline(3, 29, B - h + 22, BLUE[0])
+    c.put(16, rt - 1, GOLD[3])
+    c.put(16, rt - 2, GOLD[4])
+    c.put(15, rt - 1, GOLD[2])
+    c.put(17, rt - 1, GOLD[2])
+    # glowing arched windows climbing the tower
+    for wy, wx in ((B - h + 26, 13), (B - 30, 17), (B - 44, 11)):
+        if wy > B - h + 24:
+            for yy in range(wy, wy + 6):
+                for xx in range(wx, wx + 4):
+                    if yy == wy and xx in (wx, wx + 3):
+                        continue
+                    c.put(xx, yy, ICE_R[3] if (xx + yy) % 3 else ICE_R[2])
+    door(c, 16, B, w=7, h=11, r=BLUE)
+    # floating crystal shards orbiting at higher levels
+    for i in range(min(lv, 3)):
+        cx, cy = (4, B - h + 4 - i * 6)[0] + i * 11, B - h + 30 - i * 9
+        c.put(cx, cy, ICE_R[3])
+        c.put(cx, cy + 1, ICE_R[2])
+        c.put(cx - 1, cy + 1, ICE_R[3])
+        c.put(cx, cy + 2, ICE_R[1])
+    adorn(c, lv, pennant_at=(22, B - h + 20), boxes=[], banners=[(5, B - 14)] if lv >= 4 else [],
+          lanterns=[(24, B - 14)], trim=(5, 26, B - 15), color=BLUE)
+    if lv >= 3:
+        plinth(c, 5, B - 3, 22)
+    c.outline(INK)
+    return Art(c, top)
+
+
+def tavern(lv: int, fw: int = 3, fh: int = 2) -> Art:
+    if fw == 2:  # turned: the narrow gable end faces you
+        return _tavern_narrow(lv, fh)
+    c, top = new(3, 2, 64)
+    B = c.h - 3
+    ground_shadow(c, 3, B - 26, 45, B)
+    wall_stone(c, 4, B - 12, 40, 12, seed=11)
+    wall_plaster(c, 4, B - 28, 40, 16, braces=True)
+    roof_plane(c, 2, B - 50, 46, B - 26, RED, "tiles", curve=2)
+    roof_gable(c, 32, B - 50, 8, 12, RED, "tiles")
+    smoke = chimney(c, 10, B - 58, 16)
+    # warm windows upstairs and down
+    for wx in (8, 18):
+        window(c, wx, B - 25, 6, 6, shutters=False)
+        c.rect(wx + 1, B - 24, 4, 4, FIRE[3])
+    window(c, 29, B - 46, 6, 5, shutters=False)
+    door(c, 34, B, w=9, h=12, double=True)
+    window(c, 8, B - 10, 6, 6, shutters=False)
+    c.rect(9, B - 9, 4, 4, FIRE[3])
+    # hanging sign with a mug
+    c.hline(42, 47, B - 24, WOOD[1])
+    c.rect(43, B - 23, 5, 6, WOOD[3])
+    c.rect(44, B - 21, 2, 3, YELLOW[2])
+    c.put(46, B - 20, YELLOW[1])
+    c.put(44, B - 22, CLOTH[3])
+    # barrels and a bench
+    barrel(c, 17, B - 9)
+    barrel(c, 23, B - 9)
+    c.hline(2, 7, B - 2, WOOD[4])
+    adorn(c, lv, pennant_at=(40, B - 50), boxes=[(18, B - 18, 6)] if lv >= 3 else [], banners=[(26, B - 28)],
+          lanterns=[(28, B - 14)], trim=(2, 45, B - 27), color=RED)
+    if lv >= 3:
+        plinth(c, 4, B - 3, 40)
+    c.outline(INK)
+    return Art(c, top, [smoke])
+
+
+def _tavern_narrow(lv: int, fh: int) -> Art:
+    c, top = new(2, fh, 78)
+    B = c.h - 3
+    ground_shadow(c, 2, B - 30, 29, B)
+    wall_stone(c, 3, B - 12, 26, 12, seed=12)
+    wall_plaster(c, 3, B - 30, 26, 18, braces=True)
+    roof_gable(c, 16, B - 54, 14, 24, RED, "tiles")
+    smoke = chimney(c, 22, B - 60, 14)
+    window(c, 13, B - 44, 6, 5, shutters=False)
+    c.rect(14, B - 43, 4, 3, FIRE[3])
+    window(c, 6, B - 26, 6, 6, shutters=False)
+    c.rect(7, B - 25, 4, 4, FIRE[3])
+    door(c, 19, B, w=8, h=12)
+    c.hline(26, 31, B - 24, WOOD[1])
+    c.rect(27, B - 23, 4, 5, WOOD[3])
+    c.rect(28, B - 21, 2, 2, YELLOW[2])
+    barrel(c, 4, B - 9)
+    adorn(c, lv, pennant_at=(8, B - 40), boxes=[], banners=[], lanterns=[(25, B - 14)],
+          trim=(3, 28, B - 29), color=RED)
+    if lv >= 3:
+        plinth(c, 3, B - 3, 26)
+    c.outline(INK)
+    return Art(c, top, [smoke])
+
+
 @dataclass
 class BuildingArt:
     fn: Callable[..., Art]
@@ -1027,6 +1187,9 @@ BUILDINGS: dict[str, BuildingArt] = {
     "forge": BuildingArt(forge, (3, 3)),
     "workshop": BuildingArt(workshop, (3, 3)),
     "tannery": BuildingArt(tannery, (3, 3)),
+    "alchemist": BuildingArt(alchemist, (2, 2)),
+    "wizard_tower": BuildingArt(wizard_tower, (2, 2)),
+    "tavern": BuildingArt(tavern, (3, 2), rotatable=True),
 }
 
 

@@ -11,6 +11,21 @@ export interface Weapon {
   rarity: string;
 }
 
+export interface OffhandState {
+  key?: string;
+  type: string; // shield | bombs | tome | ""
+  tier?: number;
+  charges: number;
+  readyAt: number; // performance.now() ms
+}
+
+export interface Buff {
+  key: string; // the item eaten/drunk
+  kind: string; // damage | defence | speed | stamina
+  value: number;
+  until: number; // performance.now() ms
+}
+
 interface AvatarStore {
   mode: Mode;
   hp: number;
@@ -23,6 +38,9 @@ interface AvatarStore {
   flags: number;
   weapon: Weapon;
   quick: Record<string, [string, number]>;
+  offhand: OffhandState;
+  buffs: Buff[];
+  blocking: boolean;
   inv: InvSlot[];
   invCap: number;
   abCd: number; // ticks left
@@ -46,6 +64,9 @@ export const useAvatar = create<AvatarStore>((set) => ({
   flags: 0,
   weapon: { key: null, type: "sword", tier: 1, rarity: "common" },
   quick: {},
+  offhand: { type: "", charges: 0, readyAt: 0 },
+  buffs: [],
+  blocking: false,
   inv: [],
   invCap: 24,
   abCd: 0,

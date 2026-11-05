@@ -311,4 +311,159 @@ def generate() -> dict[str, Canvas]:
         out[f"fx.hit.{i}"] = hit(i)
     for i in range(4):
         out[f"fx.poof.{i}"] = poof(i)
+    out.update(arsenal())
+    return out
+
+
+# ── Phase 11 arsenal (held sprites point right; the client rotates them) ─────
+ICE = ramp("ice")
+VIOLET = ramp("flower_purple")
+
+
+def warhammer(blade: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    b = blade or [STONE[2], STONE[3], STONE[4], STONE[5]]
+    c = Canvas(22, 11)
+    c.hline(0, 15, 5, WOOD[3])
+    c.hline(0, 15, 6, WOOD[1])
+    for x in range(15, 21):
+        for y in range(1, 10):
+            c.put(x, y, b[3] if y < 4 else b[2] if y < 8 else b[0])
+    c.vline(15, 1, 9, b[1])
+    c.vline(14, 3, 7, trim or GOLD[2])
+    c.outline(INK)
+    return c
+
+
+def mace(blade: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    b = blade or [STONE[2], STONE[3], STONE[4], STONE[5]]
+    c = Canvas(19, 9)
+    c.hline(0, 12, 4, WOOD[3])
+    c.hline(0, 12, 5, WOOD[1])
+    c.ellipse(15, 4.5, 3.2, 3.2, b[2])
+    c.ellipse(14.5, 3.8, 1.8, 1.6, b[3])
+    for fx, fy in ((15, 0), (18, 4), (15, 8), (12, 2), (12, 7)):
+        c.put(fx, fy, b[1])
+    c.vline(11, 3, 6, trim or GOLD[2])
+    c.outline(INK)
+    return c
+
+
+def bow(limb: list | None = None, trim=None, arcane: bool = False) -> Canvas:  # noqa: ANN001
+    li = limb or [WOOD[1], WOOD[2], WOOD[3], WOOD[4]]
+    c = Canvas(9, 19)
+    for y in range(1, 18):
+        t = (y - 9) / 8
+        x = int(2 + 5 * (1 - t * t))
+        c.put(x, y, li[2] if y < 9 else li[1])
+        c.put(x - 1, y, li[3] if y < 9 else li[2])
+    c.vline(1, 1, 17, CREAM[3])
+    c.put(6, 9, trim or GOLD[2])
+    c.put(7, 9, trim or GOLD[2])
+    if arcane:
+        c.put(7, 8, GOLD[4])
+        c.put(2, 3, VIOLET[2])
+        c.put(2, 15, VIOLET[2])
+    c.outline(INK)
+    return c
+
+
+def staff(gem: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    g = gem or ICE
+    c = Canvas(26, 9)
+    c.hline(0, 19, 4, WOOD[3])
+    c.hline(0, 19, 5, WOOD[1])
+    c.vline(19, 2, 7, trim or GOLD[2])
+    pts = [(20, 4.5), (23, 1), (25.5, 4.5), (23, 8)]
+    from artgen.canvas import point_in_poly
+
+    c.shape(lambda x, y: point_in_poly(x + 0.5, y + 0.5, pts), lambda x, y: g[3] if y < 4 else g[2] if x < 24 else g[1])
+    c.put(22, 3, (255, 255, 255, 255))
+    c.outline(INK)
+    return c
+
+
+def enchanted_sword(blade: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    c = sword(blade or [VIOLET[0], VIOLET[1], VIOLET[2], ICE[3]], [WOOD[2], trim or GOLD[3]])
+    for x in (8, 11, 14):
+        c.put(x, 3, ICE[3])
+    return c
+
+
+def harpoon(blade: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    b = blade or [STONE[2], STONE[3], STONE[4], STONE[5]]
+    c = Canvas(30, 9)
+    c.hline(0, 22, 4, WOOD[3])
+    c.hline(0, 22, 5, WOOD[1])
+    for i in range(6):
+        c.vline(23 + i, 4 - (2 - abs(2 - i) if i < 5 else 0), 5, b[2] if i < 4 else b[3])
+    c.put(29, 4, b[3])
+    c.line(24, 6, 22, 8, b[1])  # barbs
+    c.line(24, 3, 22, 1, b[1])
+    c.vline(21, 3, 6, trim or GOLD[2])
+    c.hline(2, 8, 3, CREAM[2])  # rope wrap
+    c.outline(INK)
+    return c
+
+
+def shield(face: list | None = None, trim=None) -> Canvas:  # noqa: ANN001
+    f = face or [WOOD[1], WOOD[2], WOOD[3], WOOD[4]]
+    c = Canvas(11, 13)
+    for y in range(0, 12):
+        half = 5 if y < 7 else max(0, 5 - (y - 6))
+        for x in range(5 - half, 6 + half):
+            c.put(x, y, f[3] if x < 5 else f[2] if x < 8 else f[1])
+    c.hline(0, 10, 0, trim or STONE[3])
+    c.vline(5, 1, 10, trim or STONE[3])
+    c.put(5, 5, GOLD[3])
+    c.outline(INK)
+    return c
+
+
+def tome() -> Canvas:
+    c = Canvas(10, 9)
+    c.rect(1, 1, 8, 7, VIOLET[1])
+    c.rect(1, 1, 7, 6, VIOLET[2])
+    c.vline(1, 1, 7, VIOLET[0])
+    c.hline(2, 8, 7, CREAM[3])
+    c.put(5, 3, GOLD[3])
+    c.put(4, 4, GOLD[2])
+    c.put(6, 4, GOLD[2])
+    c.outline(INK)
+    return c
+
+
+def bomb(frame: int) -> Canvas:
+    c = Canvas(12, 13)
+    c.drop_shadow(6, 11, 4.5, 1.4)
+    c.ellipse(6, 7.5, 4.5, 4.2, WOOD[2])
+    c.ellipse(5, 6.5, 2.5, 2.2, WOOD[3])
+    c.hline(2, 10, 6, STONE[1])
+    c.hline(2, 10, 9, STONE[1])
+    c.line(7, 3, 9, 1, CREAM[2])
+    c.put(9 + frame % 2, 0, FIRE[4])
+    c.put(10, 1 - frame % 2, FIRE[3])
+    c.outline(INK)
+    return c
+
+
+def arsenal() -> dict[str, Canvas]:
+    from artgen.icons import TIER_RAMPS, TIER_TRIM
+
+    out: dict[str, Canvas] = {}
+    makers = {
+        "warhammer": warhammer, "mace": mace, "crystal_staff": staff, "enchanted_sword": enchanted_sword,
+        "harpoon": harpoon, "shield": shield,
+    }
+    for k, fn in makers.items():
+        out[f"wpn.{k}"] = fn()
+        for t in range(5):
+            out[f"wpn.{k}.t{t + 1}"] = fn(TIER_RAMPS[t], TIER_TRIM[t])
+    out["wpn.bow"] = bow()
+    out["wpn.arcane_bow"] = bow([VIOLET[0], VIOLET[1], VIOLET[2], ICE[3]], GOLD[3], arcane=True)
+    for t in range(5):
+        out[f"wpn.bow.t{t + 1}"] = bow(None, TIER_TRIM[t])
+        out[f"wpn.arcane_bow.t{t + 1}"] = bow([VIOLET[0], VIOLET[1], VIOLET[2], ICE[3]], TIER_TRIM[t], arcane=True)
+    out["wpn.tome"] = tome()
+    out["fx.bomb.0"] = bomb(0)
+    out["fx.bomb.1"] = bomb(1)
     return out

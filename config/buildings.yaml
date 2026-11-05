@@ -151,3 +151,34 @@ buildings:
     footprint: [3, 3]
     max_count: [0, 0, 1, 1, 1]
     base_cost: { wood: 100, stone: 40, hide: 20 }
+
+  # Phase 11: alchemy, arcana and ale (BALANCE §2.3)
+  alchemist:
+    name: Alchemist
+    description: Brews potion base from herbs. Beside the right neighbours it brews potions and hearty food.
+    category: crafting
+    rare_group: crafting
+    unlock_town_hall: 2
+    footprint: [2, 2]
+    max_count: [0, 1, 1, 1, 1]
+    base_cost: { wood: 100, stone: 80, herbs: 30 }
+
+  wizard_tower:
+    name: Wizard Tower
+    description: Studies crystal. Its neighbours learn to make staffs, enchanted blades and tomes.
+    category: crafting
+    rare_group: crafting
+    unlock_town_hall: 3
+    footprint: [2, 2]
+    max_count: [0, 0, 1, 1, 1]
+    base_cost: { wood: 80, stone: 150, crystal: 20 }
+
+  tavern:
+    name: Tavern
+    description: Bakes bread from food. Folks gather here, and so do barrels of things that go boom.
+    category: crafting
+    rare_group: crafting
+    unlock_town_hall: 3
+    footprint: [3, 2]
+    max_count: [0, 0, 1, 1, 1]
+    base_cost: { wood: 150, stone: 80, food: 50 }

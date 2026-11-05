@@ -100,6 +100,20 @@ class ResourcesCfg(Strict):
     hud_order: list[str]
 
 
+class UseCfg(Strict):
+    """A consumable's effect. `group` shares a cooldown (all potions, all stamina drinks).
+    One food buff at a time."""
+
+    heal: float = Field(default=0, ge=0, le=1)  # share of max HP
+    stamina: float = Field(default=0, ge=0, le=1)  # share of max stamina, instantly
+    regen: float = Field(default=1, ge=1, le=3)  # stamina regen × this for `duration`
+    buff: Literal["damage", "defence", "speed"] | None = None
+    value: float = Field(default=0, ge=0, le=1)
+    duration: Duration = 0
+    cooldown: Duration = 0
+    group: Literal["potion", "stamina", "food"]
+
+
 class ItemDefCfg(Strict):
     name: str
     category: Literal[
@@ -119,7 +133,9 @@ class ItemDefCfg(Strict):
     stackable: bool
     max_stack: int = 1
     weapon_type: str | None = None
+    offhand_type: Literal["shield", "bombs", "tome"] | None = None
     icon: str
+    use: UseCfg | None = None  # consumables: what drinking/eating it does (Phase 11)
 
 
 class ItemsCfg(Strict):
@@ -433,33 +449,51 @@ class Knockback(Strict):
     player_mult: float = Field(ge=0)
 
 
-class Move(Strict):
-    """One swing. `arc` shapes use arc (degrees) + range; `line` shapes use range + width."""
+class MoveExtras(Strict):
+    """Phase 11 move options, all server-side except timings (the client predictor never needs them)."""
+
+    width: float = Field(default=0.8, gt=0, le=4)
+    speed: float = Field(default=12, gt=0, le=30)  # shot/throw: tiles per second
+    pierce: bool = False
+    aoe: float = Field(default=0, ge=0, le=4)  # shot: explodes on impact · starfall: impact radius
+    homing: float = Field(default=0, ge=0, le=1)  # shot: how hard it steers toward the nearest monster
+    count: int = Field(default=1, ge=1, le=12)  # shot: projectiles fanned across `spread` degrees
+    spread: float = Field(default=0, ge=0, le=120)
+    hits: int = Field(default=1, ge=1, le=12)  # circle/starfall/spin: repeated hits…
+    interval: Duration = 0.2  # …this far apart
+    stun: Duration = 0
+    pull: float = Field(default=0, ge=0, le=6)  # tiles toward you (harpoon)
+    status: Literal["", "burn", "slow", "poison"] = ""
+    proc: float = Field(default=0, ge=0, le=1)
+    duration: Duration = 0  # barrier
+    sprite: str = ""  # shot: projectile sprite
+    impact: str = ""  # circle: which shockwave the client draws
+
+
+class Move(MoveExtras):
+    """One swing. `arc` uses arc (degrees) + range; `line` range + width; `circle` is around you;
+    `shot` fires projectiles."""
 
     dmg: float = Field(gt=0)
     windup: Duration
     active: Duration
     recover: Duration
-    shape: Literal["arc", "line"]
-    range: float = Field(gt=0, le=4)
+    shape: Literal["arc", "line", "circle", "shot", "starfall", "barrier"]
+    range: float = Field(gt=0, le=12)
     arc: float = Field(default=120, gt=0, le=360)
-    width: float = Field(default=0.8, gt=0, le=3)
     knockback: float = Field(default=0.5, ge=0)
     stamina: float = Field(default=0, ge=0)
     dash: float = Field(default=0, ge=0, le=5)
 
 
-class Ability(Strict):
-    kind: Literal["spin", "throw"]
+class Ability(MoveExtras):
+    kind: Literal["spin", "throw", "circle", "shot", "starfall", "barrier"]
     dmg: float = Field(gt=0)
     cooldown: Duration
     windup: Duration
     recover: Duration
     knockback: float = Field(default=0.5, ge=0)
     range: float = Field(gt=0, le=12)
-    hits: int = Field(default=1, ge=1, le=10)  # spin
-    interval: Duration = 0.2  # spin
-    speed: float = Field(default=12, gt=0)  # throw
 
 
 class Weapon(Strict):
@@ -467,6 +501,59 @@ class Weapon(Strict):
     combo_window: Duration
     heavy: Move
     ability: Ability
+
+
+class ShieldCfg(Strict):
+    defence: list[int] = Field(min_length=5, max_length=5)
+    block: float = Field(ge=0, le=1)  # share of a frontal hit blocked while you hold F
+    block_stamina: float = Field(ge=0)
+    block_arc: float = Field(gt=0, le=360)
+
+
+class BombsCfg(Strict):
+    dmg: float = Field(gt=0)
+    radius: float = Field(gt=0, le=5)
+    fuse: Duration
+    charges: int = Field(ge=1, le=9)
+    recharge: Duration
+    throw: float = Field(gt=0, le=8)
+    knockback: float = Field(ge=0)
+
+
+class TomeCfg(Strict):
+    dmg: float = Field(gt=0)
+    cooldown: Duration
+    speed: float = Field(gt=0)
+    range: float = Field(gt=0)
+    homing: float = Field(ge=0, le=1)
+
+
+class OffhandsCfg(Strict):
+    shield: ShieldCfg
+    bombs: BombsCfg
+    tome: TomeCfg
+
+
+class DotCfg(Strict):
+    share: float = Field(gt=0, le=2)  # total DoT damage as a share of the hit that applied it
+    duration: Duration
+    stacks: int = Field(default=1, ge=1, le=5)
+
+
+class SlowCfg(Strict):
+    mult: float = Field(gt=0, le=1)
+    duration: Duration
+
+
+class StatusesCfg(Strict):
+    burn: DotCfg
+    poison: DotCfg
+    slow: SlowCfg
+
+
+class ArmourMoveCfg(Strict):
+    speed: float = Field(gt=0.5, le=1.5)
+    dodge: float = Field(gt=0.5, le=1.5)
 
 
 class CombatCfg(Strict):
@@ -483,6 +570,9 @@ class CombatCfg(Strict):
     knockback: Knockback
     attack_move_slow: float = Field(gt=0, le=1)
     weapons: dict[str, Weapon]
+    offhands: OffhandsCfg
+    statuses: StatusesCfg
+    armour_move: dict[str, ArmourMoveCfg] = {}
 
 
 # ── enemies.yaml ─────────────────────────────────────────────────────────────
@@ -617,6 +707,15 @@ class CombosCfg(Strict):
 # ── recipes.yaml ─────────────────────────────────────────────────────────────
 
 
+class ConsumableRecipe(Strict):
+    station: str
+    inputs: dict[str, int]
+    time: Duration  # per unit
+    makes: int = Field(default=1, ge=1, le=10)
+    max_batch: int = Field(ge=1, le=50)
+    min_tier: int = Field(default=1, ge=1, le=5)
+
+
 class IntermediateRecipe(Strict):
     station: str
     inputs: dict[str, int]
@@ -634,6 +733,7 @@ class RecipesCfg(Strict):
     intermediates: dict[str, IntermediateRecipe]
     job_slots: dict[str, list[int]]
     gear: dict[str, GearRecipe]
+    consumables: dict[str, ConsumableRecipe] = {}
 
 
 # ── forging.yaml ─────────────────────────────────────────────────────────────
@@ -659,7 +759,7 @@ class RarityCfg(Strict):
 class ModifierCfg(Strict):
     key: str
     name: str
-    effect: Literal["knockback", "crit"]
+    effect: Literal["knockback", "crit", "venom", "frost", "fire", "lifesteal", "chain"]
     range: tuple[float, float]
 
 

@@ -4,7 +4,7 @@ export interface MoveRule {
   windup: number;
   active: number;
   recover: number;
-  shape: "arc" | "line" | "spin" | "throw";
+  shape: "arc" | "line" | "spin" | "throw" | "circle" | "shot" | "starfall" | "barrier";
   range: number;
   arc: number;
   width: number;
@@ -15,6 +15,13 @@ export interface MoveRule {
   interval: number;
   cooldown: number;
   speed: number;
+  // Phase 11, server-side (the client only uses them for visuals)
+  pierce?: boolean;
+  aoe?: number;
+  count?: number;
+  spread?: number;
+  sprite?: string;
+  impact?: string;
 }
 
 export interface WeaponRule {

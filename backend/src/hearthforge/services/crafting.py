@@ -91,6 +91,27 @@ def station_options(cfg: GameConfig, ld: Loaded, station_id: str) -> dict[str, A
                 ],
             }
         )
+    brews = []
+    for ck, cr in cfg.recipes.consumables.items():
+        if cr.station != st.building_key:
+            continue
+        found = combos_dom.station_tier(active, cfg.combos.combos, station_id, ck)
+        if found is None:
+            continue
+        tier, combo = found
+        brews.append(
+            {
+                "recipe": ck,
+                "name": cfg.items_cfg.items[ck].name,
+                "inputs": cr.inputs,
+                "makes": cr.makes,
+                "seconds_per_unit": cr.time,
+                "max_batch": cr.max_batch,
+                "combo": combo,
+                "combo_name": cfg.combos.combos[combo].name,
+                "needs_tier": cr.min_tier if tier < cr.min_tier else None,
+            }
+        )
     jobs = [village_svc.job_view(j) for j in ld.jobs if j.station_building_id == st.id]
     return {
         "station_id": station_id,
@@ -98,6 +119,7 @@ def station_options(cfg: GameConfig, ld: Loaded, station_id: str) -> dict[str, A
         "slots": job_slots(cfg, st.building_key, st.level),
         "intermediates": inter,
         "gear": gear,
+        "consumables": brews,
         "rare_materials": {
             k: {"modifier": m.name, "range": list(m.range)} for k, m in cfg.forging.modifiers.items()
         },
@@ -136,6 +158,23 @@ async def start(
         cost = {k: v * quantity for k, v in rec.inputs.items()}
         seconds = rec.time * quantity
         kind = "intermediate"
+    elif recipe in cfg.recipes.consumables:
+        cr = cfg.recipes.consumables[recipe]
+        if cr.station != st.building_key:
+            raise GameError("wrong_station", "This station can't brew that.")
+        found = combos_dom.station_tier(_active(cfg, ld), cfg.combos.combos, station_id, recipe)
+        if found is None:
+            raise GameError("combo_needed", "This station needs the right neighbours to make that.")
+        ctier, combo_key = found
+        if ctier < cr.min_tier:
+            raise GameError("tier_too_low", f"Upgrade this combo's buildings to level {cr.min_tier} first.")
+        if not 1 <= quantity <= cr.max_batch:
+            raise GameError("bad_quantity", f"Make between 1 and {cr.max_batch} at a time.")
+        if rares:
+            raise GameError("bad_rares", "Rare materials only go into gear.")
+        cost = {k: v * quantity for k, v in cr.inputs.items()}
+        seconds = cr.time * quantity
+        kind = "consumable"
     elif recipe in cfg.recipes.gear:
         g = cfg.recipes.gear[recipe]
         if g.station != st.building_key:
@@ -209,7 +248,7 @@ async def cancel(
     ld = await village_svc.load_locked(session, user_id=user_id, with_wallet=True)
     village_svc.settle_village(session, cfg, ld, now)
     j = _job(ld, job_id)
-    if j.kind == "gear" and j.completes_at <= now:
+    if j.kind in ("gear", "consumable") and j.completes_at <= now:
         raise GameError("job_done", "It's finished: collect it instead!")
     if j.rare_inputs:
         back: dict[str, int] = {}
@@ -247,6 +286,8 @@ async def collect(
     ld = await village_svc.load_locked(session, user_id=user_id, with_wallet=True)
     village_svc.settle_village(session, cfg, ld, now)
     j = _job(ld, job_id)
+    if j.kind == "consumable":
+        return await _collect_brew(session, cfg, user_id, now, ld, j)
     if j.kind != "gear":
         raise GameError("auto_collect", "Goods go into storage by themselves.")
     if j.completes_at > now:
@@ -295,6 +336,27 @@ async def collect(
     village_svc.touch(ld, now)
     await session.flush()
     return ld, item_view(cfg, inst)
+
+
+async def _collect_brew(
+    session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID, now: datetime, ld: Loaded, j: CraftJob
+) -> tuple[Loaded, dict[str, Any]]:
+    """Potions and food go into your bag as stacks (Phase 11)."""
+    if j.completes_at > now:
+        raise GameError("not_ready", "Still bubbling!")
+    qty = j.quantity * cfg.recipes.consumables[j.recipe_key].makes
+    left = await inventory.grant(session, cfg, user_id, {j.recipe_key: qty}, ledger.CRAFT_COLLECT)
+    if left:
+        raise GameError("bag_full", "Your bag is too full for all of that. Make some room first.")
+    j.status = JobStatus.collected
+    j.collected_at = now
+    ld.jobs.remove(j)
+    from hearthforge.services import stats
+
+    await stats.bump(session, user_id, {f"brew.{j.recipe_key}": qty, "brew.any": qty})
+    village_svc.touch(ld, now)
+    await session.flush()
+    return ld, {"item": j.recipe_key, "name": cfg.items_cfg.items[j.recipe_key].name, "quantity": qty}
 
 
 async def book(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> dict[str, Any]:

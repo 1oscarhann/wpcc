@@ -331,6 +331,21 @@ The loader checks that every ring with ruins has chest loot and every ring with 
 - **Top level:** `coop: { hp_per_player, radius }`, `storm_enemy`, `minion_xp`.
 - **Cross-checks:** shot attacks need a shot block, only at-target circles root, summon/split targets exist and don't chain, roster enemies need an elite name, and the storm enemy must be roaming.
 
+### Phase 11 additions
+
+- **`combat.yaml`**
+  - **Weapons.** warhammer, mace, bow, crystal_staff, enchanted_sword, harpoon, arcane_bow.
+  - **Moves.** A move can now use `shape: circle | shot | starfall | barrier`, and the options `speed`, `pierce`, `aoe`, `homing`, `count`, `spread`, `hits`, `interval`, `stun`, `pull`, `status`, `proc`, `duration`, `sprite` and `impact`.
+  - **New sections.** `offhands` (shield/bombs/tome numbers), `statuses` (burn/poison/slow) and `armour_move` (plate: speed 0.95, dodge 0.9).
+- **`items.yaml`.** Offhands carry `offhand_type`. Consumables carry `use: { heal | stamina + regen | buff + value, duration, cooldown, group }`.
+- **`recipes.yaml`.** New `consumables:` section (`station`, `inputs`, `time`, `makes`, `max_batch`, `min_tier`), plus the bread and potion_base intermediates and gear bills for every new weapon and offhand.
+- **`combos.yaml`.** All 13 combos (D-084).
+- **`forging.yaml`.** Modifiers for swamp venom, frost shard, ember core and moonpetal.
+- **Loader cross-checks.**
+  - Unlocks must be gear or consumable recipes.
+  - Consumables need `use`, offhands need `offhand_type`.
+  - `armour_move` keys must be armours.
+
 ## Secrets in the client bundle
 
 Sections marked secret are stripped from `GET /api/config`:

@@ -839,6 +839,127 @@ PHASES[10] = async (page, kind) => {
   await page.keyboard.press("Escape");
 };
 
+// Phase 11: find a base tile where a whole cluster of buildings fits (each checked with the server preview)
+async function placeCluster(page, members) {
+  const base = await page.evaluate(async (ms) => {
+    const ok = async (k, x, y) => (await (await fetch(`/api/village/preview?key=${k}&x=${x}&y=${y}`)).json()).valid;
+    for (let y = 9; y <= 34; y++) {
+      for (let x = 9; x <= 34; x++) {
+        let all = true;
+        for (const [k, dx, dy] of ms) {
+          if (!(await ok(k, x + dx, y + dy))) {
+            all = false;
+            break;
+          }
+        }
+        if (all) return [x, y];
+      }
+    }
+    return null;
+  }, members);
+  if (!base) return false;
+  for (const [key, dx, dy] of members) {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const r = await apiPost(page, "/api/village/buildings", { key, x: base[0] + dx, y: base[1] + dy, rotation: 0 });
+      if (r.error?.code === "queue_full") {
+        await page.waitForTimeout(5500); // two builders: wait for one to finish
+        continue;
+      }
+      if (r.error) console.log("place", key, JSON.stringify(r.error).slice(0, 160));
+      break;
+    }
+  }
+  return base;
+}
+
+async function equipFromBag(page, key, dst) {
+  return page.evaluate(async ([k, d]) => {
+    const inv = await (await fetch("/api/inventory")).json();
+    const s = inv.inventory.slots.find((x) => x.item === k);
+    if (!s) return false;
+    const csrf = document.cookie.split("; ").find((c) => c.startsWith("hf_csrf="))?.split("=")[1];
+    await fetch("/api/inventory/move", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf },
+      body: JSON.stringify({ src: { kind: "inventory", slot: s.slot }, dst: { kind: "equipment", slot: d } }),
+    });
+    return true;
+  }, [key, dst]);
+}
+
+PHASES[11] = async (page, kind) => {
+  await freshPlayer(page, kind);
+  await apiPost(page, "/api/dev/kit", { town_hall: 3, tier: 2 });
+  const a = await placeCluster(page, [["forge", 0, 0], ["wizard_tower", 3, 0], ["quarry", 5, 0], ["lumber_camp", 0, 3]]);
+  await placeCluster(page, [["alchemist", 0, 0], ["herb_garden", 2, 0], ["workshop", 0, 3], ["tavern", 3, 3]]);
+  await page.waitForTimeout(12500); // the builds finish
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(2500);
+  if (a) await page.evaluate(([x, y]) => window.__hfGame.devFocusTile?.(x, y), [a[0] + 4, a[1] + 3]);
+  await shot(page, "01-new-buildings-and-combos", kind, { wait: 900 });
+  // gear up: shield + quick-slots
+  await equipFromBag(page, "shield", 1);
+  for (const [k, q] of [["healing_potion", 4], ["stamina_potion", 5], ["warrior_stew", 6], ["swift_tart", 7]]) await equipFromBag(page, k, q);
+  await enterAvatar(page);
+  await page.keyboard.press("b");
+  await shot(page, "02-bag-offhand-quickslots", kind, { wait: 900 });
+  await page.keyboard.press("b");
+  const spot = await ringSpot(page, 190);
+  const tour = [
+    ["03-warhammer-quake", "warhammer", "q"],
+    ["04-bow-volley", "bow", "q"],
+    ["05-staff-barrier", "crystal_staff", "q"],
+    ["06-enchanted-burst", "enchanted_sword", "q"],
+    ["07-harpoon-whirlpool", "harpoon", "q"],
+    ["08-arcane-starfall", "arcane_bow", "q"],
+  ];
+  for (const [name, weapon, key] of tour) {
+    await equipFromBag(page, weapon, 0);
+    await apiPost(page, "/api/dev/teleport", { x: spot[0], y: spot[1] });
+    await page.waitForTimeout(1800);
+    await page.keyboard.press(key);
+    await page.waitForTimeout(weapon === "harpoon" || weapon === "arcane_bow" ? 650 : 380);
+    await shot(page, name, kind, { wait: 0 });
+    await page.waitForTimeout(600);
+    // put it back so the next weapon can come out
+    await page.evaluate(async () => {
+      const csrf = document.cookie.split("; ").find((c) => c.startsWith("hf_csrf="))?.split("=")[1];
+      const inv = await (await fetch("/api/inventory")).json();
+      const used = new Set(inv.inventory.slots.map((x) => x.slot));
+      let free = 0;
+      while (used.has(free)) free++;
+      await fetch("/api/inventory/move", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-csrf-token": csrf },
+        body: JSON.stringify({ src: { kind: "equipment", slot: 0 }, dst: { kind: "inventory", slot: free } }),
+      });
+    });
+  }
+  // offhands: bombs away, then a shield block
+  await equipFromBag(page, "warhammer", 0);
+  await page.evaluate(async () => {
+    const csrf = document.cookie.split("; ").find((c) => c.startsWith("hf_csrf="))?.split("=")[1];
+    const inv = await (await fetch("/api/inventory")).json();
+    const used = new Set(inv.inventory.slots.map((x) => x.slot));
+    let free = 0;
+    while (used.has(free)) free++;
+    await fetch("/api/inventory/move", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf },
+      body: JSON.stringify({ src: { kind: "equipment", slot: 1 }, dst: { kind: "inventory", slot: free } }),
+    });
+  });
+  await equipFromBag(page, "barrel_bombs", 1);
+  await apiPost(page, "/api/dev/teleport", { x: spot[0], y: spot[1] });
+  await page.waitForTimeout(1800);
+  await page.keyboard.press("f");
+  await page.waitForTimeout(1350);
+  await shot(page, "09-barrel-bomb", kind, { wait: 0 });
+  await page.keyboard.press("3");
+  await shot(page, "10-food-buff-hotbar", kind, { wait: 700 });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

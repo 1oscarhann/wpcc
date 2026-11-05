@@ -438,14 +438,35 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         if len(set(combo.buildings)) != len(combo.buildings):
             errors.append(f"{where}.buildings: a building can only appear once")
         for gk in combo.unlocks:
-            g = recipes.gear.get(gk)
+            g = recipes.gear.get(gk) or recipes.consumables.get(gk)
             if g is None:
-                errors.append(f"{where}.unlocks: '{gk}' has no gear recipe in recipes.yaml")
+                errors.append(f"{where}.unlocks: '{gk}' has no gear or consumable recipe in recipes.yaml")
             elif g.station not in combo.buildings:
                 errors.append(
                     f"{where}.unlocks: '{gk}' is forged at '{g.station}', which isn't in this combo"
                 )
     unlocked = {gk for c in combos.combos.values() for gk in c.unlocks}
+    # ── Phase 11: consumables, weapons, offhands ──────────────────────────────
+    for ck, crec in recipes.consumables.items():
+        where = f"recipes.yaml:consumables.{ck}"
+        it = items.get(ck)
+        if it is None or it.category != "consumable" or not it.stackable:
+            errors.append(f"{where}: needs a stackable consumable '{ck}' in items.yaml")
+        if crec.station not in bcfg.buildings:
+            errors.append(f"{where}.station: unknown building '{crec.station}'")
+        if ck not in unlocked:
+            errors.append(f"{where}: no combo unlocks it")
+        for k in crec.inputs:
+            if k not in res.resources:
+                errors.append(f"{where}.inputs: '{k}' isn't a resource")
+    for ik, it in items_cfg.items.items():
+        if it.category == "consumable" and it.use is None:
+            errors.append(f"items.yaml:items.{ik}: a consumable needs `use`")
+        if it.category == "offhand" and it.offhand_type is None:
+            errors.append(f"items.yaml:items.{ik}: an offhand needs `offhand_type`")
+    for ak in combat.armour_move:
+        if ak not in forging.armour:
+            errors.append(f"combat.yaml:armour_move.{ak}: not an armour in forging.yaml")
     for gk, g in recipes.gear.items():
         where = f"recipes.yaml:gear.{gk}"
         if gk not in items or items[gk].stackable:

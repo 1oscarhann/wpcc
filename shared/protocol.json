@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "client_to_server": {
     "HELLO": "0x01",
     "PING": "0x02",
@@ -11,7 +11,8 @@
     "ACTION": "0x23",
     "PARTY": "0x30",
     "TRAVEL": "0x31",
-    "INTERACT": "0x32"
+    "INTERACT": "0x32",
+    "USE_QUICK": "0x33"
   },
   "server_to_client": {
     "WELCOME": "0x81",
@@ -51,7 +52,13 @@
     "PARTY": 30,
     "PARTY_INVITE": 31,
     "ZAP": 32,
-    "POI": 33
+    "POI": 33,
+    "IMPACT": 34,
+    "MOVE_MODS": 35,
+    "OFFHAND": 36,
+    "BARRIER": 37,
+    "BUFF": 38,
+    "LOADOUT": 39
   },
   "entity_kinds": {
     "avatar": 0,
