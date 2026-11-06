@@ -93,6 +93,9 @@ class Monster:
     burn: tuple[float, int] = (0.0, 0)  # dps, ticks left
     poison: tuple[float, int, int] = (0.0, 0, 0)  # dps, ticks left, stacks
     dot_src: int = 0  # who applied the last DoT (gets the kill)
+    dungeon: int = 0  # the delve instance it belongs to (Phase 12)
+    boss: bool = False
+    atk: Any = None  # the attack being used right now (bosses switch to alt_attack from afar)
     scale: tuple[float, float, float] = (1.0, 1.0, 0.0)  # roaming spawns: the biome's hp/dmg/def scale
 
 
@@ -379,6 +382,8 @@ class Combat:
         cs = self.room.grid.cs
         r = self.en.wake_radius_chunks
         for p in self.room.players.values():
+            if p.dungeon:
+                continue  # delves spawn their own packs
             pcx, pcy = int(p.m.x) // cs, int(p.m.y) // cs
             for cy in range(pcy - r, pcy + r + 1):
                 for cx in range(pcx - r, pcx + r + 1):
@@ -453,7 +458,7 @@ class Combat:
         m.x, m.y = nx, ny
 
     def _ai(self, m: Monster, t: int) -> None:
-        a = m.cfg.attack
+        a = m.atk or m.cfg.attack
         m.st_t += 1
         if m.hurt > 0:
             m.hurt -= 1
@@ -515,6 +520,13 @@ class Combat:
             d = math.hypot(dx, dy)
             if m.cfg.summon is not None and t >= m.next_summon:
                 self._summon(m, t)
+            if m.cfg.alt_attack is not None:  # bosses: charge from afar, slam up close
+                m.atk = None
+                alt = m.cfg.alt_attack
+                if a.trigger < d <= alt.trigger and m.st_t > self.hz:
+                    m.atk = alt
+                    self._start_windup(m, target)
+                    return
             if m.cfg.keep_away and d < m.cfg.keep_away and m.backoff < self.hz * 2:
                 m.backoff += 1  # kiters and summoners keep their distance, but not forever
                 self._step_toward(m, m.x - dx, m.y - dy, 0.8)
@@ -570,7 +582,7 @@ class Combat:
         self._move(m, ux / ul * sp, uy / ul * sp)
 
     def _start_windup(self, m: Monster, target: Player) -> None:
-        a = m.cfg.attack
+        a = m.atk or m.cfg.attack
         dx, dy = target.m.x - m.x, target.m.y - m.y
         d = math.hypot(dx, dy) or 1.0
         m.dx, m.dy = dx / d, dy / d
@@ -589,7 +601,7 @@ class Combat:
         self._broadcast(m.x, m.y, ev)
 
     def _check_hit(self, m: Monster, t: int) -> None:
-        a = m.cfg.attack
+        a = m.atk or m.cfg.attack
         for p in self._players_near(m.ox, m.oy, max(a.range, a.lunge) + 1.5):
             if p.eid in m.hit_players:
                 continue
@@ -1232,6 +1244,7 @@ class Combat:
                 anim = ANIM["walk"]
             flags = (1 if m.elite else 0) | (8 if m.hurt else 0) | (16 if m.night else 0)
             flags |= 32 if m.minion_of is not None else 0
+            flags |= 64 if m.boss else 0
             out.append(
                 [
                     m.id,

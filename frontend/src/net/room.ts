@@ -6,6 +6,7 @@ import { fromList, newMotion, step, type Motion } from "../sim/motion";
 import type { ClientGrid } from "../sim/grid";
 import { ATK_NONE, type Rules, type WeaponRule } from "../sim/rules";
 import { useAvatar, type InvSlot, type Weapon } from "../state/avatar";
+import { delveSolid, useDelve, type DelveInfo, type DelveState } from "../state/delve";
 import { useSession } from "../state/session";
 import { toast } from "../state/toasts";
 import type { Appearance } from "../api/types";
@@ -79,6 +80,11 @@ const TOASTS: Record<string, string> = {
   travel_not_attuned: "You haven't attuned that waystone yet. Walk up to it once.",
   travel_not_at_waystone: "Stand next to a waystone to travel.",
   no_bombs: "Out of bombs: they come back one by one.",
+  delve_enter: "You descend into the {name}…",
+  delve_ko: "You can't go in while knocked out.",
+  delve_full: "That delve is full (four at most).",
+  delve_already_in: "You're already in a delve.",
+  delve_in_combat: "Not mid-fight! Clear the room first, or find the portal.",
   full_hp: "You're already at full health.",
   poi_too_far: "A little closer…",
   chest_empty: "You've already emptied this chest.",
@@ -158,6 +164,44 @@ export class RoomClient {
       speed === 1 && dodge === 1 && regen === 1
         ? b
         : { ...b, speed_tick: b.speed_tick * speed, dodge_step: b.dodge_step * dodge, st_regen: b.st_regen * regen };
+  }
+
+  /** Phase 12: doors, puzzles, the boss and the portal inside the delve you're in. */
+  private delveEvent(ev: RoomEvent): void {
+    const d = useDelve.getState();
+    if (!d.delve || !d.state) return;
+    const st: DelveState = { ...d.state };
+    const op = ev[1] as string;
+    const patch: Partial<ReturnType<typeof useDelve.getState>> = {};
+    if (op === "doors") {
+      st.locked = ev[2] as number[];
+      this.grid.setDelve({ ox: d.delve.origin[0], oy: d.delve.origin[1], w: d.delve.layout.w, h: d.delve.layout.h, solid: delveSolid(d.delve, st) });
+    } else if (op === "visit") {
+      if (!st.visited.includes(ev[2] as number)) st.visited = [...st.visited, ev[2] as number];
+    }
+    else if (op === "cleared") {
+      st.cleared = [...st.cleared, ev[2] as number];
+      toast("Room cleared! The gates lift.", "good", "check");
+    } else if (op === "plates") st.plates = ev[2] as number[];
+    else if (op === "lamps") {
+      st.lamps = ev[2] as number;
+      const i = ev[3] as number;
+      patch.levers = { ...d.levers, [i]: !d.levers[i] };
+    } else if (op === "solved") {
+      st.solved = [...st.solved, ev[2] as number];
+      toast("Something clicks deep in the stone. The way opens!", "good", "star");
+    } else if (op === "boss") patch.boss = { id: ev[2] as number, name: ev[3] as string, note: "wakes!" };
+    // phases read out under the boss bar rather than as toasts piling up over the fight
+    else if (op === "phase" && d.boss) patch.boss = { ...d.boss, note: "calls for help!" };
+    else if (op === "enrage" && d.boss) patch.boss = { ...d.boss, note: "is enraged!", enraged: true };
+    else if (op === "portal") {
+      st.portal = true;
+      st.clear_ms = ev[2] as number;
+      patch.boss = null;
+      const s = Math.round((ev[2] as number) / 1000);
+      toast(`Delve cleared in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}! A portal home opens.`, "good", "star");
+    } else if (op === "chest") patch.chests = [...d.chests, ev[2] as number];
+    d.set({ ...patch, state: st });
   }
 
   /** Quick-slot 1–4 (Phase 11). */
@@ -321,8 +365,27 @@ export class RoomClient {
       case EV.HEAL:
         if (ev[1] === this.eid) patch.quick = ev[3] as Record<string, [string, number]>;
         break;
-      case EV.TOAST:
-        toast(TOASTS[ev[1] as string] ?? String(ev[1]), "bad");
+      case EV.TOAST: {
+        const args = (ev[2] ?? {}) as Record<string, string | number>;
+        const text = (TOASTS[ev[1] as string] ?? String(ev[1])).replace(/\{(\w+)\}/g, (_, k: string) => String(args[k] ?? ""));
+        toast(text, String(ev[1]).startsWith("delve_enter") ? "info" : "bad");
+        break;
+      }
+      case EV.DUNGEON_ENTER: {
+        const info = ev[1] as DelveInfo;
+        info.layout.tiles = new Uint8Array(info.layout.tiles);
+        useDelve.getState().set({ delve: info, state: info.state, boss: null, levers: {}, chests: [], near: null, panel: false });
+        this.grid.setDelve({ ox: info.origin[0], oy: info.origin[1], w: info.layout.w, h: info.layout.h, solid: delveSolid(info, info.state) });
+        this.pending = [];
+        break;
+      }
+      case EV.DUNGEON_LEFT:
+        this.grid.setDelve(null);
+        useDelve.getState().set({ delve: null, state: null, boss: null, near: null });
+        this.pending = [];
+        break;
+      case EV.DUNGEON:
+        this.delveEvent(ev);
         break;
       case EV.LOADOUT: {
         // you equipped something: new moveset timings for the predictor, new icons for the HUD

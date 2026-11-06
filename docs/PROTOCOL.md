@@ -53,7 +53,7 @@ Message ids and enum tables live in `/shared/protocol.json`, which both the back
 | `0x23` | ACTION | `kind:u8, a?:any, b?:any` | Discrete actions; see the kinds table below. |
 | `0x24` | FISH_REEL | `bite_id:u32, client_tick:u32` | Fishing timing check. The server validates against the bite window with latency tolerance. |
 | `0x30` | PARTY | `kind:u8 (invite, accept, decline, leave, kick), user_id?` | Realm-scoped and in-memory. |
-| `0x31` | DUNGEON | `kind:u8 (enter, ready, leave), entrance_id?:u32` | |
+| `0x34` | DUNGEON | `["leave"] · ["use", prop] · ["portal"]` | **Phase 12.** Enter through `INTERACT`. See §3.0. |
 | `0x33` | USE_QUICK | `slot:u8 (0–3)` | **Phase 11.** Drink or eat what's in quick-slot 1–4 (equipment slots 4–7). |
 | `0x32` | INTERACT | `poi_index:u32` | **Phase 10.** Use the point of interest you're standing at (≤ 2.4 tiles). The answer is a POI event, or a TOAST (`poi_too_far`, `chest_empty`, `shrine_resting`, `villager_home`). |
 
@@ -144,6 +144,32 @@ ents = [[id, kind, type, x*64, y*64, dx*100, dy*100, anim, anim_t, hp(0-255), fl
   - **STATUS.** `[3, mid, burn|slow|poison]` now covers monsters.
   - **HIT.** kind 4 means a shield block.
   - **Projectiles.** Player projectiles carry their sprite as `type` (`arrow`, `crystal`, `orb`, `wave`, `arcane`, `tome_<element>`, `spear`). Bombs are projectiles with `flags` = 2.
+- **Phase 12 (protocol v6).**
+  - **New op.** C2S `DUNGEON` (`0x34`) is one of three messages:
+    - `["leave"]` leaves the delve. It's refused mid-fight unless the boss is down.
+    - `["use", prop_index]` pulls a lever or opens a chest within reach.
+    - `["portal"]` goes home through the portal. You must stand at it.
+  - **Entering.** You enter through `INTERACT` on a cave or the Delve Gate.
+  - **New events.**
+    - DUNGEON_ENTER `[40, info]`. `info` holds `{id, name, kind, biome, difficulty, origin, layout, state, started_ms}`.
+      - `layout` holds `{w, h, tiles (bytes: 0 void, 1 floor, 2 wall, 3 door), rooms, doors, props, start}`.
+      - Each room is `[id, kind, x, y, w, h, depth, puzzle]`.
+      - Each door is `[id, tiles, rooms, gate]`.
+      - Each prop is `[kind, x, y, room, data]`.
+      - `state` holds `{locked, visited, cleared, plates, lamps, solved, portal, clear_ms}`.
+    - DUNGEON_LEFT `[41]`.
+    - DUNGEON `[42, op, …]`. Each op carries:
+      - `doors`: the locked door ids.
+      - `visit`, `cleared`, `solved`: a room id.
+      - `plates`: the lit plate indices.
+      - `lamps`: the lamp mask and the lever that was pulled.
+      - `boss`: the entity id and name.
+      - `phase`: the phase number.
+      - `enrage`: the entity id.
+      - `portal`: `clear_ms`.
+      - `chest`: the prop index. It goes only to the player who opened it.
+  - **Flags.** Monster entity flag 64 marks a boss.
+  - **TOAST.** New keys: `delve_enter {name}`, `delve_ko`, `delve_full`, `delve_already_in`, `delve_in_combat`.
 
 ### 3.1 SNAPSHOT (target format)
 

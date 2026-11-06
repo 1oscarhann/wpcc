@@ -171,4 +171,15 @@ items:
     stackable: true
     max_stack: 99
     icon: icon.moonpetal
+  # Phase 12: delve rewards
+  ancient_rune:
+    name: Ancient Rune
+    category: rare_material
+    stackable: true
+    max_stack: 99
+    icon: icon.ancient_rune
+  blueprint_lantern_post:   { name: "Blueprint: Lantern Post",   category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
+  blueprint_stone_fountain: { name: "Blueprint: Stone Fountain", category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
+  blueprint_hedge_arch:     { name: "Blueprint: Hedge Arch",     category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
+  blueprint_banner_pole:    { name: "Blueprint: Banner Pole",    category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
 resource_max_stack: 999

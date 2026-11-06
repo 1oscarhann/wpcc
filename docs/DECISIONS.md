@@ -470,3 +470,64 @@ The card clears on acknowledge. Fast-forward ages the snapshot too, so test acco
 **Decision.**
 - **`LOADOUT`.** Equipping over REST now sends the room client a `LOADOUT` event (weapon, offhand, defence), so the predictor switches movesets and the HUD updates without a reload.
 - **Dev kit.** `POST /api/dev/kit` exists only when `HF_ENV=dev`. It sets the Town Hall level, fills storage and hands you one of every weapon and offhand plus potions, for playtests and screenshots.
+
+## Phase 12: dungeons ("delves")
+
+### D-086: delves live inside the realm room
+**Decision.** A delve is an instance inside your realm's `RealmRoom`, not a separate room. Its tiles sit far east of the map: instance *i* lives at `x = space.x0 + i × space.slot` (4096 + i × 128).
+- **Collision.** `WorldGrid.solid` hands any column past `dungeon_x0` to `DungeonSpace.solid`. The client grid has the matching `setDelve` overlay, so prediction stays exact.
+- **Separation.** Slots are 128 tiles apart, far wider than the area of interest, so two parties never see each other.
+- **Monsters.** They carry their instance id (`Monster.dungeon`). Wild monsters ignore players in delves.
+- **Why.** The 20 Hz sim, combat, loot, parties, buffs and persistence all work unchanged. A second room type would have meant a second copy of all of it, plus a room handoff on every enter and exit.
+- **Cost.** Every delve ticks in its realm's room, which caps how many can run at once per realm. That's fine at our scale: an empty instance closes after `idle_close` (60 s).
+
+### D-087: the room-graph generator
+**Decision.** `domain/dungeon.py` lays rooms on a 4×3 grid of cells (22×18 tiles each).
+- **Graph.** A seeded spanning tree joins 9 of the 12 cells, plus one extra edge so there is a loop. Each edge becomes a corridor with a three-tile door at each end.
+- **Roles by depth (BFS from the entrance).**
+  - The deepest room is the **boss** room, and one room on the main path to it holds the **mini-boss**.
+  - Dead ends become **treasure** rooms.
+  - Up to two main-path rooms become **puzzles** (plates or levers). Each locks the door leading deeper until it's solved.
+  - The rest are **combat** rooms.
+- **Seeds.**
+  - `seed_for(*parts)` is a blake2b hash, so a seed never depends on Python's per-process hash randomisation.
+  - Caves reseed every UTC day from (realm seed, cave key, day).
+  - The daily delve uses `seed_for("daily", day)`.
+- **Tests.** Layout invariants: everything reachable, exactly one boss, doors on walls, props on floor.
+
+### D-088: rooms and puzzles
+**Decision.**
+- **Combat and mini-boss rooms.** Walking in spawns the pack and drops every gate of the room. The gates lift when the last monster dies, granting `xp.room × difficulty`. A player standing in a gate when it closes is nudged out.
+- **Plates.** Step on the runes in order. A wrong plate resets them with a fizzle.
+- **Levers.** Each lever flips a fixed set of lamps (a bitmask). All lamps lit solves the room. The masks are generated so the puzzle is always solvable, and a test brute-forces it.
+- **Treasure chests.** Each player can open each chest once, for coins, a chance of an Ancient Rune and a chance of a blueprint.
+- **HUD counter.** It shows rooms *explored* (visited / total), not "cleared". Treasure and puzzle rooms never had a pack to clear, so the old counter showed 1/9 after a full clear.
+
+### D-089: the Delve Warden
+**Decision.** Every delve ends at the Delve Warden, a 420 HP obsidian tank.
+- **Attacks.** A circle slam up close, and a line charge (`alt_attack`, lunge 5.5) when you're 2–7 tiles away. `alt_attack` is a new optional field on any enemy.
+- **Phases.** It calls two adds at 66% and again at 33%, and enrages below 25% (×1.35 speed).
+- **Health bar.** The boss entity carries flag 64, so the client draws a bar for it.
+- **Phase messages.** "Wakes", "calls for help" and "is enraged" show under the boss bar, which turns red on enrage, instead of as toasts. Three toasts stacked over a small room hid the fight.
+- **Art.** The generic biped scaled ×2.2 read as a box on stick legs. The warden now has a hand-built sprite (`bestiary.warden`): pauldrons, stone fists, a glowing chest rune, and windup and slam poses.
+
+### D-090: the daily delve and its leaderboard
+**Decision.** The Delve Gate stands in every hub (`daily.place`, an offset from the well). Its delve is seeded by the UTC date, so it is the same layout for every realm.
+- **Recording.** Killing the boss opens a portal home and records a `dungeon_runs` row: kind, key, day, seed, party names and ids, clear time and deaths. The row is saved on the room's next flush.
+- **Board.** `GET /api/dungeons/daily` returns the day's fastest clears (top 20) and your own best.
+- **Schema.** As built, the table keys runs by `(kind, day, clear_ms)` with text keys. The `is_daily`/`party uuid[]` sketch in SCHEMA §9 was replaced; uncleared runs aren't stored at all.
+- **Rewards.**
+  - **Ancient Runes.** They come only from delves (P15). They are a forging modifier and sell at the market.
+  - **Blueprints.** Four decor blueprints drop from treasure and the boss. They can't be used until Phase 14 (decor). Until then they're collectibles that sell.
+
+### D-091: getting in and out
+**Decision.**
+- **Entering.**
+  - Use a sealed cave in the wild (that ring's delve) or the Delve Gate (the daily delve).
+  - Party members join the same instance, up to `max_party` (4). A solo player gets their own instance.
+- **Leaving mid-run.** It takes a second click ("Really leave?") and is refused while you're combat-locked.
+  - **Why the confirm.** Leaving abandons the run: coming back starts a fresh instance.
+- **After the boss.** "Head home" works from anywhere in the delve. Before, it only worked standing on the portal, and the button silently did nothing.
+- **Knockouts.** A KO drops you out of the delve and counts a death on the run. You respawn as you would anywhere else.
+- **Disconnects.** A disconnect also drops you out. You come back at the entrance you came in by, because your saved position is always your outside spot (`dungeon_return`).
+- **Dev routes (dev only).** `POST /api/dev/delve-weaken` knocks every monster in your delve down to a share of its HP, so the screenshot run reaches the portal. `/api/dev/teleport` works inside delves.

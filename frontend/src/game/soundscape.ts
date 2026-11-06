@@ -18,6 +18,7 @@ const WIND: Record<string, { f: number; q: number; g: number }> = {
   swamp: { f: 350, q: 0.4, g: 0.05 },
   frozen: { f: 1200, q: 1.6, g: 0.16 },
   ashen: { f: 180, q: 0.6, g: 0.12 },
+  cave: { f: 260, q: 0.5, g: 0.05 }, // Phase 12: a low draught through the delve
 };
 
 export class Soundscape {
@@ -100,6 +101,9 @@ export class Soundscape {
       if (r < 0.025) this.creak(ctx, out);
     } else if (biome === "ashen") {
       if (r < 0.35) this.crackle(ctx, out);
+    } else if (biome === "cave") {
+      if (r < 0.12) this.drip(ctx, out);
+      if (r > 0.993) this.creak(ctx, out);
     }
   }
 

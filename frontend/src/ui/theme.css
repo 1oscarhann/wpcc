@@ -1340,6 +1340,12 @@ a {
 :root[data-reduce-motion="1"] .trade-prompt {
   animation: none;
 }
+/* the first-run controls hint steps up out of the way of an interact prompt */
+@media (min-width: 641px) {
+  body:has(.trade-prompt) .av-hint {
+    bottom: 168px;
+  }
+}
 @media (max-width: 640px) {
   .market-body {
     grid-template-columns: 1fr;
@@ -1761,4 +1767,100 @@ body[data-tut="home"] [data-tut-target="home"] {
 .av-quick-touch .av-slot {
   width: 40px;
   height: 40px;
+}
+
+/* ── Phase 12: delves ───────────────────────────────────────────────────── */
+.delve-hud {
+  position: absolute;
+  top: 70px;
+  right: 12px;
+  z-index: 4;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow);
+  min-width: 170px;
+}
+.boss-bar {
+  position: absolute;
+  top: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, 70vw);
+  text-align: center;
+  color: #faf2dd;
+  text-shadow: 2px 2px 0 var(--ink);
+  pointer-events: none;
+  z-index: 4;
+}
+/* toasts drop below the boss bar while it's up */
+body:has(.boss-bar) .toasts {
+  top: 128px;
+}
+.boss-bar-track {
+  height: 12px;
+  border: 3px solid var(--ink);
+  background: #2b1e2a;
+}
+.boss-bar-fill {
+  height: 100%;
+  background: linear-gradient(#c993e8, #6a3a8f);
+  transition: width 0.2s;
+}
+.boss-bar.enraged .boss-bar-fill {
+  background: linear-gradient(#f08a33, #b52f1d);
+}
+.boss-note {
+  color: #f0c27a;
+  animation: boss-note-in 600ms ease-out;
+}
+@keyframes boss-note-in {
+  from {
+    color: #fff;
+    letter-spacing: 2px;
+  }
+}
+.delve-board {
+  max-height: 260px;
+  overflow: auto;
+  margin-bottom: 8px;
+}
+.delve-row {
+  padding: 3px 4px;
+  border-bottom: 1px dashed var(--paper-dark);
+}
+.delve-row.you {
+  background: #fff1b0;
+}
+@media (max-width: 640px) {
+  .delve-hud {
+    top: 64px;
+    right: 8px;
+    min-width: 0;
+  }
+  /* on phones the boss bar sits just above the thumbs, clear of the toasts and the delve card */
+  .boss-bar {
+    top: auto;
+    bottom: 196px;
+    width: calc(100vw - 48px);
+  }
+  body:has(.boss-bar) .toasts {
+    top: 12px;
+  }
+  /* interact prompts clear the stick and the action buttons */
+  .trade-prompt {
+    bottom: 196px;
+  }
+  body:has(.trade-prompt) .av-hint {
+    bottom: 256px;
+  }
+}
+.delve-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }

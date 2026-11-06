@@ -78,7 +78,21 @@ export class ClientGrid {
     return [solid, objs];
   }
 
+  /** Phase 12: the delve you're in lives east of the map; the server sends its tiles. */
+  private delve: { ox: number; oy: number; w: number; h: number; solid: Uint8Array } | null = null;
+
+  setDelve(d: { ox: number; oy: number; w: number; h: number; solid: Uint8Array } | null): void {
+    this.delve = d;
+  }
+
   solid = (x: number, y: number): boolean => {
+    const d = this.delve;
+    if (d && x >= this.size) {
+      const lx = x - d.ox;
+      const ly = y - d.oy;
+      if (lx < 0 || ly < 0 || lx >= d.w || ly >= d.h) return true;
+      return d.solid[ly * d.w + lx] === 1;
+    }
     if (x < 0 || y < 0 || x >= this.size || y >= this.size) return true;
     if (this.blocks.has(y * this.size + x)) return true;
     const cx = Math.floor(x / this.cs);

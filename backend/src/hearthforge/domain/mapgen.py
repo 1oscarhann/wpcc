@@ -138,6 +138,8 @@ OBJECT_NAMES: list[str] = [
     "obj.cave.0",
     "obj.trader.0",
     "obj.lost_villager.0",
+    # Phase 12
+    "obj.delve_gate.0",
 ]
 OBJECT_ID = {n: i for i, n in enumerate(OBJECT_NAMES)}
 assert len(TILE_NAMES) < 256
@@ -228,6 +230,7 @@ POI_OBJECT = {
     "cave": "obj.cave.0",
     "merchant": "obj.trader.0",
     "lost_villager": "obj.lost_villager.0",
+    "delve": "obj.delve_gate.0",
 }
 _POI_LAND = {"grass", "forest", "rock", "mud", "snow", "ash"}
 
@@ -363,6 +366,12 @@ class Generator:
                     variant = int(rand01(self.seed, x, y, 703) * 1_000_000)
                     out.append(Poi(len(out), kind, x, y, biome, variant))
                     break
+        dg = getattr(self.game, "dungeons", None)
+        if (
+            dg is not None
+        ):  # Phase 12: the Delve Gate by the well (appended, so older indices keep their meaning)
+            gx, gy = c + dg.daily.place[0], c + dg.daily.place[1]
+            out.append(Poi(len(out), "delve", gx, gy, dg.daily.biome, 0))
         return out
 
     def near_poi(self, x: int, y: int, r: float) -> bool:

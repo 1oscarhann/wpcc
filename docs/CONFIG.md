@@ -346,6 +346,36 @@ The loader checks that every ring with ruins has chest loot and every ring with 
   - Consumables need `use`, offhands need `offhand_type`.
   - `armour_move` keys must be armours.
 
+### `dungeons.yaml` (Phase 12)
+
+| Key | Meaning |
+|---|---|
+| `layout` | The generator grid: `cols × rows` cells of `cell_w × cell_h` tiles, with `rooms` of them used. |
+| `space` | Where instances live: `x0` (past the map's east edge) and `slot` (tiles per instance). |
+| `max_party` | Players per instance. |
+| `idle_close` | An empty instance closes after this long. |
+| `reseed` | `daily`: caves get a new layout every UTC day. |
+| `combat.monsters` | Pack size per combat room. |
+| `miniboss` | HP multiplier and adds. |
+| `boss` | `enemy` (must be roaming), `adds_at` HP shares, `adds`, `enrage_at`, `enrage_speed`. |
+| `treasure` | Coins × difficulty, rolls, and the rune and blueprint chances per chest. |
+| `boss_loot` | Coins, runes and the blueprint chance. |
+| `xp` | Per room, puzzle and boss, × difficulty, per member. |
+| `daily` | The Delve Gate's biome, and its tile offset from the well. |
+| `blueprints` | The blueprint items that can drop. |
+| `leaderboard.size` | Rows on the daily board. |
+
+- **Loader cross-checks.**
+  - The boss enemy exists and roams.
+  - Every blueprint is an item.
+  - `ancient_rune` exists.
+  - `space.x0` is past the map.
+  - A layout fits in one slot.
+- **Other files.**
+  - `enemies.yaml` adds `delve_warden` and the optional `alt_attack` (a second attack for a different range).
+  - `items.yaml` adds `ancient_rune` and `blueprint_*`.
+  - `forging.yaml` makes `ancient_rune` a modifier.
+
 ## Secrets in the client bundle
 
 Sections marked secret are stripped from `GET /api/config`:

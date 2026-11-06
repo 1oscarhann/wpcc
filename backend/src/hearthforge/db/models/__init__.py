@@ -36,7 +36,7 @@ from hearthforge.db.models.market import (
     MarketSalesBucket,
     MerchantPurchase,
 )
-from hearthforge.db.models.progress import UserStat
+from hearthforge.db.models.progress import DungeonRun, UserStat
 from hearthforge.db.models.realm import (
     FogReveal,
     Realm,
@@ -56,6 +56,7 @@ __all__ = [
     "ConfigVersion",
     "CraftJob",
     "DeathDrop",
+    "DungeonRun",
     "Discovery",
     "DiscoveryKind",
     "EconomySample",

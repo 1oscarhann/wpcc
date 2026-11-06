@@ -52,6 +52,16 @@ EMPTY_ROOM_TTL = 120.0  # seconds a room lingers after its last avatar leaves
 STARVE_REPEAT = 4  # ticks without input before others see us as standing still
 
 
+POI_RING_NAMES = {
+    "meadow": "Meadow",
+    "forest": "Whisperwood",
+    "stonepeak": "Stonepeak",
+    "swamp": "Murkwater",
+    "frozen": "Frostfall",
+    "ashen": "Ashfall",
+}
+
+
 @dataclass
 class Input:
     seq: int
@@ -204,6 +214,8 @@ class Player:
     regen_until: int = 0  # stamina potion's regen boost
     use_ready: dict[str, int] = field(default_factory=dict)  # cooldown group → tick it's ready
     mods: tuple[float, float, float] = (1.0, 1.0, 1.0)  # speed, dodge, stamina regen
+    dungeon: int = 0  # delve instance id (Phase 12)
+    dungeon_return: tuple[float, float] | None = None
     rules: Rules | None = None  # per-player movement rules when mods aren't all 1
     party: str | None = None  # party id (in memory, D-025)
 
@@ -257,6 +269,9 @@ class RealmRoom:
         self.tick_ms_samples: deque[float] = deque(maxlen=200)
         self.combat: Any = None  # Phase 5: sim.combat.Combat (monsters, hits, loot)
         self.weather_seed = 0  # the realm's weather timeline (Phase 10), set by the manager
+        from hearthforge.sim.dungeon import DungeonSpace
+
+        self.dungeons = DungeonSpace(self)
 
     # ── lifecycle ────────────────────────────────────────────────────────────
     def new_id(self) -> int:
@@ -420,6 +435,8 @@ class RealmRoom:
         if p.writer:
             p.writer.cancel()
         p.pending.save_pos = True
+        if p.dungeon:
+            self.dungeons.drop(p)
         if self.st.rooms is not None:
             self.st.rooms.leave_party(p.user_id)
         for o in self.players.values():
@@ -512,6 +529,7 @@ class RealmRoom:
             self.player_timers(p, t)
         if self.combat is not None:
             self.combat.tick(t)
+        self.dungeons.tick(t)
         self.tick_drops(t)
         if t % self.hz == 0:
             self.tick_nodes()
@@ -573,7 +591,7 @@ class RealmRoom:
         elif t % 10 == 0 and self.in_home(p) and not p.pending.deposit and self.has_resources(p):
             p.pending.deposit = True
             p.deposit_wait = self.hz * 2
-        if t % 5 == 0:
+        if t % 5 == 0 and not p.dungeon:
             self.explore(p)
 
     # ── exploration: fog of war and waystones (Phase 9) ──────────────────────
@@ -715,7 +733,23 @@ class RealmRoom:
             mark()
             p.pending.stats["villagers.found"] += 1
             data = {"name": name, "coins": coins}
-        else:  # cave (sealed for now) or a trader's stall: remembered for the map
+        elif poi.kind in ("cave", "delve"):  # Phase 12: caves open as delves; the gate runs the daily
+            if used is None:
+                mark()
+            if poi.kind == "cave":
+                name = f"{POI_RING_NAMES.get(poi.biome, poi.biome.title())} Delve"
+                err = self.dungeons.enter(
+                    p, f"cave:{index}", "cave", poi.biome, (poi.x + 0.5, poi.y + 2.0), name
+                )
+            else:
+                day = __import__("hearthforge.sim.dungeon", fromlist=["utc_day"]).utc_day()
+                err = self.dungeons.enter(
+                    p, f"daily:{day}", "daily", poi.biome, (poi.x + 0.5, poi.y + 2.0), "Daily Delve"
+                )
+            if err:
+                self.toast(p, f"delve_{err}")
+            return
+        else:  # a trader's stall: remembered for the map
             if used is None:
                 mark()
             if poi.kind == "merchant":
@@ -1068,6 +1102,8 @@ class RealmRoom:
             self.offhand_state(p)
 
     def respawn(self, p: Player) -> None:
+        if p.dungeon:
+            self.dungeons.drop(p)
         p.m = mo.Motion(x=p.home_door[0], y=p.home_door[1], st=p.stats.st_max, st_max=p.stats.st_max)
         p.hp = float(p.stats.hp_max)
         p.iframes = self.hz * 2
@@ -1126,6 +1162,15 @@ class RealmRoom:
         async with self._flush_lock:
             for p in list(self.players.values()):
                 await self._flush_one(p)
+            if self.dungeons.runs:
+                runs, self.dungeons.runs = self.dungeons.runs, []
+                try:
+                    from hearthforge.services import dungeons as dungeon_svc
+
+                    async with self.st.sessionmaker() as s, s.begin():
+                        await dungeon_svc.record(s, runs)
+                except Exception:  # noqa: BLE001
+                    log.exception("couldn't save %d delve runs", len(runs))
 
     async def flush_player(self, p: Player) -> None:
         async with self._flush_lock:

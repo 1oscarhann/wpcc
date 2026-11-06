@@ -28,9 +28,12 @@ def test_every_ring_gets_its_pois_on_dry_land(game_config) -> None:  # noqa: ANN
     want = Counter({(b, k): n for b, counts in game_config.pois.bands.items() for k, n in counts.items()})
     for seed in (1, 77, 4242):
         gen = mapgen.Generator(game_config, seed)
-        got = Counter((p.biome, p.kind) for p in gen.pois)
+        got = Counter((p.biome, p.kind) for p in gen.pois if p.kind != "delve")  # the hub gate (Phase 12)
         assert got == want
         for p in gen.pois:
+            if p.kind == "delve":
+                assert gen.kind(p.x, p.y) == "cobble"
+                continue
             assert gen.kind(p.x, p.y) in {"grass", "forest", "rock", "mud", "snow", "ash"}
             assert gen.trail_dist(p.x, p.y) >= game_config.pois.trail_clearance
         spacing = game_config.pois.min_spacing
@@ -148,4 +151,4 @@ def test_trader_and_cave(game_config) -> None:  # noqa: ANN001
     assert poi_events(p)[0][3] == {"merchant_id": f"wild:{poi.index}"}
     cave, p2 = at_poi(room, "cave")
     room.interact(p2, cave.index)
-    assert poi_events(p2)[0][2] == "cave" and cave.key in p2.pending.pois
+    assert p2.dungeon and cave.key in p2.pending.pois  # Phase 12: caves open into delves

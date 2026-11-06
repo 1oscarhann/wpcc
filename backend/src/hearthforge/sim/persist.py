@@ -99,7 +99,8 @@ async def flush_player(room: RealmRoom, p: Player, ops: Pending) -> FlushResult:
             av.level, av.xp = p.level, p.xp
             av.hp = max(1, round(p.hp))
             if ops.save_pos:
-                av.pos_x, av.pos_y = p.m.x, p.m.y
+                # in a delve you're saved at its entrance: instances don't outlive the room (Phase 12)
+                av.pos_x, av.pos_y = p.dungeon_return if p.dungeon and p.dungeon_return else (p.m.x, p.m.y)
                 av.realm_id = room.realm_id
                 av.location = AvatarLocation.wild
                 av.updated_at = now

@@ -104,7 +104,19 @@ def create_app(
                 )
         return await call_next(request)
 
-    from hearthforge.api import admin, auth, crafting, inventory, market, me, progress, realm, village, world
+    from hearthforge.api import (
+        admin,
+        auth,
+        crafting,
+        dungeons,
+        inventory,
+        market,
+        me,
+        progress,
+        realm,
+        village,
+        world,
+    )
     from hearthforge.realtime import gateway
 
     app.include_router(auth.router)
@@ -116,6 +128,7 @@ def create_app(
     app.include_router(market.router)
     app.include_router(progress.router)
     app.include_router(world.router)
+    app.include_router(dungeons.router)
     app.include_router(admin.router)
     app.include_router(gateway.router)
 

@@ -68,8 +68,35 @@ async def dev_teleport(
                 p.iframes = room.hz * 10  # dev hop: a moment of grace to look around (and screenshot)
                 p.pending.save_pos = True
                 p.ev.append([EV["TELEPORT"], p.m.x, p.m.y, -1])
-                return {"x": x, "y": y, "biome": room.grid.gen.biome(x, y)}
+                biome = "delve" if p.dungeon else room.grid.gen.biome(x, y)
+                return {"x": x, "y": y, "biome": biome}
     raise HTTPException(409, "no_open_tile")
+
+
+class WeakenIn(BaseModel):
+    frac: float = Field(default=0.3, gt=0, le=1)
+
+
+@router.post("/dev/delve-weaken")
+async def dev_delve_weaken(
+    body: WeakenIn, auth: Auth = Depends(current_user), st: AppState = Depends(get_state)
+) -> dict[str, Any]:
+    """Dev only (HF_ENV=dev): knock every monster in your delve down to a fraction of its health, so a
+    screenshot run can reach the boss's last phase and the portal without a ten-minute fight."""
+    if not st.settings.is_dev or st.rooms is None:
+        raise HTTPException(404)
+    found = st.rooms.find(auth.user.id)
+    if found is None:
+        raise HTTPException(409, "not_in_world")
+    room, p = found
+    if room.combat is None or not p.dungeon:
+        raise HTTPException(409, "not_in_delve")
+    n = 0
+    for m in room.combat.monsters.values():
+        if m.dungeon == p.dungeon:
+            m.hp = min(m.hp, max(1.0, m.hp_max * body.frac))
+            n += 1
+    return {"weakened": n}
 
 
 class KitIn(BaseModel):

@@ -901,6 +901,28 @@ for _t in range(5):
     ICONS[f"tome_{_t + 1}"] = tome_icon(TIER_TRIM[_t])
 
 
+# ── Phase 12 icons ──────────────────────────────────────────────────────────
+def i_ancient_rune(c: Canvas) -> None:
+    pts = [(4, 2), (12, 2), (14, 8), (11, 14), (4, 14), (2, 8)]
+    c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: STONE[3] if x + y < 15 else STONE[2])
+    for x, y in ((7, 5), (8, 6), (9, 5), (8, 7), (8, 8), (7, 10), (9, 10)):
+        c.put(x, y, PURPLE[2])
+    c.put(8, 9, PURPLE[1])
+
+
+def i_blueprint(c: Canvas) -> None:
+    c.rect(2, 4, 12, 9, WATER[2])
+    c.rect(2, 4, 12, 1, WATER[3])
+    c.ellipse(13, 8.5, 1.6, 4.8, WATER[1])
+    for x in range(4, 12, 2):
+        c.put(x, 7, WATER[4])
+    c.hline(4, 10, 10, WATER[4])
+    c.vline(7, 6, 11, WATER[4])
+
+
+ICONS.update({"ancient_rune": i_ancient_rune, "blueprint": i_blueprint})
+
+
 def generate() -> dict[str, Canvas]:
     out = {}
     for name, fn in ICONS.items():

@@ -11,7 +11,7 @@
     "obj.well.", "obj.lamp.", "obj.signpost.", "obj.stump.", "obj.log.", "obj.waystone.",
     "obj.boulder.", "obj.crag.", "obj.star_vein.", "obj.ore_vein.", "obj.dead_tree.", "obj.willow.",
     "obj.snow_pine.", "obj.ice_rock.", "obj.frost_spire.", "obj.charred_tree.", "obj.obsidian.", "obj.lava_vent.",
-    "obj.ruins.", "obj.chest.", "obj.shrine.", "obj.lore_stone.", "obj.cave.", "obj.trader."
+    "obj.ruins.", "obj.chest.", "obj.shrine.", "obj.lore_stone.", "obj.cave.", "obj.trader.", "obj.delve_gate."
   ],
   "buttons": { "light": 1, "heavy": 2, "ability": 4, "dodge": 8, "potion": 16, "offhand": 32 },
   "input_max": 127,

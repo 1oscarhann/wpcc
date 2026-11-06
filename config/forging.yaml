@@ -23,6 +23,7 @@ modifiers:                     # rare material → modifier it guarantees
   frost_shard: { key: frost,     name: Frost,     effect: frost,     range: [0.20, 0.35] }   # proc: slow
   ember_core:  { key: fire,      name: Fire,      effect: fire,      range: [0.25, 0.40] }   # proc: burn
   moonpetal:   { key: lifesteal, name: Lifesteal, effect: lifesteal, range: [0.03, 0.08] }   # heal % of damage
+  ancient_rune: { key: chain,   name: Chain Lightning, effect: chain, range: [0.15, 0.25] }  # Phase 12: delve rune
 polished: 0.03                 # an empty modifier slot: +3% damage
 
 dull_damage: 0.7               # at 0 durability (P2): −30% damage, modifiers off, never breaks

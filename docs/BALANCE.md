@@ -514,6 +514,21 @@ Other scaling:
 
 ---
 
+### 7.1 Delves as built (Phase 12)
+
+| | Number | Notes |
+|---|---|---|
+| Rooms | 9 | entrance, 1 mini-boss, 1 boss, puzzles and treasure by depth, the rest combat |
+| Combat pack | 3–5 | from the ring's roster (the daily delve uses the forest) |
+| Mini-boss | elite × 1.6 HP + 2 adds | |
+| Delve Warden | 420 HP, 12 dmg, def 4 | slam 2.4 tiles; charge 2–7 tiles, lunge 5.5; adds at 66% and 33%; enrage < 25% (×1.35 speed) |
+| Chest | 40–90 coins × difficulty, 2 rolls | 30% Ancient Rune, 15% blueprint, once per player |
+| Boss loot | 150–300 coins, 1–2 runes | 50% blueprint |
+| XP | room 20, puzzle 30, boss 250 | × difficulty, per member |
+
+- **Target.** About 6–10 minutes for a first clear of the daily delve with ring-2 gear, and 2–4 minutes for a practised party.
+- **Playtest note.** The warden is tuned for solo. HP doesn't scale with party size yet, so four players melt it. Scaling arrives with realm bosses (Phase 13).
+
 ## 8. Market and coins
 
 ### 8.1 NPC market

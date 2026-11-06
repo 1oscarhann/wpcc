@@ -172,6 +172,21 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     continue
                 if 0 <= fields[0] < 4:
                     room.use_quick(player, fields[0])
+            elif op == "DUNGEON":
+                if player is None or room is None or not fields or not isinstance(fields[0], str):
+                    continue
+                if fields[0] == "leave" and player.dungeon:
+                    # mid-fight you can't just walk out; once the boss is down the way home is open anywhere
+                    inst = room.dungeons.of(player)
+                    done = inst is not None and inst.boss_dead
+                    if not done and room.tick_no - player.last_combat < room.combat_lock:
+                        room.toast(player, "delve_in_combat")
+                    else:
+                        room.dungeons.leave(player)
+                elif fields[0] == "use" and len(fields) > 1 and isinstance(fields[1], int):
+                    room.dungeons.use(player, fields[1])
+                elif fields[0] == "portal":
+                    room.dungeons.try_portal(player)
             elif op == "INTERACT":
                 if player is None or room is None or not fields or not isinstance(fields[0], int):
                     continue

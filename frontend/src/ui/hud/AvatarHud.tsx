@@ -10,6 +10,8 @@ import { Bag } from "./Bag";
 import { TradePrompt } from "./Market";
 import { BlessingChip, LoreModal, PoiPrompt, WildMerchantPanel } from "./Poi";
 import { WorldChip } from "./WorldChip";
+import { DelveHud, DelvePanel } from "./Delve";
+import { useDelve } from "../../state/delve";
 import { MiniMap, WaystonePrompt } from "./WorldMap";
 import { PartyButton, PartyFrames } from "./Party";
 import { useTutorial } from "../../state/tutorial";
@@ -299,6 +301,7 @@ function FirstHintInner({ touch }: { touch: boolean }) {
 }
 
 export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: () => void }) {
+  const inDelve = useDelve((s) => s.delve !== null);
   const mode = useAvatar((s) => s.mode);
   const bagOpen = useAvatar((s) => s.bagOpen);
   const flags = useAvatar((s) => s.flags);
@@ -336,17 +339,20 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       {(flags & KO_FLAG) !== 0 && (
         <div className="av-ko center"><div className="panel head" style={{ fontSize: 24 }}>Knocked out! Waking up at home…</div></div>
       )}
-      <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /><BlessingChip /><BuffChips /></div>
+      {!inDelve && <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /><BlessingChip /><BuffChips /></div>}
+      {inDelve && <div className="minimap-slot"><BlessingChip /><BuffChips /></div>}
       <PartyFrames />
       <div className="hud-bottom">
         <TradePrompt touch={touch} />
         <WaystonePrompt touch={touch} />
         <PoiPrompt touch={touch} />
+        <DelveHud touch={touch} />
         <Hotbar touch={touch} />
       </div>
       {touch && <TouchControls />}
       {bagOpen && <Bag onClose={() => set({ bagOpen: false })} />}
       <LoreModal />
+      <DelvePanel />
       <WildMerchantPanel />
     </div>
   );

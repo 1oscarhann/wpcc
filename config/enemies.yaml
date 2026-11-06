@@ -484,3 +484,19 @@ enemies:
     loot:
       - { item: storm_glass, chance: 0.5, qty: [1, 1] }
       - { item: crystal, chance: 0.4, qty: [1, 2] }
+  # Phase 12: the delve boss. Roaming: difficulty-1 stats × the ring's scale. Slams up close, charges from
+  # afar, calls adds at 66% and 33% HP, enrages below 25% (dungeons.yaml → boss).
+  delve_warden:
+    name: Delve Warden
+    archetype: tank
+    hp: 420
+    dmg: 12
+    defence: 4
+    speed: 2.2
+    radius: 0.9
+    group: [1, 1]
+    roaming: true
+    attack: { shape: circle, range: 2.4, trigger: 2.0, windup: 900ms, active: 250ms, recover: 900ms, knockback: 1.8 }
+    alt_attack: { shape: line, range: 6, width: 1.4, trigger: 7, windup: 800ms, active: 400ms, recover: 1200ms, lunge: 5.5, knockback: 2.0 }
+    loot:
+      - { item: ancient_rune, chance: 0.5, qty: [1, 1] }

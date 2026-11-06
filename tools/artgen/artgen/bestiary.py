@@ -616,6 +616,111 @@ def sapling_frames(tiny: bool = False) -> dict[str, Canvas]:
 
 
 # ── the roster ────────────────────────────────────────────────────────────────
+# ── the Delve Warden (Phase 12 boss): a hulking obsidian guardian, built by hand ──
+def _slab(c: Canvas, x0: int, y0: int, x1: int, y1: int, rp: Ramp) -> None:
+    """A block lit from the top-left: bright left edge and top row, dark right side."""
+    n = len(rp)
+    w = max(1, x1 - x0)
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            u = (x - x0) / w
+            i = n - 1 if u < 0.2 else n - 2 if u < 0.6 else max(0, n - 3)
+            if y == y0:
+                i = min(n - 1, i + 1)
+            c.put(x, y, rp[i])
+
+
+def warden(phase: int, pose: str) -> Canvas:
+    ob = ramp("obsidian")
+    hot = (255, 255, 255, 255)
+    c = Canvas(52, 54)
+    cx = 26
+    feet = 51
+    c.drop_shadow(cx, 52, 17, 2.4)
+    crouch = 3 if pose == "windup" else 1 if pose == "attack" else 0
+    rock = -1 if pose == "hurt" else 0
+    step = [(1, -1), (0, 0), (-1, 1), (0, 0)][phase % 4] if pose == "walk" else (0, 0)
+    hip = feet - 11 + crouch
+    sh = hip - 17 + rock
+    # legs: thick stone columns; a stepping foot lifts
+    for side, off in ((-1, step[0]), (1, step[1])):
+        lx = cx + side * 7
+        lift = 2 if off > 0 else 0
+        _slab(c, lx - 3, hip, lx + 3, feet - 2 - lift, ob)
+        _slab(c, lx - 4, feet - 2 - lift, lx + 4, feet - lift, STONE[0:3])
+    # torso: a broad wedge of obsidian plates with a glowing rune
+    for y in range(sh, hip + 1):
+        half = round(14 - 4 * (y - sh) / max(1, hip - sh))
+        for x in range(cx - half, cx + half + 1):
+            u = (x - (cx - half)) / (2 * half)
+            c.put(x, y, ob[3] if u < 0.18 else ob[2] if u < 0.55 else ob[1] if u < 0.85 else ob[0])
+    c.hline(cx - 11, cx + 11, sh + 6, ob[0])
+    c.hline(cx - 9, cx + 9, sh + 12, ob[0])
+    glow = VIOLET[2] if pose in ("windup", "attack") else VIOLET[1]
+    for i in range(5):
+        c.put(cx - 5 + i, sh + 2 + i, glow)
+        c.put(cx + 5 - i, sh + 2 + i, glow)
+    for dx, dy in ((0, -1), (-1, 0), (1, 0), (0, 1)):
+        c.put(cx + dx, sh + 9 + dy, VIOLET[2])
+    c.put(cx, sh + 9, hot)
+    # head, sunk between the shoulders
+    _slab(c, cx - 5, sh - 7, cx + 5, sh + 1, ob[1:])
+    c.hline(cx - 5, cx + 5, sh - 4, ob[0])
+    for ex in (cx - 4, cx + 2):
+        c.hline(ex, ex + 2, sh - 3, VIOLET[2])
+        c.put(ex + 1, sh - 3, hot)
+        c.put(ex + 1, sh - 2, VIOLET[1])
+    if pose in ("windup", "attack"):
+        c.hline(cx - 4, cx + 4, sh - 3, VIOLET[2])
+        c.put(cx - 3, sh - 3, hot)
+        c.put(cx + 3, sh - 3, hot)
+    # arms and fists
+    def fist(x: float, y: float) -> None:
+        ell(c, x, y, 4.6, 3.9, STONE[0:4])
+
+    if pose == "windup":
+        for side in (-1, 1):
+            for y in range(sh - 10, sh + 4):
+                ax = cx + side * (12 + (y - (sh - 10)) // 4)
+                _slab(c, ax - 2, y, ax + 2, y, STONE[0:3])
+            fist(cx + side * 9, sh - 12)
+    elif pose == "attack":
+        for side in (-1, 1):
+            c.line(cx + side * 15, sh + 3, cx + side * 15, feet - 4, STONE[1])
+            for w in range(-2, 3):
+                c.line(cx + side * 15 + w, sh + 3, cx + side * 15 + w, feet - 4, STONE[1 if w > 0 else 2])
+            fist(cx + side * 15, feet - 3)
+            for k in range(3):  # cracked stone kicked up by the slam
+                c.put(cx + side * (20 + k), feet - 1 - k * 2, STONE[3])
+    else:
+        for side, swing in ((-1, -step[0]), (1, -step[1])):
+            ax = cx + side * 16
+            for y in range(sh + 3, hip + 3):
+                sx = swing if y > sh + 9 else 0
+                _slab(c, ax - 2 + sx, y, ax + 2 + sx, y, STONE[0:3] if side > 0 else STONE[1:4])
+            fist(ax + swing, hip + 5)
+    # pauldrons with violet crystal shards
+    for side in (-1, 1):
+        ell(c, cx + side * 13, sh + 1, 6.5, 5, STONE[1:5])
+        sx = cx + side * 14
+        c.vline(sx, sh - 6, sh - 3, VIOLET[1])
+        c.put(sx, sh - 7, VIOLET[2])
+        c.vline(sx - side, sh - 4, sh - 3, VIOLET[0])
+    c.outline(INK)
+    return c
+
+
+def warden_frames() -> dict[str, Canvas]:
+    return {
+        "idle.0": warden(0, "idle"),
+        "idle.1": warden(2, "idle"),
+        **{f"move.{i}": warden(i, "walk") for i in range(4)},
+        "windup.0": warden(0, "windup"),
+        "attack.0": warden(0, "attack"),
+        "hurt.0": warden(1, "hurt"),
+    }
+
+
 def roster() -> dict[str, dict[str, Canvas]]:
     return {
         "big_slime": blob_frames(BlobSpec(30, 26, 11, 8.5, ramp("grass"))),
@@ -645,6 +750,7 @@ def roster() -> dict[str, dict[str, Canvas]]:
         "ash_golem": biped_frames(BipedSpec(ramp("obsidian"), ramp("ash"), w=30, h=34, scale=1.5, wide=1.3, head="golem", eye=LAVA[4], extra="cracks")),
         "cinder_witch": biped_frames(BipedSpec(_s("porcelain"), ramp("obsidian"), head="hat", held="staff", eye=FIRE[3], accent=FIRE, hair=_h("auburn"))),
         "ember_archer": biped_frames(BipedSpec(_s("umber"), _o("charcoal"), head="hood", held="bow", eye=FIRE[3], accent=FIRE)),
+        "delve_warden": warden_frames(),
         "storm_elemental": flyer_frames(FlyerSpec(_o("navy") + [STONE[4]], _o("navy"), "cloud", w=26, h=26, r=5.0, eye=YELLOW[2])),
     }
 

@@ -26,6 +26,8 @@ import { safeDestroy } from "./safe";
 import { sfx } from "./sfx";
 import { type Light, Sky } from "./sky";
 import { Soundscape } from "./soundscape";
+import { DelveView } from "./delve";
+import { useDelve } from "../state/delve";
 import { biomeAt, dayPhase, useWorld } from "../state/world";
 import { buildingLook, loadIconAtlas, loadWorldAtlas, tex } from "./sprites";
 
@@ -93,6 +95,7 @@ export class Game {
   private moonpetals: Sprite[] = [];
   private petalsOpen: boolean | null = null;
   private heavens: Sky | null = null;
+  private delveView: DelveView | null = null;
   private sound = new Soundscape();
   private flowerSpots: { x: number; y: number }[] = [];
   private hoverDebris: number | null = null;
@@ -226,6 +229,18 @@ export class Game {
         }
       }),
     );
+    // Phase 12: the delve you're in
+    this.unsub.push(
+      useDelve.subscribe((s, p) => {
+        if (s.delve !== p.delve) {
+          this.delveView?.destroy();
+          this.delveView = s.delve ? new DelveView(this.ground, this.objects, s.delve) : null;
+          if (this.delveView && s.state) this.delveView.sync(s.state, s.levers, s.chests);
+        } else if (this.delveView && s.state && (s.state !== p.state || s.levers !== p.levers || s.chests !== p.chests)) {
+          this.delveView.sync(s.state, s.levers, s.chests);
+        }
+      }),
+    );
     const onRealm = () => void this.refreshMap();
     window.addEventListener("hf:realm-changed", onRealm);
     this.unsub.push(() => window.removeEventListener("hf:realm-changed", onRealm));
@@ -244,9 +259,11 @@ export class Game {
     this.app.ticker.add((t) => this.tick(t.deltaMS));
     if (import.meta.env.DEV) {
       // for screenshot tests
-      const w = window as unknown as { __hfGame?: Game; __hfVillage?: typeof useVillage };
+      const w = window as unknown as { __hfGame?: Game; __hfVillage?: typeof useVillage; __hfDelve?: typeof useDelve; __hfRealm?: typeof useRealm };
       w.__hfGame = this;
       w.__hfVillage = useVillage;
+      w.__hfDelve = useDelve;
+      w.__hfRealm = useRealm;
     }
   }
 
@@ -257,6 +274,7 @@ export class Game {
     this.avatar = null;
     this.comboFx?.destroy();
     this.sound.destroy();
+    this.delveView?.destroy();
     this.heavens?.destroy();
     this.heavens = null;
     if (gridLink.grid === this.grid) gridLink.grid = null;
@@ -279,6 +297,7 @@ export class Game {
   }
 
   private clampCamera(): void {
+    if (this.avatar && this.delveView) return; // inside a delve, east of the map
     if (this.avatar && this.map) {
       const max = this.map.size * T;
       this.cam.x = Math.max(0, Math.min(max, this.cam.x));
@@ -384,14 +403,38 @@ export class Game {
     this.updateSky(dms);
   }
 
+  /** Phase 12: the lever, chest or portal you're standing at (drives the E prompt). */
+  private delveNear(): void {
+    const dv = this.delveView;
+    const c = this.avatar?.client;
+    if (!dv || !c) return;
+    const p = c.drawPos();
+    let near: { kind: "use" | "portal"; prop: number; label: string } | null = null;
+    const portal = dv.portalPos();
+    if (portal && (portal.x - p.x) ** 2 + (portal.y - p.y) ** 2 < 2.2 * 2.2) near = { kind: "portal", prop: -1, label: "Step through the portal" };
+    else {
+      const prop = dv.usableNear(p.x, p.y);
+      if (prop) near = { kind: "use", prop: prop.index, label: prop.kind === "lever" ? "Pull the lever" : "Open the chest" };
+    }
+    const cur = useDelve.getState().near;
+    if (cur?.prop !== near?.prop || cur?.kind !== near?.kind) useDelve.getState().set({ near });
+  }
+
   /** Phase 10: day/night light, season tint, weather and the soundscape. */
   private updateSky(dms: number): void {
     if (!this.heavens) return;
     const dt = Math.min(dms, 50) / 1000;
-    const phase = dayPhase();
-    const { season, weather } = useWorld.getState();
-    const biome = biomeAt(this.cam.x / T, this.cam.y / T);
+    const dv = this.delveView;
+    const phase = dv ? { name: "night", progress: 0.5, dark: 0.92, glow: 0 } : dayPhase();
+    const world = useWorld.getState();
+    const season = world.season;
+    const weather = dv ? "clear" : world.weather;
+    const biome = dv ? "cave" : biomeAt(this.cam.x / T, this.cam.y / T);
     const lights: Light[] = [];
+    if (dv) {
+      dv.update(dms);
+      this.delveNear();
+    }
     if (phase.dark > 0.02 || weather === "storm") {
       const z = this.cam.zoom;
       const r = this.viewRect();
@@ -400,7 +443,7 @@ export class Game {
         if (wx < r.x0 - pad || wx > r.x1 + pad || wy < r.y0 - pad || wy > r.y1 + pad) return;
         lights.push({ x: this.world.x + wx * z, y: this.world.y + wy * z, r: rad * z, color, flicker, power });
       };
-      for (const l of this.lightSpots) add(l.x, l.y, l.r, l.color, l.flicker);
+      for (const l of dv ? dv.lights(useDelve.getState().state) : this.lightSpots) add(l.x, l.y, l.r, l.color, l.flicker ?? false);
       for (const v of this.views.values()) {
         // lit windows: a warm pool around every finished building
         if (v.level < 1) continue;
@@ -990,7 +1033,15 @@ export class Game {
     });
   }
 
+  private floaters: { wx: number; wy: number; t: number }[] = [];
+
   private floatText(wx: number, wy: number, text: string, color: number, delay = 0, size = 17): void {
+    // texts that pop at the same spot together (XP, loot, damage) step up a line instead of piling up
+    const at = performance.now() + delay * 1000;
+    this.floaters = this.floaters.filter((f) => Math.abs(at - f.t) < 650);
+    const near = this.floaters.filter((f) => Math.abs(f.wx - wx) < 22 && Math.abs(f.wy - wy) < 16).length;
+    this.floaters.push({ wx, wy, t: at });
+    const stack = (near % 4) * (size + 3);
     const t = new Text({
       text,
       style: { fontFamily: "Pixelify Sans", fontSize: size, fill: color, stroke: { color: INK, width: size > 14 ? 4 : 3 }, fontWeight: "700" },
@@ -1001,7 +1052,7 @@ export class Game {
     const state = { lift: 0, a: 0 };
     const place = () => {
       const p = { x: this.world.x + wx * this.cam.zoom, y: this.world.y + wy * this.cam.zoom };
-      t.position.set(Math.round(p.x), Math.round(p.y - state.lift));
+      t.position.set(Math.round(p.x), Math.round(p.y - state.lift - stack));
       t.alpha = state.a;
     };
     gsap.timeline({ delay, onUpdate: place, onComplete: () => t.destroy() })
@@ -1499,7 +1550,15 @@ export class Game {
       const r = useRealm.getState();
       if (m.near) m.set({ merchantOpen: !m.merchantOpen });
       else if (r.nearWaystone !== null) r.set({ mapOpen: !r.mapOpen, travelMode: true });
-      else if (r.nearPoi !== null) roomLink.send?.("INTERACT", r.nearPoi);
+      else if (useDelve.getState().near) {
+        const n = useDelve.getState().near!;
+        if (n.kind === "portal") roomLink.send?.("DUNGEON", "portal");
+        else roomLink.send?.("DUNGEON", "use", n.prop);
+      } else if (r.nearPoi !== null) {
+        const poi = r.overview?.pois[r.nearPoi];
+        if (poi?.kind === "delve") useDelve.getState().set({ panel: !useDelve.getState().panel });
+        else roomLink.send?.("INTERACT", r.nearPoi);
+      }
     } else if (k === "h") leaveAvatar();
     else if (k === "+" || k === "=") this.zoomAvatar(1);
     else if (k === "-") this.zoomAvatar(-1);

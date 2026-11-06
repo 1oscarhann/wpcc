@@ -42,6 +42,7 @@ FILES: dict[str, type[BaseModel]] = {
     "social": s.SocialCfg,
     "world_clock": s.WorldClockCfg,
     "pois": s.PoisCfg,
+    "dungeons": s.DungeonsCfg,
 }
 
 
@@ -111,6 +112,7 @@ class GameConfig:
     social: s.SocialCfg
     world_clock: s.WorldClockCfg
     pois: s.PoisCfg
+    dungeons: s.DungeonsCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -249,6 +251,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     social: s.SocialCfg = parsed["social"]
     world_clock: s.WorldClockCfg = parsed["world_clock"]
     pois: s.PoisCfg = parsed["pois"]
+    dungeons: s.DungeonsCfg = parsed["dungeons"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -566,6 +569,28 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
             if not 0 < chance <= 1:
                 errors.append(f"pois.yaml:chests.{bk}.rare.{k}: chance must be in (0, 1]")
 
+    # ── dungeons (Phase 12) ───────────────────────────────────────────────────
+    dg = dungeons
+    if dg.boss.enemy not in enemies.enemies or not enemies.enemies[dg.boss.enemy].roaming:
+        errors.append(f"dungeons.yaml:boss.enemy: '{dg.boss.enemy}' must be a roaming enemy")
+    for bp in dg.blueprints:
+        if bp not in items or items[bp].category != "blueprint":
+            errors.append(f"dungeons.yaml:blueprints: '{bp}' must be a blueprint item")
+    if "ancient_rune" not in items:
+        errors.append("items.yaml: delves drop 'ancient_rune'; it must exist")
+    if dg.space.x0 < mapgen.map_size + 64:
+        errors.append("dungeons.yaml:space.x0: must be well east of the map")
+    lay = dg.layout
+    if (
+        lay.rooms > lay.cols * lay.rows
+        or max(lay.cols * lay.cell_w, lay.rows * lay.cell_h) + 2 > dg.space.slot
+    ):
+        errors.append("dungeons.yaml:layout: too many rooms for the grid, or the grid doesn't fit a slot")
+    for k in ("alt_attack",):
+        for ek, en in enemies.enemies.items():
+            if getattr(en, k) is not None and getattr(en, k).shape == "shot":
+                errors.append(f"enemies.yaml:enemies.{ek}.{k}: a boss's second attack can't be a shot")
+
     # ── world clock (Phase 10) ────────────────────────────────────────────────
     wc = world_clock
     if abs(sum(wc.day_cycle.phases.values()) - wc.day_cycle.length) > 0.5:
@@ -662,6 +687,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         social=social,
         world_clock=world_clock,
         pois=pois,
+        dungeons=dungeons,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from hearthforge.domain import mapgen
 from hearthforge.sim.rules import WORLD
 
@@ -67,7 +69,12 @@ class WorldGrid:
             self._objs[(cx, cy)] = objs
         return solid, objs
 
+    dungeon_solid: Callable[[int, int], bool] | None = None  # sim.dungeon.DungeonSpace (Phase 12)
+    dungeon_x0 = 1 << 30
+
     def solid(self, x: int, y: int) -> bool:
+        if x >= self.dungeon_x0 and self.dungeon_solid is not None:
+            return self.dungeon_solid(x, y)
         if x < 0 or y < 0 or x >= self.size or y >= self.size:
             return True
         if (x, y) in self.blocks:

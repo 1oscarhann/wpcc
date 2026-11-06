@@ -5,6 +5,7 @@ import { roomLink } from "../../net/room";
 import { useMarket } from "../../state/market";
 import { useRealm, type PoiInfo } from "../../state/realm";
 import { useAvatar } from "../../state/avatar";
+import { useDelve } from "../../state/delve";
 import { formatDuration, Icon, Modal } from "../components/kit";
 import { MerchantStock } from "./Market";
 
@@ -12,7 +13,8 @@ const VERB: Record<PoiInfo["kind"], [string, string]> = {
   ruins: ["chest", "Open the chest"],
   shrine: ["sun", "Pray at the shrine"],
   lore_stone: ["scroll", "Read the stone"],
-  cave: ["map", "Inspect the cave"],
+  cave: ["map", "Enter the delve"],
+  delve: ["map", "The Delve Gate"],
   merchant: ["cart", "Trade"],
   lost_villager: ["home", "Help them home"],
 };
@@ -29,7 +31,8 @@ export function PoiPrompt({ touch }: { touch: boolean }) {
   const label = poi.used && poi.kind === "ruins" ? "Empty chest" : poi.used && poi.kind === "lost_villager" ? "" : verb;
   if (!label) return null;
   return (
-    <button className="btn gold trade-prompt" onClick={() => roomLink.send?.("INTERACT", near)}>
+    <button className="btn gold trade-prompt" onClick={() =>
+      poi.kind === "delve" ? useDelve.getState().set({ panel: true }) : roomLink.send?.("INTERACT", near)}>
       <Icon name={icon} /> {touch ? label : <><span className="av-key">E</span> {label}</>}
     </button>
   );

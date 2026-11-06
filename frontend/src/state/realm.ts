@@ -36,7 +36,7 @@ export interface Waystone {
 
 export interface PoiInfo {
   index: number;
-  kind: "ruins" | "shrine" | "lore_stone" | "cave" | "merchant" | "lost_villager";
+  kind: "ruins" | "shrine" | "lore_stone" | "cave" | "merchant" | "lost_villager" | "delve";
   x: number;
   y: number;
   name: string;

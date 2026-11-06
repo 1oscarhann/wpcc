@@ -1,0 +1,28 @@
+# Dungeons (Phase 12). Every sealed cave opens into a delve; the Delve Gate in the hub runs the
+# daily delve, the same for every realm (seeded by the UTC date), with a global leaderboard.
+#
+# A delve is an instance inside your realm's room: its tiles live far east of the map, one slot per
+# instance, so parties never see each other. Rooms: entrance → combat / puzzle / treasure → mini-boss
+# → boss. Combat rooms lock their doors until they're cleared; puzzles gate the way on.
+layout: { cols: 4, rows: 3, cell_w: 22, cell_h: 18, rooms: 9 }
+space: { x0: 4096, slot: 128 }       # instance i lives at x = x0 + i × slot
+max_party: 4
+idle_close: 60s                      # an instance with nobody in it closes after this
+reseed: daily                        # caves reshuffle their layout every UTC day
+
+combat: { monsters: [3, 5] }         # per combat room
+miniboss: { hp: 1.6, adds: 2 }       # an elite of the ring's roster, tougher still
+boss:
+  enemy: delve_warden
+  adds_at: [0.66, 0.33]              # it calls for help at these HP shares
+  adds: 2
+  enrage_at: 0.25                    # and gets faster below this
+  enrage_speed: 1.35
+
+treasure: { coins: [40, 90], rolls: 2, rune: 0.3, blueprint: 0.15 }   # coins × the ring's difficulty
+boss_loot: { coins: [150, 300], runes: [1, 2], blueprint: 0.5 }
+xp: { room: 20, puzzle: 30, boss: 250 }                                  # × difficulty, per member
+
+daily: { biome: forest, place: [-7, 6] }   # the Delve Gate: tile offset from the well
+blueprints: [blueprint_lantern_post, blueprint_stone_fountain, blueprint_hedge_arch, blueprint_banner_pole]
+leaderboard: { size: 20 }

@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
-from artgen import bestiary, buildings, characters, creatures, icons, landmarks, nature, terrain, ui
+from artgen import bestiary, buildings, characters, creatures, dungeon, icons, landmarks, nature, terrain, ui
 from artgen.pack import pixi_json, save_json, save_png, shelf_pack
 from artgen.palette import EYES, HAIR, OUTFIT, SHADE_KEYS, SKIN
 from artgen.terrain import BLOB_MASKS
@@ -40,6 +40,7 @@ def main() -> None:
     world.update(creatures.generate())
     world.update(bestiary.generate())
     world.update(landmarks.generate())
+    world.update(dungeon.generate())
     world_img, world_rects = shelf_pack(world)
     save_png(world_img, PUBLIC / "world.png")
     save_json(pixi_json("world.png", world_img, world_rects), PUBLIC / "world.json")

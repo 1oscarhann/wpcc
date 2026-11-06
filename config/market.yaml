@@ -52,3 +52,5 @@ items:
   moonpetal:   { base: 70,  baseline: 2,   soft_cap: 15, k: 0.4 }
   frost_shard: { base: 80,  baseline: 2,   soft_cap: 15, k: 0.4 }
   ember_core:  { base: 110, baseline: 1.5, soft_cap: 10, k: 0.4 }
+  # Phase 12
+  ancient_rune: { base: 90,  baseline: 2,   soft_cap: 15, k: 0.4 }

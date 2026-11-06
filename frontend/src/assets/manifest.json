@@ -118,162 +118,164 @@
   "cols": 16,
   "image": "/assets/gen/icons.png",
   "names": {
-   "anvil": 0,
-   "arcane_bow": 1,
-   "arcane_bow_1": 2,
-   "arcane_bow_2": 3,
-   "arcane_bow_3": 4,
-   "arcane_bow_4": 5,
-   "arcane_bow_5": 6,
-   "avatar": 7,
-   "banner": 8,
-   "bog_moss": 9,
-   "bomb": 10,
-   "bomb_1": 11,
-   "bomb_2": 12,
-   "bomb_3": 13,
-   "bomb_4": 14,
-   "bomb_5": 15,
-   "book": 16,
-   "bow": 17,
-   "bow_1": 18,
-   "bow_2": 19,
-   "bow_3": 20,
-   "bow_4": 21,
-   "bow_5": 22,
-   "bread": 23,
-   "bricks": 24,
-   "build": 25,
-   "cart": 26,
-   "check": 27,
-   "chest": 28,
-   "close": 29,
-   "cloud": 30,
-   "coins": 31,
-   "crystal": 32,
-   "crystal_staff": 33,
-   "crystal_staff_1": 34,
-   "crystal_staff_2": 35,
-   "crystal_staff_3": 36,
-   "crystal_staff_4": 37,
-   "crystal_staff_5": 38,
-   "demolish": 39,
-   "ember_core": 40,
-   "ember_dust": 41,
-   "enchanted_sword": 42,
-   "enchanted_sword_1": 43,
-   "enchanted_sword_2": 44,
-   "enchanted_sword_3": 45,
-   "enchanted_sword_4": 46,
-   "enchanted_sword_5": 47,
-   "fish": 48,
-   "fog": 49,
-   "food": 50,
-   "frost_fur": 51,
-   "frost_shard": 52,
-   "golem_shard": 53,
-   "harpoon": 54,
-   "harpoon_1": 55,
-   "harpoon_2": 56,
-   "harpoon_3": 57,
-   "harpoon_4": 58,
-   "harpoon_5": 59,
-   "herbs": 60,
-   "hide": 61,
-   "home": 62,
-   "info": 63,
-   "ingots": 64,
-   "ironbark": 65,
-   "leather": 66,
-   "leather_armour": 67,
-   "leather_armour_1": 68,
-   "leather_armour_2": 69,
-   "leather_armour_3": 70,
-   "leather_armour_4": 71,
-   "leather_armour_5": 72,
-   "lock": 73,
-   "mace": 74,
-   "mace_1": 75,
-   "mace_2": 76,
-   "mace_3": 77,
-   "mace_4": 78,
-   "mace_5": 79,
-   "map": 80,
-   "market": 81,
-   "moon": 82,
-   "moonpetal": 83,
-   "move": 84,
-   "mute": 85,
-   "ore": 86,
-   "party": 87,
-   "planks": 88,
-   "plate_armour": 89,
-   "plate_armour_1": 90,
-   "plate_armour_2": 91,
-   "plate_armour_3": 92,
-   "plate_armour_4": 93,
-   "plate_armour_5": 94,
-   "plus": 95,
-   "porridge": 96,
-   "potion_base": 97,
-   "potion_big": 98,
-   "potion_green": 99,
-   "potion_red": 100,
-   "queue": 101,
-   "rain": 102,
-   "rotate": 103,
-   "scroll": 104,
-   "settings": 105,
-   "shield": 106,
-   "shield_1": 107,
-   "shield_2": 108,
-   "shield_3": 109,
-   "shield_4": 110,
-   "shield_5": 111,
-   "slime_gel": 112,
-   "snowfall": 113,
-   "sound": 114,
-   "spear": 115,
-   "spear_1": 116,
-   "spear_2": 117,
-   "spear_3": 118,
-   "spear_4": 119,
-   "spear_5": 120,
-   "spider_silk": 121,
-   "star": 122,
-   "starstone": 123,
-   "stew": 124,
-   "stone": 125,
-   "storm": 126,
-   "storm_glass": 127,
-   "sun": 128,
-   "swamp_venom": 129,
-   "sword": 130,
-   "sword_1": 131,
-   "sword_2": 132,
-   "sword_3": 133,
-   "sword_4": 134,
-   "sword_5": 135,
-   "tart": 136,
-   "timer": 137,
-   "tome": 138,
-   "tome_1": 139,
-   "tome_2": 140,
-   "tome_3": 141,
-   "tome_4": 142,
-   "tome_5": 143,
-   "trend_down": 144,
-   "trend_up": 145,
-   "undo": 146,
-   "upgrade": 147,
-   "warhammer": 148,
-   "warhammer_1": 149,
-   "warhammer_2": 150,
-   "warhammer_3": 151,
-   "warhammer_4": 152,
-   "warhammer_5": 153,
-   "wolf_fang": 154,
-   "wood": 155
+   "ancient_rune": 0,
+   "anvil": 1,
+   "arcane_bow": 2,
+   "arcane_bow_1": 3,
+   "arcane_bow_2": 4,
+   "arcane_bow_3": 5,
+   "arcane_bow_4": 6,
+   "arcane_bow_5": 7,
+   "avatar": 8,
+   "banner": 9,
+   "blueprint": 10,
+   "bog_moss": 11,
+   "bomb": 12,
+   "bomb_1": 13,
+   "bomb_2": 14,
+   "bomb_3": 15,
+   "bomb_4": 16,
+   "bomb_5": 17,
+   "book": 18,
+   "bow": 19,
+   "bow_1": 20,
+   "bow_2": 21,
+   "bow_3": 22,
+   "bow_4": 23,
+   "bow_5": 24,
+   "bread": 25,
+   "bricks": 26,
+   "build": 27,
+   "cart": 28,
+   "check": 29,
+   "chest": 30,
+   "close": 31,
+   "cloud": 32,
+   "coins": 33,
+   "crystal": 34,
+   "crystal_staff": 35,
+   "crystal_staff_1": 36,
+   "crystal_staff_2": 37,
+   "crystal_staff_3": 38,
+   "crystal_staff_4": 39,
+   "crystal_staff_5": 40,
+   "demolish": 41,
+   "ember_core": 42,
+   "ember_dust": 43,
+   "enchanted_sword": 44,
+   "enchanted_sword_1": 45,
+   "enchanted_sword_2": 46,
+   "enchanted_sword_3": 47,
+   "enchanted_sword_4": 48,
+   "enchanted_sword_5": 49,
+   "fish": 50,
+   "fog": 51,
+   "food": 52,
+   "frost_fur": 53,
+   "frost_shard": 54,
+   "golem_shard": 55,
+   "harpoon": 56,
+   "harpoon_1": 57,
+   "harpoon_2": 58,
+   "harpoon_3": 59,
+   "harpoon_4": 60,
+   "harpoon_5": 61,
+   "herbs": 62,
+   "hide": 63,
+   "home": 64,
+   "info": 65,
+   "ingots": 66,
+   "ironbark": 67,
+   "leather": 68,
+   "leather_armour": 69,
+   "leather_armour_1": 70,
+   "leather_armour_2": 71,
+   "leather_armour_3": 72,
+   "leather_armour_4": 73,
+   "leather_armour_5": 74,
+   "lock": 75,
+   "mace": 76,
+   "mace_1": 77,
+   "mace_2": 78,
+   "mace_3": 79,
+   "mace_4": 80,
+   "mace_5": 81,
+   "map": 82,
+   "market": 83,
+   "moon": 84,
+   "moonpetal": 85,
+   "move": 86,
+   "mute": 87,
+   "ore": 88,
+   "party": 89,
+   "planks": 90,
+   "plate_armour": 91,
+   "plate_armour_1": 92,
+   "plate_armour_2": 93,
+   "plate_armour_3": 94,
+   "plate_armour_4": 95,
+   "plate_armour_5": 96,
+   "plus": 97,
+   "porridge": 98,
+   "potion_base": 99,
+   "potion_big": 100,
+   "potion_green": 101,
+   "potion_red": 102,
+   "queue": 103,
+   "rain": 104,
+   "rotate": 105,
+   "scroll": 106,
+   "settings": 107,
+   "shield": 108,
+   "shield_1": 109,
+   "shield_2": 110,
+   "shield_3": 111,
+   "shield_4": 112,
+   "shield_5": 113,
+   "slime_gel": 114,
+   "snowfall": 115,
+   "sound": 116,
+   "spear": 117,
+   "spear_1": 118,
+   "spear_2": 119,
+   "spear_3": 120,
+   "spear_4": 121,
+   "spear_5": 122,
+   "spider_silk": 123,
+   "star": 124,
+   "starstone": 125,
+   "stew": 126,
+   "stone": 127,
+   "storm": 128,
+   "storm_glass": 129,
+   "sun": 130,
+   "swamp_venom": 131,
+   "sword": 132,
+   "sword_1": 133,
+   "sword_2": 134,
+   "sword_3": 135,
+   "sword_4": 136,
+   "sword_5": 137,
+   "tart": 138,
+   "timer": 139,
+   "tome": 140,
+   "tome_1": 141,
+   "tome_2": 142,
+   "tome_3": 143,
+   "tome_4": 144,
+   "tome_5": 145,
+   "trend_down": 146,
+   "trend_up": 147,
+   "undo": 148,
+   "upgrade": 149,
+   "warhammer": 150,
+   "warhammer_1": 151,
+   "warhammer_2": 152,
+   "warhammer_3": 153,
+   "warhammer_4": 154,
+   "warhammer_5": 155,
+   "wolf_fang": 156,
+   "wood": 157
   },
   "size": 16
  },
@@ -2231,6 +2233,33 @@
   "mon.crystal_sprite.windup.0": {
    "atlas": "world"
   },
+  "mon.delve_warden.attack.0": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.idle.0": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.idle.1": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.move.0": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.move.1": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.move.2": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.move.3": {
+   "atlas": "world"
+  },
+  "mon.delve_warden.windup.0": {
+   "atlas": "world"
+  },
   "mon.ember_archer.attack.0": {
    "atlas": "world"
   },
@@ -2864,10 +2893,79 @@
   "obj.crag.1": {
    "atlas": "world"
   },
+  "obj.dbanner.0": {
+   "atlas": "world"
+  },
+  "obj.dbones.0": {
+   "atlas": "world"
+  },
+  "obj.dbones.1": {
+   "atlas": "world"
+  },
+  "obj.dcrystal.0": {
+   "atlas": "world"
+  },
+  "obj.dcrystal.1": {
+   "atlas": "world"
+  },
   "obj.dead_tree.0": {
    "atlas": "world"
   },
   "obj.dead_tree.1": {
+   "atlas": "world"
+  },
+  "obj.delve_gate.0": {
+   "atlas": "world"
+  },
+  "obj.dgate.0": {
+   "atlas": "world"
+  },
+  "obj.dgate.1": {
+   "atlas": "world"
+  },
+  "obj.dlamp.0": {
+   "atlas": "world"
+  },
+  "obj.dlamp.1": {
+   "atlas": "world"
+  },
+  "obj.dlever.0": {
+   "atlas": "world"
+  },
+  "obj.dlever.1": {
+   "atlas": "world"
+  },
+  "obj.dpillar.0": {
+   "atlas": "world"
+  },
+  "obj.dplate.0": {
+   "atlas": "world"
+  },
+  "obj.dplate.1": {
+   "atlas": "world"
+  },
+  "obj.dportal.0": {
+   "atlas": "world"
+  },
+  "obj.dportal.1": {
+   "atlas": "world"
+  },
+  "obj.dportal.2": {
+   "atlas": "world"
+  },
+  "obj.dportal.3": {
+   "atlas": "world"
+  },
+  "obj.drubble.0": {
+   "atlas": "world"
+  },
+  "obj.drubble.1": {
+   "atlas": "world"
+  },
+  "obj.dtorch.0": {
+   "atlas": "world"
+  },
+  "obj.dtorch.1": {
    "atlas": "world"
   },
   "obj.ember_rock.0": {
@@ -3216,6 +3314,24 @@
    "atlas": "world"
   },
   "tile.cobble.95": {
+   "atlas": "world"
+  },
+  "tile.dfloor.0": {
+   "atlas": "world"
+  },
+  "tile.dfloor.1": {
+   "atlas": "world"
+  },
+  "tile.dfloor.2": {
+   "atlas": "world"
+  },
+  "tile.dfloor.3": {
+   "atlas": "world"
+  },
+  "tile.dwall.face": {
+   "atlas": "world"
+  },
+  "tile.dwall.top": {
    "atlas": "world"
   },
   "tile.flowers.0": {

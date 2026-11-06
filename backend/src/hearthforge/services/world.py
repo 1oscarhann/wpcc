@@ -148,6 +148,7 @@ POI_NAMES = {
     "cave": "Sealed Cave",
     "merchant": "Wandering Trader",
     "lost_villager": "Lost Villager",
+    "delve": "Delve Gate",
 }
 
 

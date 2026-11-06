@@ -683,6 +683,27 @@ CREATE TABLE dungeon_runs (
 CREATE INDEX ON dungeon_runs (is_daily, seed, clear_ms) WHERE cleared;
 ```
 
+**As built (Phase 12, migration `0008_dungeons`).** Only cleared runs are stored:
+
+```sql
+CREATE TABLE dungeon_runs (
+  id         uuid PRIMARY KEY,
+  kind       text NOT NULL,            -- daily | cave
+  key        text NOT NULL,            -- daily:<day> | cave:<poi index>
+  day        text NOT NULL,            -- UTC date, YYYY-MM-DD
+  realm_id   uuid NOT NULL REFERENCES realms ON DELETE CASCADE,
+  seed       bigint NOT NULL,
+  biome      text NOT NULL,
+  names      jsonb NOT NULL,           -- party display names at clear time
+  user_ids   jsonb NOT NULL,
+  clear_ms   integer NOT NULL,
+  deaths     integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  extra      jsonb NOT NULL DEFAULT '{}'
+);
+CREATE INDEX ix_dungeon_runs_board ON dungeon_runs (kind, day, clear_ms);
+```
+
 ## 10. Infrastructure (Phases 2, 3, 8, 18)
 
 ```sql

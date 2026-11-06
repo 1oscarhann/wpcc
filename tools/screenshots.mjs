@@ -960,6 +960,89 @@ PHASES[11] = async (page, kind) => {
   await shot(page, "10-food-buff-hotbar", kind, { wait: 700 });
 };
 
+// ── Phase 12: delves ─────────────────────────────────────────────────────
+// centre (world tile) of the first room of a role in the delve you're in
+const delveRoom = (page, role) =>
+  page.evaluate((k) => {
+    const d = window.__hfDelve.getState().delve;
+    const r = d?.layout.rooms.find((q) => q[1] === k);
+    if (!d || !r) return null;
+    const [id, , x, y, w, h, , puzzle] = r;
+    return { id, puzzle, x: d.origin[0] + x + Math.floor(w / 2), y: d.origin[1] + y + Math.floor(h / 2) };
+  }, role);
+
+const delveProp = (page, room, kind, data) =>
+  page.evaluate(([rid, k, dd]) => {
+    const d = window.__hfDelve.getState().delve;
+    const p = d?.layout.props.find((q) => q[0] === k && q[3] === rid && (dd === null || q[4] === dd));
+    return p ? { x: d.origin[0] + p[1], y: d.origin[1] + p[2] } : null;
+  }, [room, kind, data]);
+
+const hop = async (page, x, y, ms = 1800) => {
+  await apiPost(page, "/api/dev/teleport", { x, y });
+  await page.waitForTimeout(ms);
+};
+
+PHASES[12] = async (page, kind) => {
+  await freshPlayer(page, kind);
+  await apiPost(page, "/api/dev/kit", { town_hall: 3, tier: 3 });
+  await equipFromBag(page, "enchanted_sword", 0);
+  await enterAvatar(page);
+  const gate = await page.evaluate(() => window.__hfRealm.getState().overview?.pois.find((q) => q.kind === "delve"));
+  if (!gate) throw new Error("no Delve Gate in the overview");
+  await hop(page, gate.x, gate.y + 2);
+  await shot(page, "01-delve-gate", kind, { wait: 300 });
+  if (kind === "mobile") await page.locator(".trade-prompt").first().click({ force: true });
+  else await page.keyboard.press("e");
+  await page.getByText("Today's delve is the same").waitFor();
+  await shot(page, "02-gate-leaderboard", kind, { wait: 900 });
+  await page.getByRole("button", { name: /Enter today's delve/ }).click();
+  await page.waitForFunction(() => window.__hfDelve.getState().delve);
+  await shot(page, "03-entrance", kind, { wait: 1800 });
+  // a combat room: the pack wakes and the gates slam down
+  const combat = await delveRoom(page, "combat");
+  if (combat) {
+    await hop(page, combat.x, combat.y, 2200);
+    await shot(page, "04-combat-room-locked", kind, { wait: 0 });
+    const fight = page.evaluate(() => window.__hfGame.devFight(5000, 4));
+    await shot(page, "05-delve-fight", kind, { wait: 1600 });
+    await fight;
+  }
+  // a puzzle: step on the first rune plate, or stand by a lever
+  const puzzle = await delveRoom(page, "puzzle");
+  if (puzzle) {
+    const plate = puzzle.puzzle === "plates" ? await delveProp(page, puzzle.id, "plate", 0) : null;
+    const lever = plate ? null : await delveProp(page, puzzle.id, "lever", null);
+    const at = plate ?? (lever ? { x: lever.x, y: lever.y + 1 } : puzzle);
+    await hop(page, at.x, at.y, 1500);
+    await shot(page, "06-puzzle-room", kind, { wait: 300 });
+  }
+  // the boss: shove it down to its last phase so the run reaches the portal in screenshot time
+  const boss = await delveRoom(page, "boss");
+  if (boss) {
+    await hop(page, boss.x, boss.y + 3, 2600);
+    await shot(page, "07-boss", kind, { wait: 0 });
+    await apiPost(page, "/api/dev/delve-weaken", { frac: 0.3 });
+    const fight = page.evaluate(() => window.__hfGame.devFight(6000, 3));
+    await shot(page, "08-boss-fight", kind, { wait: 2600 });
+    await fight;
+    for (let i = 0; i < 8; i++) {
+      if (await page.evaluate(() => window.__hfDelve.getState().state?.portal)) break;
+      await apiPost(page, "/api/dev/delve-weaken", { frac: 0.02 });
+      await apiPost(page, "/api/dev/teleport", { x: boss.x, y: boss.y + 3 }); // a fresh grace window
+      await page.evaluate(() => window.__hfGame.devFight(5000));
+    }
+    await page.waitForFunction(() => window.__hfDelve.getState().state?.portal, null, { timeout: 20000 });
+    await shot(page, "09-portal", kind, { wait: 1500 });
+    await page.getByRole("button", { name: "Head home" }).click();
+    await page.waitForFunction(() => !window.__hfDelve.getState().delve);
+    await page.waitForTimeout(6000); // the run is saved on the next flush
+    await page.evaluate(() => window.__hfDelve.getState().set({ panel: true }));
+    await page.getByText("Today's delve is the same").waitFor();
+    await shot(page, "10-on-the-board", kind, { wait: 1200 });
+  }
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

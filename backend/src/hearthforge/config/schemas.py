@@ -642,6 +642,7 @@ class EnemyCfg(Strict):
     keep_away: float = Field(default=0, ge=0)  # kiters/summoners back off when you get this close
     summon: SummonCfg | None = None
     split: SplitCfg | None = None  # splits into smaller ones on death (Big Slime)
+    alt_attack: EnemyAttack | None = None  # bosses: a second attack used when the target is far (Phase 12)
     roaming: bool = False  # not tied to a biome: stats are scaled by the biome it appears in
 
 
@@ -1016,3 +1017,81 @@ class PoisCfg(Strict):
     lost_villager: LostVillagerCfg
     lore_xp: int = Field(ge=0)
     lore: dict[Biome, list[LoreCfg]]
+
+
+# ── dungeons.yaml (Phase 12) ─────────────────────────────────────────────────
+
+
+class DungeonLayoutCfg(Strict):
+    cols: int = Field(ge=2, le=6)
+    rows: int = Field(ge=2, le=6)
+    cell_w: int = Field(ge=16, le=30)
+    cell_h: int = Field(ge=14, le=30)
+    rooms: int = Field(ge=5, le=20)
+
+
+class DungeonSpaceCfg(Strict):
+    x0: int = Field(ge=1024)
+    slot: int = Field(ge=64, le=512)
+
+
+class DungeonCombatCfg(Strict):
+    monsters: Range
+
+
+class MinibossCfg(Strict):
+    hp: float = Field(ge=1)
+    adds: int = Field(ge=0, le=6)
+
+
+class DungeonBossCfg(Strict):
+    enemy: str
+    adds_at: list[float]
+    adds: int = Field(ge=0, le=6)
+    enrage_at: float = Field(ge=0, le=1)
+    enrage_speed: float = Field(ge=1, le=3)
+
+
+class DungeonTreasureCfg(Strict):
+    coins: Range
+    rolls: int = Field(ge=0, le=5)
+    rune: float = Field(ge=0, le=1)
+    blueprint: float = Field(ge=0, le=1)
+
+
+class BossLootCfg(Strict):
+    coins: Range
+    runes: Range
+    blueprint: float = Field(ge=0, le=1)
+
+
+class DungeonXpCfg(Strict):
+    room: int = Field(ge=0)
+    puzzle: int = Field(ge=0)
+    boss: int = Field(ge=0)
+
+
+class DailyCfg(Strict):
+    biome: Biome
+    place: tuple[int, int]
+
+
+class LeaderboardCfg(Strict):
+    size: int = Field(ge=1, le=100)
+
+
+class DungeonsCfg(Strict):
+    layout: DungeonLayoutCfg
+    space: DungeonSpaceCfg
+    max_party: int = Field(ge=1, le=8)
+    idle_close: Duration
+    reseed: Literal["daily", "never"]
+    combat: DungeonCombatCfg
+    miniboss: MinibossCfg
+    boss: DungeonBossCfg
+    treasure: DungeonTreasureCfg
+    boss_loot: BossLootCfg
+    xp: DungeonXpCfg
+    daily: DailyCfg
+    blueprints: list[str] = Field(min_length=1)
+    leaderboard: LeaderboardCfg
