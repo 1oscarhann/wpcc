@@ -89,11 +89,14 @@ async def dev_delve_weaken(
     if found is None:
         raise HTTPException(409, "not_in_world")
     room, p = found
-    if room.combat is None or not p.dungeon:
-        raise HTTPException(409, "not_in_delve")
+    if room.combat is None:
+        raise HTTPException(409, "no_combat")
     n = 0
     for m in room.combat.monsters.values():
-        if m.dungeon == p.dungeon:
+        near = (m.x - p.m.x) ** 2 + (m.y - p.m.y) ** 2 < 20**2
+        if (p.dungeon and m.dungeon == p.dungeon) or (
+            not p.dungeon and near
+        ):  # delve, or a realm boss nearby
             m.hp = min(m.hp, max(1.0, m.hp_max * body.frac))
             n += 1
     return {"weakened": n}

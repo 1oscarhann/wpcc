@@ -12,6 +12,7 @@ import { BTN } from "../sim/motion";
 import { ClientGrid, gridLink } from "../sim/grid";
 import { useAvatar } from "../state/avatar";
 import { Ambient } from "./ambient";
+import { VillagerLife } from "./villagers";
 import { CloudShadows, groundLighting } from "./atmosphere";
 import { AvatarWorld, type WorldHost } from "./avatarWorld";
 import { MerchantCart } from "./merchantFx";
@@ -84,6 +85,7 @@ export class Game {
   private clouds = new CloudShadows(5);
   private sky = new Container();
   private ambient: Ambient | null = null;
+  villagerLife: VillagerLife | null = null; // Phase 14
   private debrisViews = new Map<number, Sprite>();
   private clearing = new Set<number>();
   private fence: Sprite[] = [];
@@ -113,6 +115,7 @@ export class Game {
   private grid: ClientGrid | null = null;
   private objectSprites = new Map<number, Sprite>();
   avatar: AvatarWorld | null = null;
+  private combatFx: CombatFx | null = null; // Phase 13: the blizzard flag
   private mouse: { x: number; y: number } | null = null;
   private mouseLight = false;
   private camTween: gsap.core.Tween | null = null;
@@ -169,6 +172,21 @@ export class Game {
       this.fx,
       this.sky,
     );
+    this.villagerLife = new VillagerLife({
+      origin: () => this.origin,
+      village: () => useVillage.getState().village,
+      defs: () => this.defs,
+      objects: this.objects,
+      screen: this.screen,
+      toScreen: (wx, wy) => ({ x: this.world.x + wx * this.cam.zoom, y: this.world.y + wy * this.cam.zoom }),
+      zoom: () => this.cam.zoom,
+      avatar: () => {
+        const c = this.avatar?.client;
+        if (!c) return null;
+        const p = c.drawPos();
+        return { x: p.x, y: p.y, weapon: useAvatar.getState().weapon?.key ?? "" };
+      },
+    });
     this.app.stage.addChild(this.world, this.screen);
     this.heavens = new Sky(this.app);
     this.heavens.reduceMotion = gfx?.reduce_motion ?? false;
@@ -254,6 +272,17 @@ export class Game {
       }),
     );
     this.bindInput();
+    const cv = this.app.canvas;
+    cv.addEventListener("dragover", (e) => {
+      if (e.dataTransfer?.types.includes("text/villager")) e.preventDefault();
+    });
+    cv.addEventListener("drop", (e) => {
+      const vid = e.dataTransfer?.getData("text/villager");
+      if (!vid) return;
+      e.preventDefault();
+      const bid = this.buildingAtClient(e.clientX, e.clientY);
+      if (bid) void useVillage.getState().assignVillager(vid, bid);
+    });
     roomLink.listeners.add(this.onRoomClient);
     if (roomLink.client) this.onRoomClient(roomLink.client);
     this.app.ticker.add((t) => this.tick(t.deltaMS));
@@ -273,6 +302,7 @@ export class Game {
     this.avatar?.destroy();
     this.avatar = null;
     this.comboFx?.destroy();
+    this.villagerLife?.destroy();
     this.sound.destroy();
     this.delveView?.destroy();
     this.heavens?.destroy();
@@ -397,6 +427,7 @@ export class Game {
     this.loadVisibleChunks();
     this.updateTimers();
     this.ambient?.update(dms);
+    this.villagerLife?.update(dms);
     this.comboFx?.update(dms);
     this.ghostResonance(dms);
     this.clouds.update(dt, this.viewRect());
@@ -428,7 +459,8 @@ export class Game {
     const phase = dv ? { name: "night", progress: 0.5, dark: 0.92, glow: 0 } : dayPhase();
     const world = useWorld.getState();
     const season = world.season;
-    const weather = dv ? "clear" : world.weather;
+    // Phase 13: the Frost Matriarch's blizzard swallows the sky around her
+    const weather = dv ? "clear" : this.combatFx?.blizzard ? "snow" : world.weather;
     const biome = dv ? "cave" : biomeAt(this.cam.x / T, this.cam.y / T);
     const lights: Light[] = [];
     if (dv) {
@@ -505,8 +537,9 @@ export class Game {
     if (c) {
       const me = useSession.getState().me!;
       this.avatar = new AvatarWorld(this.worldHost, c, me.avatar.appearance);
+      this.combatFx = new CombatFx(this.worldHost, this.avatar);
       this.avatar.extras.push(
-        new CombatFx(this.worldHost, this.avatar),
+        this.combatFx,
         new MerchantCart(this.worldHost, this.avatar),
         new Explorer(this.worldHost, this.avatar),
       );
@@ -623,6 +656,7 @@ export class Game {
     this.loadVisibleChunks();
     this.updateTimers();
     if (!frozen) this.ambient?.update(dms);
+    if (!frozen) this.villagerLife?.update(dms);
     this.comboFx?.update(dms);
     this.clouds.update(Math.min(dms, 50) / 1000, this.viewRect());
     this.updateSky(dms);
@@ -868,6 +902,7 @@ export class Game {
     if (prev && (prev.buildings.length !== next.buildings.length || prev.debris.length !== next.debris.length ||
         prev.buildings.some((b, i) => next.buildings[i]?.x !== b.x || next.buildings[i]?.y !== b.y))) {
       this.ambient?.invalidate();
+      this.villagerLife?.invalidate();
     }
     const seen = new Set<string>();
     for (const b of next.buildings) {
@@ -1096,6 +1131,10 @@ export class Game {
     view.anchorTop = look.anchorTop;
     view.root.position.set((this.origin[0] + b.x) * T, (this.origin[1] + b.y) * T);
     view.root.zIndex = (this.origin[1] + b.y + h) * T;
+    if (def.walkable && b.key.startsWith("path") && view.root.parent !== this.below) {
+      this.below.addChild(view.root); // paths lie flat under everyone's feet (Phase 14)
+      view.label.visible = false;
+    }
     Object.assign(view, { key: b.key, level: b.level, state: b.state, rotation: b.rotation, x: b.x, y: b.y });
   }
 
@@ -1622,6 +1661,12 @@ export class Game {
       }
     }
     store.select(b);
+  }
+
+  /** Phase 14: the building under a page point (drag a villager onto it to put them to work). */
+  buildingAtClient(clientX: number, clientY: number): string | null {
+    const r = this.app.canvas.getBoundingClientRect();
+    return this.buildingAt(clientX - r.left, clientY - r.top);
   }
 
   private buildingAt(sx: number, sy: number): string | null {

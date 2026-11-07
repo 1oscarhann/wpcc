@@ -184,6 +184,13 @@ class BuildingCfg(Strict):
     rare_group: str = "default"
     demolishable: bool = True
     sell_bonus: list[float] | None = None  # market: extra sell price per level (fraction)
+    jobs: list[int] | None = (
+        None  # worker / guard slots per level (Phase 13/14); else villagers.yaml by category
+    )
+    tower_dmg: list[float] | None = None  # watchtower arrow damage per level (Phase 13)
+    beauty: float = Field(default=0, ge=0)  # decorations: beauty points (Phase 14)
+    walkable: bool = False  # paths and arches: avatars and villagers walk over them
+    requires_item: str | None = None  # placing it uses up one of these (blueprint decorations)
 
     @field_validator("footprint")
     @classmethod
@@ -1095,3 +1102,233 @@ class DungeonsCfg(Strict):
     daily: DailyCfg
     blueprints: list[str] = Field(min_length=1)
     leaderboard: LeaderboardCfg
+
+
+# ── waves.yaml (Phase 13) ────────────────────────────────────────────────────
+
+
+class WaveEligibleCfg(Strict):
+    min_town_hall: int = Field(ge=1, le=5)
+    since_last: Duration
+    online_before_announce: Duration
+    offline_grace: Duration
+
+
+class WaveComposition(Strict):
+    subwaves: int = Field(ge=1, le=8)
+    size: int = Field(ge=1, le=12)
+    biome: Biome
+    roster: dict[str, float] = Field(min_length=1)
+    elites: int = Field(default=0, ge=0, le=6)
+    miniboss: str | None = None
+
+
+class GuardsCfg(Strict):
+    hp: float = Field(gt=0)
+    dmg: float = Field(gt=0)
+    per_level: float = Field(ge=0)
+    speed: float = Field(gt=0, le=8)
+    aggro: float = Field(gt=0)
+    leash: float = Field(gt=0)
+    range: float = Field(gt=0, le=3)
+    attack_every: Duration
+    respawn: Literal["after_wave"]
+
+
+class TowersCfg(Strict):
+    every: Duration
+    range: float = Field(gt=0, le=12)
+
+
+class StealCfg(Strict):
+    max_fraction: float = Field(gt=0, le=0.5)
+    resources: list[str] = Field(min_length=1)
+
+
+class WaveRewardsCfg(Strict):
+    coins_per_th: int = Field(ge=0)
+    bundle: dict[int, dict[str, int]]
+    rare_chance: float = Field(ge=0, le=1)
+    rare: dict[str, str]
+
+
+class ReportLinesCfg(Strict):
+    flawless: list[str] = Field(min_length=1)
+    held: list[str] = Field(min_length=1)
+    overrun: list[str] = Field(min_length=1)
+
+
+class WavesCfg(Strict):
+    eligible: WaveEligibleCfg
+    warning: Duration
+    director_every: Duration
+    composition: dict[int, WaveComposition]
+    miniboss_hp: float = Field(ge=1)
+    hp_mult: float = Field(gt=0, le=3)
+    subwave_gap: Duration
+    spawn_distance: float = Field(ge=2, le=20)
+    max_duration: Duration
+    aggro: float = Field(gt=0)
+    leash: float = Field(gt=0)
+    guards: GuardsCfg
+    towers: TowersCfg
+    steal: StealCfg
+    win_if_through_below: float = Field(gt=0, le=1)
+    rewards: WaveRewardsCfg
+    report_lines: ReportLinesCfg
+
+
+# ── bosses.yaml (Phase 13) ───────────────────────────────────────────────────
+
+
+class BossAttackCfg(Strict):
+    shape: Literal["circle", "line", "rain", "cone", "ring", "lines"]
+    range: float = Field(default=0, ge=0, le=12)
+    width: float = Field(default=1.0, gt=0, le=4)
+    windup: Duration
+    recover: Duration
+    dmg: float = Field(gt=0, le=4)
+    trigger: float = Field(gt=0, le=14)  # use it when the target is this close
+    knockback: float = Field(default=0.8, ge=0)
+    lunge: float = Field(default=0, ge=0, le=8)
+    at_target: bool = False
+    count: int = Field(default=1, ge=1, le=10)  # rain circles per fighter / lines
+    radius: float = Field(default=1.5, gt=0, le=4)  # rain circle radius
+    spread: float = Field(default=3, ge=0, le=8)  # rain lands within this of each fighter
+    angle: float = Field(default=60, gt=0, le=180)  # cone
+    inner: float = Field(default=0, ge=0)  # ring: safe inside this
+    poison: bool = False
+    burn: bool = False
+    slow: bool = False
+    vulnerable: Duration = 0  # after this attack the boss takes extra damage for this long
+
+
+class BossSummonCfg(Strict):
+    enemy: str
+    count: int = Field(ge=1, le=6)
+
+
+class BossPhaseCfg(Strict):
+    at: float = Field(gt=0, le=1)  # HP share where this phase starts
+    attacks: list[str] = Field(min_length=1)
+    speed: float = Field(default=1.0, ge=0.5, le=2)
+    dmg: float = Field(default=1.0, ge=0.5, le=2)
+    summon: BossSummonCfg | None = None
+    blizzard: bool = False
+    note: str | None = None  # shown under the boss bar when the phase starts
+
+
+class BossRegenCfg(Strict):
+    per_s: float = Field(gt=0, le=0.05)  # share of max HP per second
+    unless: Literal["burn"]
+
+
+class BossLootCfg2(Strict):
+    coins: Range
+    xp: int = Field(ge=0)
+    rares: dict[str, Range]
+    trophy: str
+
+
+class BossCfg(Strict):
+    unlock_level: int = Field(default=1, ge=1, le=60)
+    name: str
+    biome: Biome
+    enemy: str
+    hp: float = Field(gt=0)
+    lair_radius: float = Field(gt=0)
+    attacks: dict[str, BossAttackCfg]
+    phases: list[BossPhaseCfg] = Field(min_length=1)
+    vulnerable_mult: float = Field(default=2.0, ge=1, le=4)
+    regen: BossRegenCfg | None = None
+    loot: BossLootCfg2
+
+
+class BossSpawnCfg(Strict):
+    every: Duration
+    stays: Duration
+    first_after: Duration
+
+
+class BossesCfg(Strict):
+    spawn: BossSpawnCfg
+    engage: float = Field(gt=0)
+    hp_per_fighter: float = Field(ge=0, le=2)
+    leash: float = Field(gt=0)
+    aggro: float = Field(gt=0)
+    loot_min_share: float = Field(ge=0, le=0.5)
+    trophy_chance: float = Field(ge=0, le=1)
+    bosses: dict[str, BossCfg] = Field(min_length=1)
+
+
+# ── villagers.yaml (Phase 14) ────────────────────────────────────────────────
+
+
+class ArrivalCfg(Strict):
+    every: Duration
+    min_happiness: int = Field(ge=0, le=100)
+    start_with: int = Field(ge=0, le=10)
+
+
+class LeavingCfg(Strict):
+    below: int = Field(ge=0, le=100)
+    after: Duration
+    warn_after: Duration
+
+
+class HappinessCfg(Strict):
+    weights: dict[Literal["beauty", "housing", "food", "tavern"], float]
+    beauty_per_tile: float = Field(gt=0)
+    tavern_reach: int = Field(ge=1)
+    empty: int = Field(ge=0, le=100)
+
+
+class JobsCfg(Strict):
+    by_category: dict[str, list[int]]
+    production_bonus: float = Field(ge=0, le=1)
+    crafting_speed: float = Field(ge=0, le=0.5)
+    auto_assign: bool
+    priority: list[str]
+
+
+class BeautyCfg(Strict):
+    variety: float = Field(ge=0)
+    connected: float = Field(ge=0)
+    nature: float = Field(ge=0)
+
+
+class ScheduleCfg(Strict):
+    work: list[str]
+    social: list[str]
+    home: list[str]
+
+
+class NamesCfg(Strict):
+    first: list[str] = Field(min_length=10)
+    last: list[str] = Field(min_length=5)
+
+
+class VillagerLinesCfg(Strict):
+    happy: list[str] = Field(min_length=1)
+    hungry: list[str] = Field(min_length=1)
+    crowded: list[str] = Field(min_length=1)
+    ugly: list[str] = Field(min_length=1)
+    bored: list[str] = Field(min_length=1)
+    leaving: list[str] = Field(min_length=1)
+    working: list[str] = Field(min_length=1)
+    greet: list[str] = Field(min_length=1)
+    gear: list[str] = Field(min_length=1)
+    wave: list[str] = Field(min_length=1)
+
+
+class VillagersCfg(Strict):
+    arrival: ArrivalCfg
+    leaving: LeavingCfg
+    food_per_villager: float = Field(ge=0)
+    happiness: HappinessCfg
+    jobs: JobsCfg
+    beauty: BeautyCfg
+    schedule: ScheduleCfg
+    names: NamesCfg
+    traits: list[str]
+    lines: VillagerLinesCfg

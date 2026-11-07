@@ -170,6 +170,30 @@ ents = [[id, kind, type, x*64, y*64, dx*100, dy*100, anim, anim_t, hp(0-255), fl
       - `chest`: the prop index. It goes only to the player who opened it.
   - **Flags.** Monster entity flag 64 marks a boss.
   - **TOAST.** New keys: `delve_enter {name}`, `delve_ko`, `delve_full`, `delve_already_in`, `delve_in_combat`.
+- **Phases 13/14 (protocol v7).**
+  - **New op.** C2S `WAVE` (`0x35`): `["home"]`, the "Defend!" hop, allowed during a raid countdown or a raid. The answer is a TELEPORT with index −2, or a TOAST (`wave_no_wave`, `wave_busy`, `wave_no_village`).
+  - **New events.**
+    - WAVE `[43, owner, op, …]`. Each op carries:
+      - `start`: sub-waves, guards, towers.
+      - `sub`: the sub-wave number, the total, raiders alive.
+      - `steal`: x, y, the number through so far.
+      - `guard_down`: the guard's name.
+      - `end`: the report (see `services/waves.py`).
+    - TOWER `[44, x0, y0, x1, y1, ms]`: a watchtower arrow in flight.
+    - BOSS `[45, op, …]`. Each op carries:
+      - `awake`: key, name, x, y, expires_ms. Sent to everyone in the room.
+      - `wake`: key, name, entity id. It noticed you.
+      - `phase`: entity id, phase, note.
+      - `vulnerable`: entity id, ms.
+      - `reset`: key.
+      - `down`: key, name, the top damagers' names.
+  - **TELEGRAPH.** New shapes:
+    - 2 is a ring: `range` is the outer radius and `width` the inner (safe) radius.
+    - 3 is a cone: `width` is the angle in degrees.
+    - The id is the boss's hazard id, so several can show at once.
+  - **Monster entity flags.** 128 marks a guard (friendly, `type: "guard"`), 256 a boss with its guard down, and 512 a blizzard.
+  - **NOTIFY.** NOTIFY `"wave"` reaches every socket of the owner (Build Mode too) with `{status: announced, starts_at_ms}`, `{status: running}` or `{status: done, report}`.
+  - **Joining.** Player info on join carries `bosses`: `[[key, name, x, y, expires_ms]]`.
 
 ### 3.1 SNAPSHOT (target format)
 
@@ -293,5 +317,7 @@ The clock offset is estimated from `PING`/`PONG` with an RTT-filtered median of 
 | Progression | `GET /api/quests` · `POST /api/quests/{id}/claim` · `GET /api/achievements` · `POST /api/achievements/{key}/claim` · `GET /api/collection` · `GET /api/cosmetics` · `POST /api/cosmetics/equip` · `POST /api/login-reward/claim` · `GET /api/pets` · `GET /api/mounts` | 16 |
 | Misc | `GET /api/notifications?after=` (polling fallback) · `POST /api/notifications/read` · `GET /api/away-summary` · `POST /api/reports` | 8 |
 | Leaderboards | `GET /api/leaderboards/{board}?period=` · `GET /api/dungeons/daily` | 12, 17 |
+| Raids and bosses | `GET /api/waves` (current + last 5 reports) · `GET /api/bosses` (the realm's boss) · dev: `POST /api/dev/wave`, `POST /api/dev/boss`, `POST /api/dev/delve-weaken` | 13 |
+| Villagers | `POST /api/village/villagers/{id}/assign {building_id|null}`; the village state carries `villagers`, `happiness`, `beauty`, `housing`, `job_slots`, `next_arrival_ms`, `food_demand` | 14 |
 | Admin (role=admin) | `GET /api/admin/players` · `GET /api/admin/realms` · `GET /api/admin/economy` (coin supply, faucets vs sinks by reason; **built in Phase 7**: `{coin_supply, wallets, mean_coins, series:[{at_ms, supply, faucet, sink, active}], day/week:{faucets, sinks, net}}`) · `GET /api/admin/ledger?user=` · `GET /api/admin/market` · `POST /api/admin/fast-forward` · `POST /api/admin/grant` · `POST /api/admin/events/{kind}` (spawn wave/boss/world boss) · `POST /api/admin/reset-account` · `GET /api/admin/reports` | 7, 18 |
 | WebSocket | `GET /ws` | 3, 4 |

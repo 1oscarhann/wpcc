@@ -24,6 +24,8 @@ def village_blocks(cfg, state: dict[str, Any]) -> list[Rect]:  # noqa: ANN001 - 
     hi = lo + size
     out: list[Rect] = []
     for b in state["buildings"]:
+        if cfg.buildings[b["key"]].cfg.walkable:
+            continue  # paths and arches (Phase 14)
         w, h = rotated_footprint(cfg.buildings[b["key"]].footprint, b["rotation"])
         out.append((ox + b["x"], oy + b["y"], w, h))
     gx, gy, side = state["gate"]

@@ -1,6 +1,7 @@
 // Phase 9: the mini-map (corner) and the full map (modal). One coloured pixel-block per chunk, fog over
 // what you haven't seen, plots with their owners, waystones, the merchant, you and your party.
 // At a waystone the full map opens in travel mode: tap an attuned stone to go there.
+import { useDefence } from "../../state/defence";
 import { useEffect, useRef } from "react";
 import { roomLink } from "../../net/room";
 import { useAvatar } from "../../state/avatar";
@@ -124,6 +125,29 @@ function draw(ctx: CanvasRenderingContext2D, o: Overview, opts: DrawOpts): { x: 
     ctx.arc(m.pos[0] * tile, m.pos[1] * tile, Math.max(2.5, px * 0.6), 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+  }
+  // an awake realm boss (Phase 13): a red diamond, shown even through the fog (the whole realm hears it)
+  const def = useDefence.getState();
+  const bosses = def.bosses.length
+    ? def.bosses
+    : def.boss && def.boss.status === "waiting" && def.boss.spawns_at_ms <= Date.now() ? [def.boss] : [];
+  for (const b of bosses) {
+    const x = b.x * tile;
+    const y = b.y * tile;
+    const r = Math.max(4, px * 1.1);
+    ctx.fillStyle = "#e2735a";
+    ctx.strokeStyle = "#2b1e2a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#faf2dd";
+    ctx.fillRect(x - 1, y - 1, 2, 2);
   }
   // party
   const party = useRealm.getState().party;

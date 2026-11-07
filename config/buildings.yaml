@@ -182,3 +182,194 @@ buildings:
     footprint: [3, 2]
     max_count: [0, 0, 1, 1, 1]
     base_cost: { wood: 150, stone: 80, food: 50 }
+
+  # ── Phase 13: defence ────────────────────────────────────────────────────────
+  guard_post:
+    name: Guard Post
+    description: Villagers posted here stand guard when monsters raid. Each level hires more and trains them harder.
+    category: defence
+    unlock_town_hall: 2
+    footprint: [2, 2]
+    max_count: [0, 1, 2, 3, 4]
+    base_cost: { wood: 60, stone: 80, ore: 20 }
+    jobs: [1, 1, 2, 2, 3]            # guard slots (BALANCE §2.3); guards get +15% per level (waves.yaml)
+
+  watchtower:
+    name: Watchtower
+    description: Looses arrows at raiders within 7 tiles. Harder hitting each level.
+    category: defence
+    unlock_town_hall: 3
+    footprint: [1, 1]
+    max_count: [0, 0, 1, 2, 3]
+    base_cost: { wood: 80, stone: 100 }
+    tower_dmg: [6, 9, 13, 18, 24]    # per arrow, one every 1.2 s (waves.yaml → towers)
+
+  # ── Phase 14: decorations. Placed instantly, no levels; `beauty` feeds the village's beauty score ──
+  # Deco sets unlock with the Town Hall: Rustic (1), Garden (2), Festival (3), Noble (4).
+  # Blueprint decorations (from delves) use up one blueprint each.
+  path_dirt:
+    name: Dirt Path
+    description: A trodden path. Link buildings to the Town Hall with paths for beauty.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [120, 160, 200, 240, 300]
+    base_cost: { coins: 2 }
+    walkable: true
+  path_stone:
+    name: Stone Path
+    description: Neat flagstones. Counts as a path, and looks it.
+    category: decoration
+    unlock_town_hall: 2
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [0, 160, 200, 240, 300]
+    base_cost: { stone: 4, coins: 3 }
+    walkable: true
+    beauty: 0.2
+  flower_bed:
+    name: Flower Bed
+    description: A little riot of colour.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [12, 18, 24, 30, 40]
+    base_cost: { wood: 4, coins: 15 }
+    beauty: 2
+  hedge:
+    name: Hedge
+    description: Clipped and proud of it.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [20, 30, 40, 50, 60]
+    base_cost: { wood: 3, coins: 8 }
+    beauty: 1
+  bench:
+    name: Bench
+    description: Somewhere to sit and watch the chickens.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [6, 9, 12, 15, 20]
+    base_cost: { wood: 12, coins: 10 }
+    beauty: 1
+  lantern:
+    name: Lantern
+    description: A warm light for the walk home.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [8, 12, 16, 20, 26]
+    base_cost: { wood: 6, ore: 2, coins: 15 }
+    beauty: 1.5
+  young_tree:
+    name: Young Tree
+    description: Plant one now, sit under it later.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [10, 15, 20, 25, 30]
+    base_cost: { wood: 5, coins: 12 }
+    beauty: 1.5
+  well:
+    name: Well
+    description: Fresh water and the best gossip in the village.
+    category: decoration
+    unlock_town_hall: 2
+    footprint: [2, 2]
+    max_level: 1
+    max_count: [0, 1, 2, 2, 3]
+    base_cost: { stone: 60, wood: 20, coins: 80 }
+    beauty: 4
+  banner:
+    name: Banner
+    description: Your colours, flying high.
+    category: decoration
+    unlock_town_hall: 2
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [0, 6, 10, 14, 18]
+    base_cost: { wood: 8, coins: 30 }
+    beauty: 2
+  market_stall:
+    name: Market Stall
+    description: Mostly sells turnips. Mostly.
+    category: decoration
+    unlock_town_hall: 3
+    footprint: [2, 1]
+    max_level: 1
+    max_count: [0, 0, 3, 4, 6]
+    base_cost: { wood: 40, coins: 120 }
+    beauty: 3
+  pumpkins:
+    name: Pumpkin Pile
+    description: A seasonal heap of pumpkins. Festive!
+    category: decoration
+    unlock_town_hall: 3
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [0, 0, 6, 8, 10]
+    base_cost: { food: 30, coins: 40 }
+    beauty: 3
+  fountain:
+    name: Fountain
+    description: The village's pride, splashing away.
+    category: decoration
+    unlock_town_hall: 4
+    footprint: [2, 2]
+    max_level: 1
+    max_count: [0, 0, 0, 1, 2]
+    base_cost: { stone: 200, coins: 600 }
+    beauty: 8
+  statue:
+    name: Statue
+    description: A hero of old. Possibly you, if you squint.
+    category: decoration
+    unlock_town_hall: 4
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [0, 0, 0, 2, 4]
+    base_cost: { stone: 150, coins: 450 }
+    beauty: 6
+  lantern_post:
+    name: Lantern Post
+    description: A tall wrought lamp from a delve blueprint.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [4, 6, 8, 10, 12]
+    base_cost: { ore: 10, coins: 40 }
+    requires_item: blueprint_lantern_post
+    beauty: 3
+  stone_fountain:
+    name: Stone Fountain
+    description: An old delve design, carved with runes. Water glows faintly at night.
+    category: decoration
+    footprint: [2, 2]
+    max_level: 1
+    max_count: [1, 1, 2, 2, 3]
+    base_cost: { stone: 120, coins: 200 }
+    requires_item: blueprint_stone_fountain
+    beauty: 10
+  hedge_arch:
+    name: Hedge Arch
+    description: An archway of clipped hedge. Walk right through it.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [4, 6, 8, 10, 12]
+    base_cost: { wood: 20, coins: 60 }
+    requires_item: blueprint_hedge_arch
+    walkable: true
+    beauty: 4
+  banner_pole:
+    name: Banner Pole
+    description: A tall pole with your colours. Visible from the next village.
+    category: decoration
+    footprint: [1, 1]
+    max_level: 1
+    max_count: [4, 6, 8, 10, 12]
+    base_cost: { wood: 30, coins: 60 }
+    requires_item: blueprint_banner_pole
+    beauty: 3

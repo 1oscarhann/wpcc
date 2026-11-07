@@ -531,3 +531,139 @@ The card clears on acknowledge. Fast-forward ages the snapshot too, so test acco
 - **Knockouts.** A KO drops you out of the delve and counts a death on the run. You respawn as you would anywhere else.
 - **Disconnects.** A disconnect also drops you out. You come back at the entrance you came in by, because your saved position is always your outside spot (`dungeon_return`).
 - **Dev routes (dev only).** `POST /api/dev/delve-weaken` knocks every monster in your delve down to a share of its HP, so the screenshot run reaches the portal. `/api/dev/teleport` works inside delves.
+
+## Phase 13: defence and bosses
+
+### D-092: party scaling for bosses
+**Decision.** Realm bosses and the Delve Warden scale with the fighters around them: HP × (1 + 0.75 × (fighters − 1)).
+- **Fighters.** Players within 14 tiles who aren't knocked out.
+- **Rechecks.** Realm bosses recheck every second and keep the share of HP they have left, so leaving can't skip HP. The Warden is scaled once, when it spawns, from the party in the delve.
+- **Correction.** In the Phase 12 wrap-up I said bosses didn't scale with party size at all. That was wrong: every spawn already had the generic co-op bump (+50% per extra player within 20 tiles). Bosses now use the steeper 0.75.
+- **The daily board.** It's still not perfectly fair between solo players and parties. Splitting it by party size is the cleaner fix and is noted for Phase 17.
+
+### D-093: realm boss loot
+**Decision.** When a realm boss falls, everyone who dealt at least 1% of its damage and is still in the realm gets their own drops: XP, coins, the boss's biome rares, and maybe its trophy.
+- **Trophies.** Your first kill of each boss always drops its trophy (checked against your `kill.<boss>` stat). After that the chance is 20%.
+- **Tally.** Damage is tallied per player and saved to `boss_damage` as it changes. A restart doesn't wipe the tally, but the boss's HP rolls back up to 10 seconds (its HP share is only saved every 10 s).
+- **Leaving early.** Players who left before the kill get nothing. There's no mailbox to post loot to until Phase 15.
+
+### D-094: boss HP retuned to the damage we actually have
+**Decision.** Solo HP is 2,400 (Grubmaw), 5,000 (Colossus), 8,000 (Hydra), 11,000 (Matriarch) and 15,000 (Tyrant), instead of BALANCE §7's 7,500–60,000.
+- **Why.** As built, a starter sword hits for about 12, and tier gear for a few times that. The plan's numbers would have meant 15–20-minute solo fights against the 2–4-minute target.
+
+### D-095: data-driven bosses
+**Decision.** `bosses.yaml` drives a `BossBrain` on top of an ordinary `Monster`.
+- **Phases.** Each phase starts at an HP share and has its own attack rotation, speed and damage multipliers.
+- **Attack shapes.**
+  - `circle`, and `line` (a charge when it has a lunge)
+  - `rain`: circles dropped around every fighter, one right on you
+  - `cone`
+  - `ring`: a donut, safe inside it and outside it
+  - `lines`: cracks radiating out from the boss
+- **Mechanics.**
+  - Adds are summoned when a phase starts.
+  - The Hydra regrows unless it's burning.
+  - The Colossus's core is exposed (×2 damage) after a fist slam.
+  - The Matriarch's blizzard turns the sky to snow around her.
+  - The Tyrant enrages.
+- **Immunities.** Bosses ignore stuns and heavy-hit staggers, and shrug off 80% of knockback.
+- **Telegraphs.** Every hazard gets its own telegraph id, so several can show at once. Telegraphs gain shape 2 (ring) and shape 3 (cone).
+- **Phase notes.** They show under the boss bar, as with the Warden (D-089).
+
+### D-096: when and where bosses wake
+**Decision.** In every realm with someone online, a boss wakes every 72 hours and waits 24 hours. A realm's first boss wakes 15 minutes after its first visit.
+- **Rotation.** It cycles through the bosses whose `unlock_level` the realm's best avatar has reached. A fresh realm only meets Grubmaw.
+- **Lair.** The lair is a seeded spot on the boss's biome ring.
+- **Persistence.** The room loads waiting bosses when it starts and every 30 seconds after. It saves the boss's HP share every 10 seconds and damage tallies whenever they change.
+- **Leashing.** A boss nobody is fighting walks home and heals.
+- **Map.** Awake bosses show as a red diamond on both maps, even through the fog: the whole realm hears it wake.
+
+### D-097: raids follow the online rules (P18)
+**Decision.**
+- **The director.** A director in the API process checks every 10 seconds.
+- **Online.** A live socket, or one that dropped less than 60 seconds ago.
+- **When a raid is announced.** A village qualifies when all of these hold:
+  - Town Hall 2 or higher.
+  - The tutorial is done.
+  - At least 3 hours since the last raid, or since the village was founded.
+  - The owner has been online for 20 minutes.
+- **Warning.** A 10-minute warning follows the announcement, so no raid ever lands in your first half hour online.
+- **Postponing.** Logging out during the countdown, or being offline when it ends, postpones the raid. It's never fired at an empty village.
+- **Where it runs.** The raid runs in the realm room. The room is started if nobody's in Avatar Mode, and the reaper won't close a room mid-raid.
+- **Pathing.** Raiders follow a BFS flow field from the Storehouse's free edge tiles (or the Town Hall's if there's no Storehouse). They walk in through the gate and break off to fight anyone within 4.5 tiles.
+- **Plots.** Raiders may step into the plot they're raiding, and only that one. Every other monster still treats villages as safe.
+- **Rosters.** Raid rosters must be melee walkers. The loader rejects shooters, ambushers and summoners: shots don't hit guards, and an ambusher would just hide in your village.
+
+### D-098: guards and watchtowers
+**Decision.**
+- **Guards.** Guards are the villagers posted at a Guard Post (1/1/2/2/3 slots by level). They're named, and get +15% HP and damage per post level. They fight raiders within 6 tiles of their post and leash at 10.
+- **Before Phase 14.** Before villagers existed, every slot was filled by a nameless guard. That fallback remains for village states without villagers.
+- **Rendering.** Guards travel as monster entities with flag 128 (friendly), so the client draws them like monsters but with green HP bars.
+- **Fallen guards.** They're back for the next raid.
+- **Watchtowers.** They loose an arrow every 1.2 seconds at the nearest raider within 7 tiles, for 6/9/13/18/24 damage by level. The arrow is drawn on the client from a `TOWER` event.
+- **"Defend!"** The button, in either mode, hops you just inside your own gate during a countdown or a raid. From Build Mode it first steps you into the world.
+
+### D-099: theft, rewards and the report
+**Decision.**
+- **Theft.** Each raw resource loses 10% × (raiders through ÷ raiders sent). The raid is held if fewer than half got through. Buildings are never touched.
+- **Rewards for a held raid.**
+  - 60 coins × Town Hall level.
+  - A resource bundle.
+  - A 25% chance at the raid biome's rare material. It drops at your feet if you're in the world, otherwise it goes to your bag.
+- **Raiders.** They give XP but no loot: the raid pays out at the end.
+- **Report.** It names the outcome (flawless, held or overrun), the funny line (`{res}` is the most-stolen resource), what went and what came, how many guards are still standing, and the realm-mates who helped.
+- **Deferred.** Walls and gates wait for a later phase. Gaps in buildings already make chokepoints, and a wall that blocks villagers and players needs a gate rule (P-later).
+
+## Phase 14: villagers and beauty
+
+### D-100: villagers arrive and leave lazily
+**Decision.** Villagers are settled on every village read, like production.
+- **Arrivals.** The clock walks forward in 10-minute steps, and each step brings a newcomer if there's a free bed and happiness is 40 or more. A new village starts with two.
+- **Leaving.** After 2 hours below happiness 20, the newest arrival leaves. The panel counts down to it.
+- **Food (P10).** Villagers eat food as a *rate*: 4/h each comes off the food rate, floored at zero, so nobody starves.
+- **Approximation.** Arrivals that happen while you're away change food demand from the next read on, not from the moment they arrived. It's a small error that keeps settlement simple.
+
+### D-101: jobs are a bonus, not a requirement
+**Decision.** Buildings produce without workers, so existing villages don't suddenly halve. Each worker adds:
+- **Production buildings.** +15% output each.
+- **Crafting stations.** 10% faster crafts each (at most −50%).
+- **Guard Post.** A guard for raids.
+
+Assignment:
+- **Slots.** They come from `jobs` on the building, or `villagers.yaml` by category.
+- **Newcomers.** They take the open job with the highest priority (Guard Post first). A villager you give the day off stays off.
+- **How to assign.** A dropdown per villager, or (desktop) drag a villager card onto a building on the map.
+
+### D-102: how beauty is scored
+**Decision.** A village's beauty is the sum of:
+- each decoration's points
+- 1.5 per *distinct* decoration type
+- 2 per building linked to the Town Hall by paths: a breadth-first walk over path tiles from the Town Hall's edges
+- 0.5 per tree, bush or weed still growing on the plot, so clearing everything costs a little beauty
+
+Happiness follows the formula in BALANCE §10.
+- **Tavern access.** A finished Tavern within 12 tiles (centre to centre, Manhattan distance) of more than half the homes. That's simpler than path distance, and close enough at plot scale.
+
+### D-103: decorations are buildings
+**Decision.** Decorations are entries in `buildings.yaml` with `category: decoration`, rather than the separate `village_decorations` and `village_tiles` tables SCHEMA sketched.
+- **Behaviour.**
+  - One level, no builder.
+  - Placed instantly.
+  - Moved, demolished and undone like any building.
+  - Counted by Town Hall limits.
+- **Why.** Placement, previews, undo, refunds and rendering all work unchanged.
+- **Paths.** They're walkable 1×1 decorations. They don't block the world, and the client draws them on the ground layer.
+- **Placing.** A decoration stays in hand after you place it, so you can lay a whole path or row of flowers.
+- **Blueprint decorations.** The four from delves each use up one blueprint. Undo and demolish don't give it back.
+
+### D-104: villagers walk their day on the client
+**Decision.** Villagers are drawn and walked entirely on the client, from the village state and the world clock. The server only knows who lives and works where.
+- **Daily routine.**
+  - Dawn and day: they work near their job.
+  - Dusk: they gather at the Tavern, or take a stroll.
+  - Night: they go home and inside.
+  - During a raid: they run home.
+- **Pathing.** Routes use Dijkstra over the plot, with path tiles cheaper than grass, so paths get walked.
+- **Speech bubbles.** They come from `villagers.yaml`, chosen by the village's weakest happiness factor (hungry, crowded, ugly, bored, leaving) or "happy" and "working".
+- **Greetings.** Walk your avatar past and they stop, turn and greet you, sometimes admiring your weapon.
+- **Replaces.** The Phase 3 ambient walkers, which had random looks and no jobs.

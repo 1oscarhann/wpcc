@@ -22,6 +22,9 @@ function moveFrames(key: string): number {
 }
 const SQUISHY = new Set(["slime", "big_slime", "pebbling", "leechling", "toad_spitter", "bog_lurker"]);
 const NIGHT = 16;
+const FRIENDLY = 128; // a guard (Phase 13)
+const VULNERABLE = 256; // a realm boss with its guard down
+const BLIZZARD = 512;
 const MONSTER_SHOT = 1;
 
 interface MonsterView {
@@ -46,6 +49,7 @@ export class CombatFx {
   private statusTint = new Map<number, { color: number; until: number }>();
   private root: Graphics | null = null;
   private telegraphs = new Map<number, { g: Graphics; tween: gsap.core.Tween }>();
+  blizzard = false; // Phase 13: a Frost Matriarch nearby has called her blizzard
   private time = 0;
   private lastLocalHit = -1e9;
 
@@ -68,10 +72,15 @@ export class CombatFx {
     this.time += dms;
     const c = this.world.client;
     const rt = c.renderTick();
+    let blizzard = false;
     for (const ent of c.ents.values()) {
-      if (ent.kind === ENT.monster) this.updateMonster(ent, rt, dms);
-      else if (ent.kind === ENT.projectile) this.updateProjectile(ent, rt);
+      if (ent.kind === ENT.monster) {
+        this.updateMonster(ent, rt, dms);
+        const last = ent.samples[ent.samples.length - 1];
+        if (last && (last.flags & BLIZZARD) !== 0 && Math.abs(last.x - c.me.x) < 22 && Math.abs(last.y - c.me.y) < 22) blizzard = true;
+      } else if (ent.kind === ENT.projectile) this.updateProjectile(ent, rt);
     }
+    this.blizzard = blizzard;
     this.updateRoot();
   }
 
@@ -171,6 +180,7 @@ export class CombatFx {
     }
     const st = this.statusTint.get(ent.id);
     if (st && st.until > this.time && s.anim !== ANIM.windup) v.body.tint = st.color;
+    if ((s.flags & VULNERABLE) !== 0) v.body.tint = Math.floor(v.t / 120) % 2 ? 0xfff6c0 : 0xffd27a; // its core is open
     if (v.flash > 0) {
       v.flash -= dms;
       v.body.tint = 0xfff4d8;
@@ -187,7 +197,8 @@ export class CombatFx {
       const w = v.elite ? 22 : 14;
       const top = -v.body.texture.height * sc - 4;
       v.bar.rect(-w / 2 - 1, top - 1, w + 2, 4).fill({ color: INK });
-      v.bar.rect(-w / 2, top, (w * s.hp) / 255, 2).fill({ color: v.elite ? 0xf7d66a : 0xe2735a });
+      const friendly = (s.flags & FRIENDLY) !== 0;
+      v.bar.rect(-w / 2, top, (w * s.hp) / 255, 2).fill({ color: friendly ? 0x8fc95c : v.elite ? 0xf7d66a : 0xe2735a });
     }
   }
 
@@ -237,6 +248,14 @@ export class CombatFx {
     switch (kind) {
       case EV.TELEGRAPH:
         this.telegraph(ev as number[]);
+        break;
+      case EV.TOWER: {
+        const [, x0, y0, x1, y1, ms] = ev as number[];
+        this.arrow(x0 * T, y0 * T, x1 * T, y1 * T, ms);
+        break;
+      }
+      case EV.WAVE:
+        if (ev[2] === "steal") this.steal((ev[3] as number) * T, (ev[4] as number) * T);
         break;
       case EV.HIT:
         this.hit(ev as number[]);
@@ -325,6 +344,22 @@ export class CombatFx {
       if (shape === 0) {
         g.circle(0, 0, range * T).fill({ color: 0xe05a47, alpha: 0.16 }).stroke({ width: 1, color: 0xe05a47, alpha: 0.75 });
         g.circle(0, 0, range * T * state.p).fill({ color: 0xe05a47, alpha: 0.28 });
+      } else if (shape === 2) {
+        // ring: safe inside `width` (the inner radius) and outside `range`
+        const inner = width * T;
+        const outer = range * T;
+        g.circle(0, 0, outer).circle(0, 0, inner).cut();
+        g.circle(0, 0, outer).fill({ color: 0x7fc6ff, alpha: 0.16 }).stroke({ width: 1, color: 0x7fc6ff, alpha: 0.8 });
+        g.circle(0, 0, inner).fill({ color: 0x2b1e2a, alpha: 0.0 }).stroke({ width: 1, color: 0xfaf2dd, alpha: 0.9 });
+        g.circle(0, 0, inner + (outer - inner) * state.p).stroke({ width: 2, color: 0x7fc6ff, alpha: 0.6 });
+      } else if (shape === 3) {
+        // cone: `width` is the angle in degrees
+        const a0 = Math.atan2(dy, dx);
+        const half = ((width / 2) * Math.PI) / 180;
+        const len = range * T;
+        g.moveTo(0, 0).arc(0, 0, len, a0 - half, a0 + half).lineTo(0, 0)
+          .fill({ color: 0x8fd05c, alpha: 0.16 }).stroke({ width: 1, color: 0x8fd05c, alpha: 0.8 });
+        g.moveTo(0, 0).arc(0, 0, len * state.p, a0 - half, a0 + half).lineTo(0, 0).fill({ color: 0x8fd05c, alpha: 0.28 });
       } else {
         const len = range * T;
         const w = width * T;
@@ -465,6 +500,40 @@ export class CombatFx {
   }
 
   /** Chain lightning: a jagged bolt that flickers twice. */
+  /** Phase 13: a watchtower arrow arcing onto a raider. */
+  private arrow(x0: number, y0: number, x1: number, y1: number, ms: number): void {
+    const s = new Sprite(tex("fx.shot.arrow"));
+    s.anchor.set(0.5);
+    s.zIndex = 99997;
+    this.host.objects.addChild(s);
+    const st = { t: 0 };
+    const arc = Math.min(28, Math.hypot(x1 - x0, y1 - y0) * 0.35);
+    const place = () => {
+      const t = st.t;
+      const x = x0 + (x1 - x0) * t;
+      const y = y0 + (y1 - y0) * t - Math.sin(t * Math.PI) * arc;
+      const nt = Math.min(1, t + 0.05);
+      const ny = y0 + (y1 - y0) * nt - Math.sin(nt * Math.PI) * arc;
+      s.rotation = Math.atan2(ny - y, x0 + (x1 - x0) * nt - x);
+      s.position.set(x, y);
+    };
+    place();
+    gsap.to(st, { t: 1, duration: Math.max(0.12, ms / 1000), ease: "none", onUpdate: place, onComplete: () => safeDestroy(s) });
+    sfx("shoot");
+  }
+
+  /** Phase 13: a raider made it to the storehouse and legs it with a sack. */
+  private steal(x: number, y: number): void {
+    const s = new Sprite(tex(hasSprite("fx.sack") ? "fx.sack" : "fx.shot.arrow"));
+    s.anchor.set(0.5, 1);
+    s.position.set(x, y);
+    s.zIndex = 99997;
+    this.host.objects.addChild(s);
+    gsap.to(s, { y: y - 26, alpha: 0, duration: 0.9, ease: "power1.out", onComplete: () => safeDestroy(s) });
+    this.host.floatText(x, y - 20, "Stolen!", 0xe2735a, 0, 14);
+    sfx("poof");
+  }
+
   private zap(x0: number, y0: number, x1: number, y1: number): void {
     const g = new Graphics();
     const seg = 6;

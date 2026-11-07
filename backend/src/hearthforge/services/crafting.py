@@ -195,6 +195,11 @@ async def start(
         kind = "gear"
     else:
         raise GameError("unknown_recipe", "Unknown recipe.")
+    staff = sum(
+        1 for v in ld.villagers if v.job_building_id == st.id
+    )  # Phase 14: staffed stations are quicker
+    if staff:
+        seconds = max(1, int(seconds * max(0.5, 1 - cfg.villagers.jobs.crafting_speed * staff)))
     job = CraftJob(
         id=uuid.uuid4(),
         user_id=user_id,

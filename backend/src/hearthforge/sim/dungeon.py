@@ -327,6 +327,12 @@ class DungeonSpace:
             m = put(self.cfg.boss.enemy)
             m.x, m.y = inst.world(r.cx, r.cy - 1)
             m.boss = True
+            # the same party scaling as realm bosses (Phase 13, D-092): HP × (1 + k × (members − 1))
+            ecfg = en.enemies[self.cfg.boss.enemy]
+            spec = en.biomes.get(inst.biome) or en.biomes["meadow"]  # type: ignore[call-overload]
+            hp = ecfg.hp * spec.scale.hp * (self.room.cfg.world_clock.night.hp if combat.night else 1.0)
+            n = max(1, len(self._members(inst)))
+            m.hp = m.hp_max = round(hp * (1 + self.room.cfg.bosses.hp_per_fighter * (n - 1)))
             inst.boss_id = m.id
             self._broadcast(inst, [EV["DUNGEON"], "boss", m.id, en.enemies[self.cfg.boss.enemy].name])
         inst.pack[r.id] = ids

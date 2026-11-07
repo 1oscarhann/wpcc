@@ -8,6 +8,8 @@ import { useMarket } from "../../state/market";
 import { useTutorial } from "../../state/tutorial";
 import { useRealm } from "../../state/realm";
 import { WorldChip } from "./WorldChip";
+import { useDefenceSync, WaveChip, WaveReportModal } from "./Defence";
+import { HappinessChip, VillagersPanel } from "./Villagers";
 import { MiniMap } from "./WorldMap";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
@@ -28,6 +30,8 @@ const CATEGORIES: { key: string; label: string }[] = [
   { key: "core", label: "Core" },
   { key: "production", label: "Production" },
   { key: "crafting", label: "Crafting" },
+  { key: "defence", label: "Defence" },
+  { key: "decoration", label: "Decor" },
 ];
 
 function CostChips({ cost, v, now }: { cost: Record<string, number>; v: VillageState; now: number }) {
@@ -77,6 +81,7 @@ function TopBar({ v, now, onSettings }: { v: VillageState; now: number; onSettin
         </span>
       </div>
       <div className="row" style={{ gap: 6 }}>
+        <HappinessChip v={v} />
         <span className="hud-bar hud-chip" title="Builders busy / available">
           <Icon name="build" scale={1.5} /> {v.queue.used}/{v.queue.slots}
         </span>
@@ -129,13 +134,19 @@ function BuildMenu({ v, now, onClose }: { v: VillageState; now: number; onClose:
               }}>
               <SpriteThumb name={`building.${key}.a.l1`} box={80} maxScale={3} dim={disabled} />
               <span className="head" style={{ fontSize: 16 }}>{d.name}</span>
+              {d.category === "decoration" && (
+                <span className="small" style={{ color: "var(--leaf, #5c8a3a)" }}>
+                  {d.beauty ? `+${d.beauty} beauty` : d.walkable ? "links buildings" : ""}
+                  {d.requires_item ? ` · uses a blueprint` : ""}
+                </span>
+              )}
               {locked ? (
                 <span className="small row" style={{ gap: 4 }}><Icon name="lock" scale={1} /> Town Hall {d.unlock_town_hall}</span>
               ) : (
                 <>
                   <CostChips cost={cost} v={v} now={now} />
                   <span className="small muted row" style={{ gap: 4 }}>
-                    <Icon name="timer" scale={1} /> {formatDuration(d.levels[0].time_s)} · {count}/{max}
+                    <Icon name="timer" scale={1} /> {d.levels[0].time_s ? formatDuration(d.levels[0].time_s) : "Instant"} · {count}/{max}
                     {Object.keys(missing).length > 0 && <span style={{ color: "var(--red)" }}> · need more</span>}
                   </span>
                 </>
@@ -154,6 +165,9 @@ function describeLevel(d: BuildingDef, level: number, config: ReturnType<typeof 
   const parts = Object.entries(lv.production).map(([k, r]) => `+${r} ${config!.resources[k].name.toLowerCase()}/h`);
   if (lv.storage) parts.push(`${d.name === "Town Hall" ? "" : "+"}${formatNum(lv.storage)} storage`);
   if (lv.housing) parts.push(`houses ${lv.housing}`);
+  if (d.category === "defence" && d.jobs) parts.push(`${d.jobs[level - 1]} guard post${d.jobs[level - 1] === 1 ? "" : "s"}`);
+  if (d.tower_dmg) parts.push(`arrows hit for ${d.tower_dmg[level - 1]}`);
+  if (d.beauty) parts.push(`+${d.beauty} beauty`);
   return parts.join(" · ");
 }
 
@@ -336,6 +350,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
   const [menu, setMenu] = useState(false);
   const now = useTick(250);
   const selected = useMemo(() => v?.buildings.find((b) => b.id === selectedId), [v, selectedId]);
+  useDefenceSync();
   if (!v) return null;
   const undoLeft = v.undo ? Math.ceil((v.undo.expires_at_ms - now) / 1000) : 0;
   return (
@@ -344,6 +359,9 @@ export function BuildHud({ onSettings, touch, onZoom }: {
       <div className="village-name"><span className="ribbon">{v.name}</span></div>
       <ClearHint v={v} />
       <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /></div>
+      <WaveChip />
+      <WaveReportModal />
+      <VillagersPanel />
       {!wsConnected && <div className="panel-dark hud-offline small">Reconnecting… (updates every few seconds)</div>}
       <div className="hud-bottom">
         {placing ? (

@@ -603,6 +603,31 @@ Every lot the market also buys costs at least 1.25 × the best price the market 
 
 ---
 
+### 9.1 As built (Phase 13)
+
+| | Number | Notes |
+|---|---|---|
+| TH2 raid | 2 sub-waves × 5, meadow (slime, big slime, thornhare) | |
+| TH3 raid | 3 × 5, forest (wolf, bandit brute, slime), 1 elite | |
+| TH4 raid | 4 × 6, stonepeak (ram goat, pebbling, rock golem), 2 elites | |
+| TH5 raid | 4 × 7, mixed, 2 elites + a rock golem mini-boss (×1.6 HP) | |
+| Raiders | × 0.8 HP, 25 s between sub-waves | They come to steal, not to duel |
+| Guard | 80 HP, 8 dmg, +15% per post level, 1 hit/s | |
+| Watchtower | 6 / 9 / 13 / 18 / 24 per arrow, every 1.2 s, range 7 | |
+| Held raid | 60 × TH coins + a bundle (TH2: 80 wood, 60 stone … TH5: 150 planks, 150 bricks, 120 ore, 10 crystal), 25% rare | |
+
+**Realm bosses as built** (solo HP; × (1 + 0.75 × extra fighters)):
+
+| Boss | HP | Dmg | Phases | Signature | Loot |
+|---|---|---|---|---|---|
+| Grubmaw the Slime King (meadow, lvl 1+) | 2,400 | 14 | 100/66/33% | slam, slime rain, bouncing charge; 4 Slimelings at 33% | 200–350 coins, 300 XP, 1–2 moonpetal, Gel Crown |
+| The Stone Colossus (stonepeak, lvl 8+) | 5,000 | 34 | 100/66/33% | fist line (core exposed ×2 for 2.5 s), rockfall, stomp | 400–700, 600 XP, 2–3 starstone, Colossus Core |
+| The Swamp Hydra (swamp, lvl 14+) | 8,000 | 44 | 100/66/33% | poison breath cone, snap, spit rain; regrows 0.6%/s unless burning | 600–1,000, 900 XP, 2–3 swamp venom, Hydra Fang |
+| The Frost Matriarch (frozen, lvl 20+) | 11,000 | 60 | 100/66/33% | ice ring (roots), shards, lance; 2 frost wolves; blizzard | 800–1,300, 1,200 XP, 2–3 frost shards, Matriarch's Tiara |
+| The Cinder Tyrant (ashen, lvl 26+) | 15,000 | 85 | 100/66/15% | lava cracks (6 lines), meteors, smash; enrage ×1.4 speed, ×1.25 dmg | 1,000–1,800, 1,600 XP, 2–3 ember cores, Tyrant's Heart |
+
+Trophy: the first kill always drops it, 20% after that. Loot needs ≥ 1% of the damage (D-093).
+
 ## 10. Villagers, happiness, beauty (Phase 14)
 
 ```
@@ -620,6 +645,17 @@ tavern = 1 if a Tavern exists within 12 tiles path-distance of most homes, else 
 - **Arrivals:** a new villager arrives every 10 min (settled lazily) if there's free housing and happiness ≥ 40. A villager leaves if happiness stays < 20 for 2 h (the warning comes first via speech bubbles).
 
 ---
+
+### 10.1 As built (Phase 14)
+
+- **Arrivals and departures.** One newcomer per 10 minutes while there's a bed and happiness is ≥ 40. A new village starts with 2. After 2 hours under 20, one leaves.
+- **Food.** 4 food/h per villager, taken off the food rate and floored at 0.
+- **Jobs.** Production buildings have 1/1/2/2/3 slots (+15% output each). Crafting stations have 1/1/1/2/2 (−10% craft time each, at most −50%). The Guard Post has 1/1/2/2/3 guards.
+- **Beauty points.**
+  - Paths 0 (stone 0.2), flower bed 2, hedge 1, bench 1, lantern 1.5, young tree 1.5, banner 2, well 4, market stall 3, pumpkins 3, fountain 8, statue 6.
+  - From blueprints: lantern post 3, stone fountain 10, hedge arch 4, banner pole 3.
+- **Beauty bonuses.** +1.5 per distinct decoration, +2 per building linked to the Town Hall by paths, +0.5 per tree, bush or weed left on the plot.
+- **Normalisation.** A 32×32 plot is "fully beautiful" at 123 beauty (1,024 tiles × 0.12).
 
 ## 11. Progression and misc (Phase 16)
 

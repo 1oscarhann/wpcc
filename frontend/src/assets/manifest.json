@@ -152,130 +152,135 @@
    "close": 31,
    "cloud": 32,
    "coins": 33,
-   "crystal": 34,
-   "crystal_staff": 35,
-   "crystal_staff_1": 36,
-   "crystal_staff_2": 37,
-   "crystal_staff_3": 38,
-   "crystal_staff_4": 39,
-   "crystal_staff_5": 40,
-   "demolish": 41,
-   "ember_core": 42,
-   "ember_dust": 43,
-   "enchanted_sword": 44,
-   "enchanted_sword_1": 45,
-   "enchanted_sword_2": 46,
-   "enchanted_sword_3": 47,
-   "enchanted_sword_4": 48,
-   "enchanted_sword_5": 49,
-   "fish": 50,
-   "fog": 51,
-   "food": 52,
-   "frost_fur": 53,
-   "frost_shard": 54,
-   "golem_shard": 55,
-   "harpoon": 56,
-   "harpoon_1": 57,
-   "harpoon_2": 58,
-   "harpoon_3": 59,
-   "harpoon_4": 60,
-   "harpoon_5": 61,
-   "herbs": 62,
-   "hide": 63,
-   "home": 64,
-   "info": 65,
-   "ingots": 66,
-   "ironbark": 67,
-   "leather": 68,
-   "leather_armour": 69,
-   "leather_armour_1": 70,
-   "leather_armour_2": 71,
-   "leather_armour_3": 72,
-   "leather_armour_4": 73,
-   "leather_armour_5": 74,
-   "lock": 75,
-   "mace": 76,
-   "mace_1": 77,
-   "mace_2": 78,
-   "mace_3": 79,
-   "mace_4": 80,
-   "mace_5": 81,
-   "map": 82,
-   "market": 83,
-   "moon": 84,
-   "moonpetal": 85,
-   "move": 86,
-   "mute": 87,
-   "ore": 88,
-   "party": 89,
-   "planks": 90,
-   "plate_armour": 91,
-   "plate_armour_1": 92,
-   "plate_armour_2": 93,
-   "plate_armour_3": 94,
-   "plate_armour_4": 95,
-   "plate_armour_5": 96,
-   "plus": 97,
-   "porridge": 98,
-   "potion_base": 99,
-   "potion_big": 100,
-   "potion_green": 101,
-   "potion_red": 102,
-   "queue": 103,
-   "rain": 104,
-   "rotate": 105,
-   "scroll": 106,
-   "settings": 107,
-   "shield": 108,
-   "shield_1": 109,
-   "shield_2": 110,
-   "shield_3": 111,
-   "shield_4": 112,
-   "shield_5": 113,
-   "slime_gel": 114,
-   "snowfall": 115,
-   "sound": 116,
-   "spear": 117,
-   "spear_1": 118,
-   "spear_2": 119,
-   "spear_3": 120,
-   "spear_4": 121,
-   "spear_5": 122,
-   "spider_silk": 123,
-   "star": 124,
-   "starstone": 125,
-   "stew": 126,
-   "stone": 127,
-   "storm": 128,
-   "storm_glass": 129,
-   "sun": 130,
-   "swamp_venom": 131,
-   "sword": 132,
-   "sword_1": 133,
-   "sword_2": 134,
-   "sword_3": 135,
-   "sword_4": 136,
-   "sword_5": 137,
-   "tart": 138,
-   "timer": 139,
-   "tome": 140,
-   "tome_1": 141,
-   "tome_2": 142,
-   "tome_3": 143,
-   "tome_4": 144,
-   "tome_5": 145,
-   "trend_down": 146,
-   "trend_up": 147,
-   "undo": 148,
-   "upgrade": 149,
-   "warhammer": 150,
-   "warhammer_1": 151,
-   "warhammer_2": 152,
-   "warhammer_3": 153,
-   "warhammer_4": 154,
-   "warhammer_5": 155,
-   "wolf_fang": 156,
-   "wood": 157
+   "colossus_core": 34,
+   "crystal": 35,
+   "crystal_staff": 36,
+   "crystal_staff_1": 37,
+   "crystal_staff_2": 38,
+   "crystal_staff_3": 39,
+   "crystal_staff_4": 40,
+   "crystal_staff_5": 41,
+   "demolish": 42,
+   "ember_core": 43,
+   "ember_dust": 44,
+   "enchanted_sword": 45,
+   "enchanted_sword_1": 46,
+   "enchanted_sword_2": 47,
+   "enchanted_sword_3": 48,
+   "enchanted_sword_4": 49,
+   "enchanted_sword_5": 50,
+   "fish": 51,
+   "fog": 52,
+   "food": 53,
+   "frost_fur": 54,
+   "frost_shard": 55,
+   "gel_crown": 56,
+   "golem_shard": 57,
+   "harpoon": 58,
+   "harpoon_1": 59,
+   "harpoon_2": 60,
+   "harpoon_3": 61,
+   "harpoon_4": 62,
+   "harpoon_5": 63,
+   "herbs": 64,
+   "hide": 65,
+   "home": 66,
+   "hydra_fang": 67,
+   "info": 68,
+   "ingots": 69,
+   "ironbark": 70,
+   "leather": 71,
+   "leather_armour": 72,
+   "leather_armour_1": 73,
+   "leather_armour_2": 74,
+   "leather_armour_3": 75,
+   "leather_armour_4": 76,
+   "leather_armour_5": 77,
+   "lock": 78,
+   "mace": 79,
+   "mace_1": 80,
+   "mace_2": 81,
+   "mace_3": 82,
+   "mace_4": 83,
+   "mace_5": 84,
+   "map": 85,
+   "market": 86,
+   "matriarch_tiara": 87,
+   "moon": 88,
+   "moonpetal": 89,
+   "move": 90,
+   "mute": 91,
+   "ore": 92,
+   "party": 93,
+   "planks": 94,
+   "plate_armour": 95,
+   "plate_armour_1": 96,
+   "plate_armour_2": 97,
+   "plate_armour_3": 98,
+   "plate_armour_4": 99,
+   "plate_armour_5": 100,
+   "plus": 101,
+   "porridge": 102,
+   "potion_base": 103,
+   "potion_big": 104,
+   "potion_green": 105,
+   "potion_red": 106,
+   "queue": 107,
+   "rain": 108,
+   "rotate": 109,
+   "scroll": 110,
+   "settings": 111,
+   "shield": 112,
+   "shield_1": 113,
+   "shield_2": 114,
+   "shield_3": 115,
+   "shield_4": 116,
+   "shield_5": 117,
+   "slime_gel": 118,
+   "snowfall": 119,
+   "sound": 120,
+   "spear": 121,
+   "spear_1": 122,
+   "spear_2": 123,
+   "spear_3": 124,
+   "spear_4": 125,
+   "spear_5": 126,
+   "spider_silk": 127,
+   "star": 128,
+   "starstone": 129,
+   "stew": 130,
+   "stone": 131,
+   "storm": 132,
+   "storm_glass": 133,
+   "sun": 134,
+   "swamp_venom": 135,
+   "sword": 136,
+   "sword_1": 137,
+   "sword_2": 138,
+   "sword_3": 139,
+   "sword_4": 140,
+   "sword_5": 141,
+   "tart": 142,
+   "timer": 143,
+   "tome": 144,
+   "tome_1": 145,
+   "tome_2": 146,
+   "tome_3": 147,
+   "tome_4": 148,
+   "tome_5": 149,
+   "trend_down": 150,
+   "trend_up": 151,
+   "tyrants_heart": 152,
+   "undo": 153,
+   "upgrade": 154,
+   "warhammer": 155,
+   "warhammer_1": 156,
+   "warhammer_2": 157,
+   "warhammer_3": 158,
+   "warhammer_4": 159,
+   "warhammer_5": 160,
+   "wolf_fang": 161,
+   "wood": 162
   },
   "size": 16
  },
@@ -579,6 +584,42 @@
     ]
    ]
   },
+  "building.banner.a.l1": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.banner_pole.a.l1": {
+   "anchor": [
+    0,
+    42
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.bench.a.l1": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
   "building.farm.a.l1": {
    "anchor": [
     0,
@@ -759,6 +800,18 @@
    ],
    "smoke": []
   },
+  "building.flower_bed.a.l1": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
   "building.forge.a.l1": {
    "anchor": [
     0,
@@ -843,6 +896,102 @@
      18
     ]
    ]
+  },
+  "building.fountain.a.l1": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
+  "building.guard_post.a.l1": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
+  "building.guard_post.a.l2": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
+  "building.guard_post.a.l3": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
+  "building.guard_post.a.l4": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
+  "building.guard_post.a.l5": {
+   "anchor": [
+    0,
+    28
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
+  "building.hedge.a.l1": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.hedge_arch.a.l1": {
+   "anchor": [
+    0,
+    26
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
   },
   "building.herb_garden.a.l1": {
    "anchor": [
@@ -988,6 +1137,30 @@
      20
     ]
    ]
+  },
+  "building.lantern.a.l1": {
+   "anchor": [
+    0,
+    22
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.lantern_post.a.l1": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
   },
   "building.lumber_camp.a.l1": {
    "anchor": [
@@ -1169,6 +1342,18 @@
    ],
    "smoke": []
   },
+  "building.market_stall.a.l1": {
+   "anchor": [
+    0,
+    26
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    1
+   ],
+   "smoke": []
+  },
   "building.mine.a.l1": {
    "anchor": [
     0,
@@ -1229,6 +1414,42 @@
    ],
    "smoke": []
   },
+  "building.path_dirt.a.l1": {
+   "anchor": [
+    0,
+    0
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.path_stone.a.l1": {
+   "anchor": [
+    0,
+    0
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.pumpkins.a.l1": {
+   "anchor": [
+    0,
+    14
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
   "building.quarry.a.l1": {
    "anchor": [
     0,
@@ -1286,6 +1507,18 @@
    "footprint": [
     3,
     3
+   ],
+   "smoke": []
+  },
+  "building.scaffold.1x1": {
+   "anchor": [
+    0,
+    42
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
    ],
    "smoke": []
   },
@@ -1370,6 +1603,30 @@
    "footprint": [
     4,
     4
+   ],
+   "smoke": []
+  },
+  "building.statue.a.l1": {
+   "anchor": [
+    0,
+    34
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.stone_fountain.a.l1": {
+   "anchor": [
+    0,
+    16
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
    ],
    "smoke": []
   },
@@ -1723,6 +1980,78 @@
    ],
    "smoke": []
   },
+  "building.watchtower.a.l1": {
+   "anchor": [
+    0,
+    50
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.watchtower.a.l2": {
+   "anchor": [
+    0,
+    52
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.watchtower.a.l3": {
+   "anchor": [
+    0,
+    54
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.watchtower.a.l4": {
+   "anchor": [
+    0,
+    56
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.watchtower.a.l5": {
+   "anchor": [
+    0,
+    56
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
+  "building.well.a.l1": {
+   "anchor": [
+    0,
+    16
+   ],
+   "atlas": "world",
+   "footprint": [
+    2,
+    2
+   ],
+   "smoke": []
+  },
   "building.wizard_tower.a.l1": {
    "anchor": [
     0,
@@ -1843,6 +2172,18 @@
    ],
    "smoke": []
   },
+  "building.young_tree.a.l1": {
+   "anchor": [
+    0,
+    26
+   ],
+   "atlas": "world",
+   "footprint": [
+    1,
+    1
+   ],
+   "smoke": []
+  },
   "fx.bird.0": {
    "atlas": "world"
   },
@@ -1937,6 +2278,9 @@
    "atlas": "world"
   },
   "fx.poof.3": {
+   "atlas": "world"
+  },
+  "fx.sack": {
    "atlas": "world"
   },
   "fx.shot.arcane": {
@@ -2176,6 +2520,33 @@
   "mon.buzzling.windup.0": {
    "atlas": "world"
   },
+  "mon.cinder_tyrant.attack.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.idle.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.idle.1": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.move.0": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.move.1": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.move.2": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.move.3": {
+   "atlas": "world"
+  },
+  "mon.cinder_tyrant.windup.0": {
+   "atlas": "world"
+  },
   "mon.cinder_witch.attack.0": {
    "atlas": "world"
   },
@@ -2314,6 +2685,33 @@
   "mon.fire_imp.windup.0": {
    "atlas": "world"
   },
+  "mon.frost_matriarch.attack.0": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.idle.0": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.idle.1": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.move.0": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.move.1": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.move.2": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.move.3": {
+   "atlas": "world"
+  },
+  "mon.frost_matriarch.windup.0": {
+   "atlas": "world"
+  },
   "mon.frost_wolf.attack.0": {
    "atlas": "world"
   },
@@ -2339,6 +2737,60 @@
    "atlas": "world"
   },
   "mon.frost_wolf.windup.0": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.attack.0": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.idle.0": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.idle.1": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.move.0": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.move.1": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.move.2": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.move.3": {
+   "atlas": "world"
+  },
+  "mon.grubmaw.windup.0": {
+   "atlas": "world"
+  },
+  "mon.guard.attack.0": {
+   "atlas": "world"
+  },
+  "mon.guard.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.guard.idle.0": {
+   "atlas": "world"
+  },
+  "mon.guard.idle.1": {
+   "atlas": "world"
+  },
+  "mon.guard.move.0": {
+   "atlas": "world"
+  },
+  "mon.guard.move.1": {
+   "atlas": "world"
+  },
+  "mon.guard.move.2": {
+   "atlas": "world"
+  },
+  "mon.guard.move.3": {
+   "atlas": "world"
+  },
+  "mon.guard.windup.0": {
    "atlas": "world"
   },
   "mon.harpy.attack.0": {
@@ -2710,6 +3162,33 @@
   "mon.spider.windup.0": {
    "atlas": "world"
   },
+  "mon.stone_colossus.attack.0": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.idle.0": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.idle.1": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.move.0": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.move.1": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.move.2": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.move.3": {
+   "atlas": "world"
+  },
+  "mon.stone_colossus.windup.0": {
+   "atlas": "world"
+  },
   "mon.storm_elemental.attack.0": {
    "atlas": "world"
   },
@@ -2735,6 +3214,33 @@
    "atlas": "world"
   },
   "mon.storm_elemental.windup.0": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.attack.0": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.hurt.0": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.idle.0": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.idle.1": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.move.0": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.move.1": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.move.2": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.move.3": {
+   "atlas": "world"
+  },
+  "mon.swamp_hydra.windup.0": {
    "atlas": "world"
   },
   "mon.thornhare.attack.0": {

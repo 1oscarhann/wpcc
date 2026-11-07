@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "client_to_server": {
     "HELLO": "0x01",
     "PING": "0x02",
@@ -13,7 +13,8 @@
     "TRAVEL": "0x31",
     "INTERACT": "0x32",
     "USE_QUICK": "0x33",
-    "DUNGEON": "0x34"
+    "DUNGEON": "0x34",
+    "WAVE": "0x35"
   },
   "server_to_client": {
     "WELCOME": "0x81",
@@ -62,7 +63,10 @@
     "LOADOUT": 39,
     "DUNGEON_ENTER": 40,
     "DUNGEON_LEFT": 41,
-    "DUNGEON": 42
+    "DUNGEON": 42,
+    "WAVE": 43,
+    "TOWER": 44,
+    "BOSS": 45
   },
   "entity_kinds": {
     "avatar": 0,

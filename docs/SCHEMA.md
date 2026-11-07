@@ -291,6 +291,11 @@ CREATE TABLE villagers (
 CREATE INDEX ON villagers (village_id);
 ```
 
+**As built (Phase 14, migration `0009`).**
+- **Columns.** `villagers` has no `traits` default beyond `[]`, no `is_guard` (a guard is a villager whose job is a Guard Post) and no per-villager `happiness` (happiness belongs to the village).
+- **New columns on `villages`.** `villagers_at` (arrivals are settled up to here) and `unhappy_since` (the leaving clock).
+- **Not built.** `village_decorations` and `village_tiles` weren't: decorations and paths are `village_buildings` rows (D-103).
+
 ## 5. Items, containers and crafting (Phases 2, 4, 6)
 
 All items live in exactly one place: a container slot, an active market listing, or a craft job's output. Inventory, bank, equipment, realm stash and mailbox are all **containers**, so a single move/transfer code path covers everything.
@@ -657,6 +662,13 @@ CREATE TABLE boss_damage (                            -- who gets loot (realm bo
   looted_at  timestamptz,
   PRIMARY KEY (boss_ref, user_id)
 );
+
+-- As built (Phase 13, migration 0009): text statuses instead of enums, and the boss's HP as a fraction.
+--   monster_waves(id, user_id, realm_id, status text: announced|running|done|postponed, town_hall,
+--                 announced_at, starts_at, ended_at, result jsonb (the report), created_at)
+--   realm_bosses (id, realm_id, boss_key, lair_x, lair_y, status text: waiting|defeated|expired,
+--                 spawns_at, expires_at, hp_fraction, defeated_at)
+--   boss_damage  (boss_id → realm_bosses, user_id, damage, looted)   -- realm bosses only for now
 
 CREATE TABLE world_boss_events (
   id            uuid PRIMARY KEY,

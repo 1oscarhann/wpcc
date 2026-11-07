@@ -11,6 +11,7 @@ import { TradePrompt } from "./Market";
 import { BlessingChip, LoreModal, PoiPrompt, WildMerchantPanel } from "./Poi";
 import { WorldChip } from "./WorldChip";
 import { DelveHud, DelvePanel } from "./Delve";
+import { BossBar, useDefenceSync, WaveChip, WaveReportModal } from "./Defence";
 import { useDelve } from "../../state/delve";
 import { MiniMap, WaystonePrompt } from "./WorldMap";
 import { PartyButton, PartyFrames } from "./Party";
@@ -302,6 +303,7 @@ function FirstHintInner({ touch }: { touch: boolean }) {
 
 export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: () => void }) {
   const inDelve = useDelve((s) => s.delve !== null);
+  useDefenceSync();
   const mode = useAvatar((s) => s.mode);
   const bagOpen = useAvatar((s) => s.bagOpen);
   const flags = useAvatar((s) => s.flags);
@@ -342,6 +344,8 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       {!inDelve && <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /><BlessingChip /><BuffChips /></div>}
       {inDelve && <div className="minimap-slot"><BlessingChip /><BuffChips /></div>}
       <PartyFrames />
+      <WaveChip />
+      <BossBar />
       <div className="hud-bottom">
         <TradePrompt touch={touch} />
         <WaystonePrompt touch={touch} />
@@ -354,6 +358,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       <LoreModal />
       <DelvePanel />
       <WildMerchantPanel />
+      <WaveReportModal />
     </div>
   );
 }

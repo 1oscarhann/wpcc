@@ -10,6 +10,7 @@ from hearthforge.db.models.accounts import (
     UserSettings,
 )
 from hearthforge.db.models.crafting import CraftJob, Discovery, DiscoveryKind, JobStatus
+from hearthforge.db.models.defence import BossDamage, MonsterWave, RealmBoss
 from hearthforge.db.models.economy import LedgerAsset, Transaction, Wallet
 from hearthforge.db.models.infra import (
     AdminAuditLog,
@@ -45,10 +46,21 @@ from hearthforge.db.models.realm import (
     RealmRole,
     RealmVisibility,
 )
-from hearthforge.db.models.village import BuildingState, Presence, Resource, Village, VillageBuilding
+from hearthforge.db.models.village import (
+    BuildingState,
+    Presence,
+    Resource,
+    Village,
+    VillageBuilding,
+    Villager,
+)
 from hearthforge.db.models.world import DeathDrop, NodeHarvest
 
 __all__ = [
+    "BossDamage",
+    "MonsterWave",
+    "RealmBoss",
+    "Villager",
     "AdminAuditLog",
     "Avatar",
     "AvatarLocation",

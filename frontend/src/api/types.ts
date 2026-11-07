@@ -31,6 +31,11 @@ export interface BuildingDef {
   requires_water: boolean;
   demolishable: boolean;
   levels: LevelSpec[];
+  jobs: number[] | null; // Phases 13/14: worker / guard slots per level
+  tower_dmg: number[] | null;
+  beauty: number;
+  walkable: boolean;
+  requires_item: string | null;
 }
 
 export interface ConfigBundle {
@@ -42,6 +47,19 @@ export interface ConfigBundle {
     auth: { username_min: number; username_max: number; password_min: number };
   };
   resources: Record<string, { name: string; kind: string; icon: string }>;
+  waves: { min_town_hall: number; warning_s: number; steal_max: number };
+  bosses: Record<string, { name: string; biome: string; enemy: string; trophy: string }>;
+  villagers: {
+    lines: Record<string, string[]>;
+    schedule: { work: string[]; social: string[]; home: string[] };
+    food_per_villager: number;
+    weights: Record<string, number>;
+    production_bonus: number;
+    crafting_speed: number;
+    arrival_every_s: number;
+    min_happiness: number;
+    leave_below: number;
+  };
   hud_order: string[];
   items: Record<
     string,
@@ -169,6 +187,43 @@ export interface VillageState {
   discovered: string[];
   new_discoveries: string[];
   jobs: CraftJobView[];
+  /** Phase 14: villagers, happiness and beauty */
+  villagers: VillagerView[];
+  happiness: Happiness;
+  beauty: BeautyView;
+  housing: { cap: number; used: number };
+  next_arrival_ms: number | null;
+  job_slots: Record<string, { slots: number; workers: number }>;
+  food_demand: number;
+}
+
+export interface VillagerView {
+  id: string;
+  name: string;
+  look: Appearance;
+  traits: string[];
+  job: string | null;
+  home: string | null;
+  arrived_ms: number;
+}
+
+export interface Happiness {
+  value: number;
+  beauty: number;
+  housing: number;
+  food: number;
+  tavern: number;
+  mood: "happy" | "hungry" | "crowded" | "ugly" | "bored" | "leaving";
+  leave_at_ms: number | null;
+}
+
+export interface BeautyView {
+  score: number;
+  decor: number;
+  variety: number;
+  connected: number;
+  nature: number;
+  linked: number;
 }
 
 export interface ActiveCombo {

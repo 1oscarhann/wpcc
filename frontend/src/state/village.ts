@@ -1,5 +1,6 @@
 // Village state for Build Mode. The server is the source of truth: every REST response and every
 // WebSocket push carries the full village state with a version, and older versions are ignored.
+import { useSession } from "./session";
 import { create } from "zustand";
 import { api, ApiError } from "../api/client";
 import type { VillageState } from "../api/types";
@@ -57,6 +58,7 @@ interface VillageStore {
   cancel: (id: string) => Promise<void>;
   demolish: (id: string) => Promise<void>;
   undo: () => Promise<void>;
+  assignVillager: (villagerId: string, buildingId: string | null) => Promise<boolean>;
   clearDebris: (id: number) => Promise<Record<string, number> | null>;
   setWs: (connected: boolean) => void;
 }
@@ -175,7 +177,12 @@ export const useVillage = create<VillageStore>((set, get) => {
       const ok = p.moveId
         ? await mutate(`/api/village/buildings/${p.moveId}`, "PATCH", { x: p.x, y: p.y, rotation: p.rotation })
         : await mutate("/api/village/buildings", "POST", { key: p.key, x: p.x, y: p.y, rotation: p.rotation });
-      if (ok) set({ placing: null });
+      if (ok) {
+        // decorations stay in hand so you can lay a whole path or flowerbed row (Phase 14)
+        const def = useSession.getState().config?.buildings[p.key];
+        const sticky = !p.moveId && def?.category === "decoration";
+        set({ placing: sticky ? { key: p.key, rotation: p.rotation } : null });
+      }
       return ok;
     },
 
@@ -187,6 +194,14 @@ export const useVillage = create<VillageStore>((set, get) => {
       }
     },
     undo: async () => void (await mutate("/api/village/undo", "POST", undefined, "Undone!")),
+    assignVillager: async (villagerId, buildingId) => {
+      const v = get().village;
+      const who = v?.villagers.find((x) => x.id === villagerId)?.name ?? "They";
+      const b = v?.buildings.find((x) => x.id === buildingId);
+      const where = b ? useSession.getState().config?.buildings[b.key]?.name ?? b.key : null;
+      return mutate(`/api/village/villagers/${villagerId}/assign`, "POST", { building_id: buildingId },
+        where ? `${who.split(" ")[0]} now works at the ${where}.` : `${who.split(" ")[0]} takes the day off.`);
+    },
     async clearDebris(id) {
       try {
         const r = await api<{ village: VillageState; gained: Record<string, number> }>(

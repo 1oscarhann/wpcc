@@ -1,10 +1,7 @@
-// Ambient life for Build Mode: strolling villagers, ducks, butterflies, chimney smoke, water glints,
-// falling leaves and passing birds. Purely cosmetic; real villagers with jobs arrive in Phase 14.
-import { AnimatedSprite, Container, Rectangle, Sprite, Texture } from "pixi.js";
-import type { Appearance, BuildingDef, VillageState } from "../api/types";
-import { useSession } from "../state/session";
-import { composeAvatar, frameFor } from "./avatarComposer";
-import { rotatedFootprint, usableBounds } from "./placement";
+// Ambient life: ducks, butterflies, chimney smoke, water glints, falling leaves and passing birds.
+// Purely cosmetic. (The strolling villagers became real ones in Phase 14: see villagers.ts.)
+import { AnimatedSprite, Container } from "pixi.js";
+import type { BuildingDef, VillageState } from "../api/types";
 import { tex } from "./sprites";
 
 const T = 16;
@@ -20,26 +17,14 @@ export interface WorldInfo {
   smokeSpots(): { x: number; y: number }[];
 }
 
-interface Walker {
-  sprite: Sprite;
-  frames: Texture[];
-  path: [number, number][]; // frame tiles still to walk
-  x: number; // world px (feet)
-  y: number;
-  dir: string;
-  idle: number;
-  t: number;
-}
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <X,>(xs: X[]) => xs[Math.floor(Math.random() * xs.length)];
 
 export class Ambient {
-  private walkers: Walker[] = [];
   private ducks: { s: AnimatedSprite; tx: number; ty: number }[] = [];
   private butterflies: { s: AnimatedSprite; ax: number; ay: number; ph: number; retarget: number }[] = [];
   private timers = { smoke: 0, glint: 0, leaf: 0, bird: rand(4, 10) };
-  private spawning = false;
   private time = 0;
 
   constructor(
@@ -48,129 +33,6 @@ export class Ambient {
     private fx: Container, // above objects
     private sky: Container, // birds
   ) {}
-
-  // ── villagers ──────────────────────────────────────────────────────────────
-  private blocked(v: VillageState): Set<string> {
-    const b = new Set<string>();
-    const defs = this.info.defs();
-    for (const bl of v.buildings) {
-      const [w, h] = rotatedFootprint(defs[bl.key].footprint, bl.rotation);
-      for (let x = bl.x; x < bl.x + w; x++) for (let y = bl.y; y < bl.y + h; y++) b.add(`${x},${y}`);
-    }
-    for (const [, , , x, y] of v.debris) b.add(`${x},${y}`);
-    for (const [px, py, pw, ph] of v.blocked) {
-      for (let x = px; x < px + pw; x++) for (let y = py; y < py + ph; y++) b.add(`${x},${y}`);
-    }
-    return b;
-  }
-
-  private route(v: VillageState, from: [number, number], to: [number, number]): [number, number][] {
-    const [lo, hi] = usableBounds(v.frame, v.size);
-    const blocked = this.blocked(v);
-    const key = (p: [number, number]) => `${p[0]},${p[1]}`;
-    const prev = new Map<string, [number, number] | null>([[key(from), null]]);
-    const q: [number, number][] = [from];
-    while (q.length) {
-      const cur = q.shift()!;
-      if (cur[0] === to[0] && cur[1] === to[1]) break;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const n: [number, number] = [cur[0] + dx, cur[1] + dy];
-        if (n[0] < lo || n[1] < lo || n[0] >= hi || n[1] >= hi || prev.has(key(n)) || blocked.has(key(n))) continue;
-        prev.set(key(n), cur);
-        q.push(n);
-      }
-    }
-    if (!prev.has(key(to))) return [];
-    const path: [number, number][] = [];
-    let c: [number, number] | null | undefined = to;
-    while (c) {
-      path.unshift(c);
-      c = prev.get(key(c));
-    }
-    return path;
-  }
-
-  private destinations(v: VillageState): [number, number][] {
-    const defs = this.info.defs();
-    const out: [number, number][] = [];
-    for (const b of v.buildings) {
-      const [w, h] = rotatedFootprint(defs[b.key].footprint, b.rotation);
-      out.push([b.x + Math.floor(w / 2), b.y + h]); // in front of the door
-    }
-    const [lo, hi] = usableBounds(v.frame, v.size);
-    for (let i = 0; i < 6; i++) out.push([Math.floor(rand(lo, hi)), Math.floor(rand(lo, hi))]);
-    return out;
-  }
-
-  private async spawnWalkers(v: VillageState): Promise<void> {
-    const houses = v.buildings.filter((b) => b.key === "house" && b.level > 0).length;
-    const want = Math.min(10, 2 + houses * 2);
-    if (this.walkers.length >= want || this.spawning) return;
-    this.spawning = true;
-    try {
-      const cr = useSession.getState().config!.avatar.creator;
-      const look: Appearance = {
-        body: pick(cr.bodies), skin: pick(cr.skin_tones), hair_style: pick(cr.hair_styles),
-        hair_color: pick(cr.hair_colors), eyes: pick(cr.eye_styles), eye_color: pick(cr.eye_colors),
-        outfit: pick(cr.outfits), outfit_color: pick(cr.outfit_colors),
-      };
-      const strip = await composeAvatar(look);
-      const base = Texture.from(strip);
-      base.source.scaleMode = "nearest";
-      const frames = Array.from({ length: strip.width / 16 }, (_, i) =>
-        new Texture({ source: base.source, frame: new Rectangle(i * 16, 0, 16, 24) }));
-      const start = pick(this.destinations(v));
-      if (this.blocked(v).has(`${start[0]},${start[1]}`)) return;
-      const [ox, oy] = this.info.origin();
-      const sprite = new Sprite(frames[0]);
-      sprite.anchor.set(0.5, 1);
-      const w: Walker = {
-        sprite, frames, path: [], x: (ox + start[0] + 0.5) * T, y: (oy + start[1] + 1) * T - 2, dir: "down",
-        idle: rand(0, 2), t: Math.random() * 1000,
-      };
-      sprite.position.set(w.x, w.y);
-      this.objects.addChild(sprite);
-      this.walkers.push(w);
-    } finally {
-      this.spawning = false;
-    }
-  }
-
-  private updateWalkers(dt: number, v: VillageState): void {
-    const [ox, oy] = this.info.origin();
-    const speed = 24;
-    for (const w of this.walkers) {
-      w.t += dt * 1000;
-      if (w.path.length === 0) {
-        w.idle -= dt;
-        if (w.idle <= 0) {
-          const from: [number, number] = [Math.floor(w.x / T) - ox, Math.floor((w.y - 1) / T) - oy];
-          w.path = this.route(v, from, pick(this.destinations(v))).slice(1);
-          w.idle = rand(1.5, 5);
-        }
-      } else {
-        const [tx, ty] = w.path[0];
-        const gx = (ox + tx + 0.5) * T;
-        const gy = (oy + ty + 1) * T - 2;
-        const dx = gx - w.x;
-        const dy = gy - w.y;
-        const d = Math.hypot(dx, dy);
-        if (d < 1) {
-          w.path.shift();
-        } else {
-          const step = Math.min(d, speed * dt);
-          w.x += (dx / d) * step;
-          w.y += (dy / d) * step;
-          w.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
-        }
-      }
-      const f = frameFor(w.dir, w.path.length ? "walk" : "idle", w.t);
-      w.sprite.texture = w.frames[f.index];
-      w.sprite.scale.x = f.flip ? -1 : 1;
-      w.sprite.position.set(Math.round(w.x), Math.round(w.y));
-      w.sprite.zIndex = w.y;
-    }
-  }
 
   // ── ducks ──────────────────────────────────────────────────────────────────
   private pond(v: VillageState): { x0: number; y0: number; x1: number; y1: number } {
@@ -325,15 +187,12 @@ export class Ambient {
     this.time += dt;
     const v = this.info.village();
     if (!v) return;
-    void this.spawnWalkers(v);
-    this.updateWalkers(dt, v);
+    // Phase 14: real villagers live in villagers.ts now; the ambient walkers retired
     this.updateDucks(dt, v);
     this.updateButterflies(dt);
     this.updateEffects(dt);
   }
 
-  /** A building or debris changed: walkers re-plan so nobody walks through new walls. */
-  invalidate(): void {
-    for (const w of this.walkers) w.path = [];
-  }
+  /** A building or debris changed (villagers re-plan in villagers.ts). */
+  invalidate(): void {}
 }

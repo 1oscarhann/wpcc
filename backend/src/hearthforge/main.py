@@ -65,6 +65,10 @@ def create_app(
         if settings.enable_listener:
             tasks.append(asyncio.create_task(PgListener(st).run(), name="pg-listener"))
             tasks.append(asyncio.create_task(st.village_hub.fallback_poll(), name="village-poll"))
+        if settings.enable_listener:
+            from hearthforge.services.waves import director_loop
+
+            tasks.append(asyncio.create_task(director_loop(st), name="wave-director"))
         if settings.run_worker_in_process:
             from hearthforge.worker.poller import Worker
 
@@ -108,6 +112,7 @@ def create_app(
         admin,
         auth,
         crafting,
+        defence,
         dungeons,
         inventory,
         market,
@@ -129,6 +134,7 @@ def create_app(
     app.include_router(progress.router)
     app.include_router(world.router)
     app.include_router(dungeons.router)
+    app.include_router(defence.router)
     app.include_router(admin.router)
     app.include_router(gateway.router)
 

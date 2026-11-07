@@ -187,6 +187,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     room.dungeons.use(player, fields[1])
                 elif fields[0] == "portal":
                     room.dungeons.try_portal(player)
+            elif op == "WAVE":
+                if player is None or room is None or not fields or fields[0] != "home":
+                    continue
+                err = room.go_home(player)
+                if err:
+                    room.toast(player, f"wave_{err}")
             elif op == "INTERACT":
                 if player is None or room is None or not fields or not isinstance(fields[0], int):
                     continue

@@ -269,9 +269,12 @@ class RealmRoom:
         self.tick_ms_samples: deque[float] = deque(maxlen=200)
         self.combat: Any = None  # Phase 5: sim.combat.Combat (monsters, hits, loot)
         self.weather_seed = 0  # the realm's weather timeline (Phase 10), set by the manager
+        from hearthforge.sim.defence import Defence
         from hearthforge.sim.dungeon import DungeonSpace
 
         self.dungeons = DungeonSpace(self)
+        self.defence = Defence(self)  # Phase 13: monster waves on villages
+        self.bosses: Any = None  # Phase 13: the realm boss (sim/bosses.py), set by the manager
 
     # ── lifecycle ────────────────────────────────────────────────────────────
     def new_id(self) -> int:
@@ -408,6 +411,7 @@ class RealmRoom:
 
     def player_info(self, p: Player) -> dict[str, Any]:
         return {
+            "bosses": self.bosses.info() if self.bosses is not None else [],
             "level": p.level,
             "xp": p.xp,
             "xp_next": xp_to_next(self.cfg, p.level),
@@ -529,6 +533,9 @@ class RealmRoom:
             self.player_timers(p, t)
         if self.combat is not None:
             self.combat.tick(t)
+            self.defence.tick(t)
+            if self.bosses is not None:
+                self.bosses.tick(t)
         self.dungeons.tick(t)
         self.tick_drops(t)
         if t % self.hz == 0:
@@ -610,6 +617,31 @@ class RealmRoom:
                 p.attuned.add(w.index)
                 p.pending.waystones.add(w.index)
                 p.ev.append([EV["WAYSTONE"], w.index, w.name, sorted(p.attuned)])
+
+    def go_home(self, p: Player) -> str | None:
+        """Phase 13: "Defend!" — hop to just inside your own gate while a wave is coming or on."""
+        owner = str(p.user_id)
+        rooms = self.st.rooms
+        if owner not in self.defence.runs and (rooms is None or owner not in rooms.announced):
+            return "no_wave"
+        if p.ko > 0 or p.dungeon:
+            return "busy"
+        spot = self.defence.home_spot(owner)
+        if spot is None:
+            return "no_village"
+        x, y = spot
+        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1)):
+            if not self.grid.solid(int(x + dx), int(y + dy)):
+                x, y = int(x + dx) + 0.5, int(y + dy) + 0.5
+                break
+        p.m.x, p.m.y = x, y
+        p.m.dodge = 0
+        p.m.atk = ATK_NONE
+        p.inputs.clear()
+        p.iframes = self.hz
+        p.pending.save_pos = True
+        p.ev.append([EV["TELEPORT"], p.m.x, p.m.y, -2])
+        return None
 
     def travel(self, p: Player, index: int) -> str | None:
         """Fast travel between attuned waystones (P12). Returns an error code or None."""
@@ -1162,6 +1194,12 @@ class RealmRoom:
         async with self._flush_lock:
             for p in list(self.players.values()):
                 await self._flush_one(p)
+            if self.bosses is not None:
+                await self._flush_bosses()
+            if self.defence.results:
+                results, self.defence.results = self.defence.results, []
+                for res in results:
+                    await self._finish_wave(res)
             if self.dungeons.runs:
                 runs, self.dungeons.runs = self.dungeons.runs, []
                 try:
@@ -1171,6 +1209,70 @@ class RealmRoom:
                         await dungeon_svc.record(s, runs)
                 except Exception:  # noqa: BLE001
                     log.exception("couldn't save %d delve runs", len(runs))
+
+    async def _flush_bosses(self) -> None:
+        """Save boss HP every 10 s and damage tallies as they change; reload the waiting bosses every 30 s."""
+        from hearthforge.services import bosses as boss_svc
+
+        b = self.bosses
+        now = self.st.clock.now()
+        sec = self.tick_no // self.hz
+        hp = b.snapshot() if sec % 10 == 0 else []
+        dmg: dict[tuple[str, str], int] = {}
+        for rid, uid in b.dirty_damage:
+            m = b.live.get(rid)
+            if m is not None and m.brain is not None:
+                dmg[(rid, uid)] = int(m.brain.dmg_by_user.get(uid, 0))
+        b.dirty_damage.clear()
+        done, b.done = b.done, []
+        for row, tally in done:
+            for uid, v in tally.items():
+                dmg[(row.id, uid)] = int(v)
+        if hp or dmg or done:
+            try:
+                async with self.st.sessionmaker() as s, s.begin():
+                    await boss_svc.save(s, hp, dmg, [row.id for row, _ in done], now)
+            except Exception:  # noqa: BLE001
+                log.exception("couldn't save realm boss state")
+        if sec % 30 == 0 or b.reload:
+            b.reload = False
+            try:
+                async with self.st.sessionmaker() as s:
+                    rows = await boss_svc.active_rows(s, self.cfg, self.realm_id, now)
+                b.set_rows(rows)
+            except Exception:  # noqa: BLE001
+                log.exception("couldn't load realm bosses")
+
+    async def _finish_wave(self, res: dict[str, Any]) -> None:
+        from hearthforge.services import waves as wave_svc
+
+        owner = res["owner"]
+        p = self.by_user.get(uuid.UUID(owner))
+        try:
+            async with self.st.sessionmaker() as s, s.begin():
+                report = await wave_svc.finish(
+                    s, self.cfg, res, self.st.clock.now(), self.rng, owner_in_room=p is not None
+                )
+        except Exception:  # noqa: BLE001
+            log.exception("couldn't settle wave %s", res.get("wave_id"))
+            return
+        if report is None:
+            return
+        if self.st.rooms is not None:
+            self.st.rooms.announced.pop(owner, None)
+        if p is not None:
+            for key, qty in report["rare"].items():
+                self.spawn_drop(p, key, qty, p.m.x, p.m.y)
+            p.pending.stats["wave.done"] += 1
+            if report["won"]:
+                p.pending.stats["wave.won"] += 1
+        for o in self.players.values():
+            if o is p or any(h[0] == o.name for h in report["helpers"]):
+                o.ev.append([EV["WAVE"], owner, "end", report])
+        hub = self.st.village_hub
+        if hub is not None:
+            await hub.notify([owner], "wave", {"status": "done", "report": report})
+            await hub.publish(owner)
 
     async def flush_player(self, p: Player) -> None:
         async with self._flush_lock:

@@ -1864,3 +1864,132 @@ body:has(.boss-bar) .toasts {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* ── Phase 13: raids and realm bosses ─────────────────────────────────────── */
+.wave-chip {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  z-index: 6;
+  white-space: nowrap;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+.wave-chip.live {
+  box-shadow: 0 0 0 3px #e2735a, 0 4px 0 var(--ink);
+  animation: wave-pulse 1.2s ease-in-out infinite;
+}
+@keyframes wave-pulse {
+  50% {
+    box-shadow: 0 0 0 3px #ffb07a, 0 4px 0 var(--ink);
+  }
+}
+:root[data-reduce-motion="1"] .wave-chip.live {
+  animation: none;
+}
+body:has(.boss-bar) .wave-chip {
+  top: 128px;
+}
+.boss-bar.exposed .boss-bar-fill {
+  background: linear-gradient(#fff6c0, #f7c64a);
+}
+.wave-stats b {
+  font-family: var(--font-head);
+  font-size: 20px;
+}
+@media (max-width: 640px) {
+  .wave-chip {
+    top: auto;
+    bottom: 256px;
+    max-width: calc(100vw - 24px);
+  }
+  .wave-chip .head {
+    font-size: 15px;
+  }
+}
+
+/* ── Phase 14: villagers, happiness, beauty ─────────────────────────────────── */
+.happy-chip {
+  cursor: pointer;
+  font-family: var(--font-head);
+}
+.happy-chip.sad {
+  box-shadow: 0 0 0 2px #e2735a;
+}
+.villagers-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+.beauty-box {
+  padding: 8px 10px;
+  background: var(--paper-dark, #e8d9b5);
+  border: 2px solid var(--ink);
+}
+.factor-track {
+  height: 8px;
+  border: 2px solid var(--ink);
+  background: #f5ead0;
+}
+.factor-fill {
+  height: 100%;
+  background: linear-gradient(#a5d46a, #6b9c3a);
+}
+.villager-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px;
+  max-height: 46vh;
+  overflow: auto;
+  padding: 2px;
+}
+.villager-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 2px solid var(--ink);
+  background: #fbf3df;
+  cursor: grab;
+}
+.villager-portrait {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--ink);
+  background: #cfe6f2;
+  display: grid;
+  place-items: center;
+  image-rendering: pixelated;
+  flex: none;
+}
+.job-select {
+  font-family: var(--font-body);
+  font-size: 13px;
+  max-width: 130px;
+  border: 2px solid var(--ink);
+  background: #fff8e6;
+  padding: 2px;
+}
+.villagers-dragging .modal-backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+.villagers-dragging .modal {
+  opacity: 0.25;
+}
+@media (max-width: 640px) {
+  .villagers-top {
+    grid-template-columns: 1fr;
+  }
+  .villager-list {
+    grid-template-columns: 1fr;
+  }
+}

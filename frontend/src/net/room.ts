@@ -1,6 +1,7 @@
 // Avatar Mode netcode (docs/PROTOCOL.md §4): fixed 50 ms input steps with local prediction,
 // reconciliation on every snapshot (replaying unacked inputs), and a 100 ms interpolation buffer for
 // everything else. Rendering never touches the predicted simulation (hit-stop is visual only, D-010).
+import { useDefence, type WaveReport } from "../state/defence";
 import protocol from "../../../shared/protocol.json";
 import { fromList, newMotion, step, type Motion } from "../sim/motion";
 import type { ClientGrid } from "../sim/grid";
@@ -61,6 +62,7 @@ export interface RoomInfo {
   inv_capacity: number;
   home: { rect: [number, number, number, number]; door: [number, number] };
   hz: number;
+  bosses?: [string, string, number, number, number][]; // Phase 13: awake realm bosses (key, name, x, y, expires)
 }
 
 export type RoomEvent = unknown[];
@@ -90,6 +92,9 @@ const TOASTS: Record<string, string> = {
   chest_empty: "You've already emptied this chest.",
   shrine_resting: "The shrine is resting. Come back later.",
   villager_home: "They're already on their way to your village.",
+  wave_no_wave: "There's no raid on your village right now.",
+  wave_busy: "Not now: get back on your feet (or out of the delve) first.",
+  wave_no_village: "Your village isn't in this realm.",
 };
 
 export class RoomClient {
@@ -154,6 +159,9 @@ export class RoomClient {
       offhand: { ...(info.offhand ?? {}), type: info.offhand?.type ?? "", charges: 0, readyAt: 0 },
       buffs: [],
     });
+    useDefence.getState().set({
+      bosses: (info.bosses ?? []).map(([key, name, x, y, expires_ms]) => ({ key, name, x, y, expires_ms })),
+    });
   }
 
   /** Plate armour, swift food, stamina potions: the server's MOVE_MODS, applied with the same three
@@ -202,6 +210,62 @@ export class RoomClient {
       toast(`Delve cleared in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}! A portal home opens.`, "good", "star");
     } else if (op === "chest") patch.chests = [...d.chests, ev[2] as number];
     d.set({ ...patch, state: st });
+  }
+
+  /** Phase 13: a raid on a village (yours, or one you're helping). */
+  private waveEvent(ev: RoomEvent): void {
+    const d = useDefence.getState();
+    const mine = ev[1] === useSession.getState().me?.user.id;
+    const op = ev[2] as string;
+    if (op === "start") {
+      if (mine) {
+        d.set({ live: { sub: 0, subs: ev[3] as number, stolen: 0 }, wave: d.wave ? { ...d.wave, status: "running" } : d.wave, report: null });
+        toast("The horn sounds! Raiders at the gate!", "bad", "info");
+      } else toast("A neighbour's village is under attack! Lend a hand?", "info", "info");
+    } else if (op === "sub" && mine && d.live) {
+      d.set({ live: { ...d.live, sub: ev[3] as number, subs: ev[4] as number } });
+    } else if (op === "steal" && mine && d.live) {
+      d.set({ live: { ...d.live, stolen: ev[5] as number } });
+    } else if (op === "guard_down" && mine) {
+      toast(`${ev[3] as string} is down! They'll be back on their feet after the raid.`, "bad", "info");
+    } else if (op === "end") {
+      const report = ev[3] as WaveReport;
+      if (mine) d.set({ wave: null, live: null, report });
+      else toast(report.won ? "The raid was beaten off. Thanks for the help!" : "The raiders got away with a haul.", "good", "star");
+    }
+  }
+
+  /** Phase 13: realm bosses waking, changing phase, opening up and falling. */
+  private bossEvent(ev: RoomEvent): void {
+    const d = useDefence.getState();
+    const op = ev[1] as string;
+    if (op === "awake") {
+      const [, , key, name, x, y, expires_ms] = ev as [number, string, string, string, number, number, number];
+      if (!d.bosses.some((b) => b.key === key)) {
+        d.set({ bosses: [...d.bosses, { key, name, x, y, expires_ms }] });
+        toast(`${name} has woken! Find it on your map.`, "bad", "info");
+      }
+      void d.refreshBoss();
+    } else if (op === "wake") {
+      d.set({ bossNote: { id: ev[4] as number, text: "wakes!", at: Date.now() } });
+    } else if (op === "phase") {
+      const note = ev[4] as string;
+      if (note) d.set({ bossNote: { id: ev[2] as number, text: note, at: Date.now() } });
+    } else if (op === "vulnerable") {
+      d.set({ vulnerable: { id: ev[2] as number, until: Date.now() + (ev[3] as number) }, bossNote: { id: ev[2] as number, text: "is exposed! Hit it now!", at: Date.now() } });
+    } else if (op === "reset") {
+      d.set({ bossNote: null });
+    } else if (op === "down") {
+      const [, , key, name, winners] = ev as [number, string, string, string, string[]];
+      d.set({ bosses: d.bosses.filter((b) => b.key !== key), bossNote: null, vulnerable: null });
+      toast(`${name} has fallen!${winners.length ? ` Well fought, ${winners.join(", ")}.` : ""}`, "good", "star");
+      void d.refreshBoss();
+    }
+  }
+
+  /** "Defend!": hop home while a raid is coming or on. */
+  goHome(): void {
+    this.send("WAVE", "home");
   }
 
   /** Quick-slot 1–4 (Phase 11). */
@@ -386,6 +450,12 @@ export class RoomClient {
         break;
       case EV.DUNGEON:
         this.delveEvent(ev);
+        break;
+      case EV.WAVE:
+        this.waveEvent(ev);
+        break;
+      case EV.BOSS:
+        this.bossEvent(ev);
         break;
       case EV.LOADOUT: {
         // you equipped something: new moveset timings for the predictor, new icons for the HUD

@@ -6,6 +6,7 @@ Any error aborts startup with `file:path: reason` lines. `hf config check` runs 
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import logging
 import math
@@ -43,6 +44,9 @@ FILES: dict[str, type[BaseModel]] = {
     "world_clock": s.WorldClockCfg,
     "pois": s.PoisCfg,
     "dungeons": s.DungeonsCfg,
+    "waves": s.WavesCfg,
+    "bosses": s.BossesCfg,
+    "villagers": s.VillagersCfg,
 }
 
 
@@ -113,6 +117,9 @@ class GameConfig:
     world_clock: s.WorldClockCfg
     pois: s.PoisCfg
     dungeons: s.DungeonsCfg
+    waves: s.WavesCfg
+    bosses: s.BossesCfg
+    villagers: s.VillagersCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -175,6 +182,8 @@ def _resolve_building(
                 for item, qty in curve.rare_cost.get(cfg.rare_group, {}).items():
                     raw_cost[item] = raw_cost.get(item, 0) + qty
             time_s = curve.times[n - 1]
+        if cfg.category == "decoration":
+            time_s = 0  # decorations go down instantly (Phase 14)
         cost = _apply_gates(raw_cost, curve, gates, rare_items)
         production = {res: float(rates[n - 1]) for res, rates in cfg.produces.items() if rates[n - 1] > 0}
         storage = None
@@ -252,6 +261,9 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     world_clock: s.WorldClockCfg = parsed["world_clock"]
     pois: s.PoisCfg = parsed["pois"]
     dungeons: s.DungeonsCfg = parsed["dungeons"]
+    waves: s.WavesCfg = parsed["waves"]
+    bosses: s.BossesCfg = parsed["bosses"]
+    villagers: s.VillagersCfg = parsed["villagers"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -311,7 +323,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
                 errors.append(f"{where}.produces.{rk}: unknown resource")
             if len(rates) != b.max_level:
                 errors.append(f"{where}.produces.{rk}: needs {b.max_level} entries")
-        for arr in ("storage_base", "storage_bonus", "housing", "sell_bonus"):
+        for arr in ("storage_base", "storage_bonus", "housing", "sell_bonus", "jobs", "tower_dmg"):
             v = getattr(b, arr)
             if v is not None and len(v) != b.max_level:
                 errors.append(f"{where}.{arr}: needs {b.max_level} entries")
@@ -569,6 +581,80 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
             if not 0 < chance <= 1:
                 errors.append(f"pois.yaml:chests.{bk}.rare.{k}: chance must be in (0, 1]")
 
+    # ── waves, bosses, villagers, defence and decorations (Phases 13/14) ─────
+    wv = waves
+    for th in range(max(2, wv.eligible.min_town_hall), 6):
+        if th not in wv.composition:
+            errors.append(f"waves.yaml:composition: needs an entry for Town Hall {th}")
+    for th, comp in wv.composition.items():
+        for ek in [*comp.roster, *([comp.miniboss] if comp.miniboss else [])]:
+            en = enemies.enemies.get(ek)
+            if en is None:
+                errors.append(f"waves.yaml:composition.{th}: unknown enemy '{ek}'")
+            elif en.attack.shape == "shot" or en.archetype in ("ambusher", "summoner"):
+                errors.append(
+                    f"waves.yaml:composition.{th}: '{ek}' must be a melee walker "
+                    "(no shooters, ambushers or summoners)"
+                )
+    for rk in wv.steal.resources:
+        if rk not in res.resources:
+            errors.append(f"waves.yaml:steal.resources: unknown resource '{rk}'")
+    for th, bundle in wv.rewards.bundle.items():
+        for rk in bundle:
+            if rk not in res.resources:
+                errors.append(f"waves.yaml:rewards.bundle.{th}: unknown resource '{rk}'")
+    for biome, it in wv.rewards.rare.items():
+        if it not in items:
+            errors.append(f"waves.yaml:rewards.rare.{biome}: unknown item '{it}'")
+    for key in ("guard_post", "watchtower"):
+        if key not in bcfg.buildings:
+            errors.append(f"buildings.yaml: '{key}' is needed for waves")
+    if "watchtower" in bcfg.buildings and bcfg.buildings["watchtower"].tower_dmg is None:
+        errors.append("buildings.yaml:buildings.watchtower: needs tower_dmg")
+    for key, b in bcfg.buildings.items():
+        if b.requires_item is not None and b.requires_item not in items:
+            errors.append(f"buildings.yaml:buildings.{key}.requires_item: unknown item '{b.requires_item}'")
+        if b.category == "decoration" and b.max_level != 1:
+            errors.append(f"buildings.yaml:buildings.{key}: decorations have one level (max_level: 1)")
+        if b.walkable and b.category != "decoration":
+            errors.append(f"buildings.yaml:buildings.{key}: only decorations can be walkable")
+    bs = bosses
+    for bk, bc in bs.bosses.items():
+        where = f"bosses.yaml:bosses.{bk}"
+        if bc.enemy not in enemies.enemies:
+            errors.append(f"{where}.enemy: unknown enemy '{bc.enemy}'")
+        if bc.phases[0].at != 1.0:
+            errors.append(f"{where}.phases: the first phase starts at 1.0")
+        if any(a.at <= b.at for a, b in itertools.pairwise(bc.phases)):
+            errors.append(f"{where}.phases: thresholds must go down")
+        for i, ph in enumerate(bc.phases):
+            for ak in ph.attacks:
+                if ak not in bc.attacks:
+                    errors.append(f"{where}.phases[{i}]: unknown attack '{ak}'")
+            if ph.summon and ph.summon.enemy not in enemies.enemies:
+                errors.append(f"{where}.phases[{i}].summon: unknown enemy '{ph.summon.enemy}'")
+        for ak, at in bc.attacks.items():
+            if at.shape == "ring" and not 0 < at.inner < at.range:
+                errors.append(f"{where}.attacks.{ak}: a ring needs 0 < inner < range")
+            if at.shape in ("circle", "line", "cone", "ring", "lines") and at.range <= 0:
+                errors.append(f"{where}.attacks.{ak}: needs a range")
+        for it in bc.loot.rares:
+            if it not in items:
+                errors.append(f"{where}.loot.rares: unknown item '{it}'")
+        if bc.loot.trophy not in items or items[bc.loot.trophy].category != "trophy":
+            errors.append(f"{where}.loot.trophy: '{bc.loot.trophy}' must be a trophy item")
+        if bc.lair_radius >= mapgen.map_size / 2:
+            errors.append(f"{where}.lair_radius: off the map")
+    vg = villagers
+    if abs(sum(vg.happiness.weights.values()) - 1.0) > 1e-6:
+        errors.append("villagers.yaml:happiness.weights: must add up to 1")
+    for cat, slots in vg.jobs.by_category.items():
+        if len(slots) != 5:
+            errors.append(f"villagers.yaml:jobs.by_category.{cat}: needs 5 entries")
+    for key in vg.jobs.priority:
+        if key not in bcfg.buildings:
+            errors.append(f"villagers.yaml:jobs.priority: unknown building '{key}'")
+
     # ── dungeons (Phase 12) ───────────────────────────────────────────────────
     dg = dungeons
     if dg.boss.enemy not in enemies.enemies or not enemies.enemies[dg.boss.enemy].roaming:
@@ -688,6 +774,9 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         world_clock=world_clock,
         pois=pois,
         dungeons=dungeons,
+        waves=waves,
+        bosses=bosses,
+        villagers=villagers,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

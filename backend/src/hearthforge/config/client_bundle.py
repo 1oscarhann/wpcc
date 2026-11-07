@@ -50,6 +50,12 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
                 "max_level": b.cfg.max_level,
                 "requires_water": b.cfg.requires_water,
                 "demolishable": b.cfg.demolishable,
+                # Phases 13/14: worker/guard slots per level, watchtower damage, decoration beauty
+                "jobs": b.cfg.jobs or cfg.villagers.jobs.by_category.get(b.cfg.category),
+                "tower_dmg": b.cfg.tower_dmg,
+                "beauty": b.cfg.beauty,
+                "walkable": b.cfg.walkable,
+                "requires_item": b.cfg.requires_item,
                 "levels": [
                     {
                         "level": lv.level,
@@ -63,6 +69,26 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
                 ],
             }
             for key, b in cfg.buildings.items()
+        },
+        "waves": {
+            "min_town_hall": cfg.waves.eligible.min_town_hall,
+            "warning_s": cfg.waves.warning,
+            "steal_max": cfg.waves.steal.max_fraction,
+        },
+        "bosses": {
+            k: {"name": b.name, "biome": b.biome, "enemy": b.enemy, "trophy": b.loot.trophy}
+            for k, b in cfg.bosses.bosses.items()
+        },
+        "villagers": {
+            "lines": cfg.villagers.lines.model_dump(),
+            "schedule": cfg.villagers.schedule.model_dump(),
+            "food_per_villager": cfg.villagers.food_per_villager,
+            "weights": dict(cfg.villagers.happiness.weights),
+            "production_bonus": cfg.villagers.jobs.production_bonus,
+            "crafting_speed": cfg.villagers.jobs.crafting_speed,
+            "arrival_every_s": cfg.villagers.arrival.every,
+            "min_happiness": cfg.villagers.arrival.min_happiness,
+            "leave_below": cfg.villagers.leaving.below,
         },
         "avatar": {
             "base_stats": cfg.avatar.base_stats.model_dump(),

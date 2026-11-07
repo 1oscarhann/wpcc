@@ -97,6 +97,9 @@ class Monster:
     boss: bool = False
     atk: Any = None  # the attack being used right now (bosses switch to alt_attack from afar)
     scale: tuple[float, float, float] = (1.0, 1.0, 0.0)  # roaming spawns: the biome's hp/dmg/def scale
+    wave: str = ""  # Phase 13: marching on this owner's village
+    gtarget: int | None = None  # a guard it's fighting
+    brain: Any = None  # Phase 13: a realm boss's brain (sim/bosses.py)
 
 
 @dataclass
@@ -399,6 +402,9 @@ class Combat:
         cs = self.room.grid.cs
         reach = (self.en.wake_radius_chunks + 1) * cs
         for m in list(self.monsters.values()):
+            if m.wave or m.brain is not None:
+                m.last_near = t  # waves and bosses stay until they're done
+                continue
             if any(abs(p.m.x - m.x) < reach and abs(p.m.y - m.y) < reach for p in self.room.players.values()):
                 m.last_near = t
             elif t - m.last_near > self.despawn_ticks:
@@ -450,8 +456,9 @@ class Combat:
         gen = self.room.grid.gen
         nx = mo._slide_x(m.x, m.y, dx, m.box, solid)  # type: ignore[arg-type]
         ny = mo._slide_y(nx, m.y, dy, m.box, solid)  # type: ignore[arg-type]
-        # villages are safe: monsters never step into a plot
-        if gen.plot_at(int(nx), int(ny), 2) is not None:
+        # villages are safe: monsters never step into a plot (except a wave, into the village it raids)
+        pi = gen.plot_at(int(nx), int(ny), 2)
+        if pi is not None and not (m.wave and self.room.defence.plot_of(m.wave) == pi):
             if m.state == "chase":
                 m.state, m.st_t, m.target = "return", 0, None
             return
@@ -475,6 +482,12 @@ class Combat:
             m.stun -= 1
             if m.state in ("windup", "active"):
                 m.state, m.st_t = "recover", 0  # a stun breaks the attack
+            return
+        if m.wave:
+            self.room.defence.wave_ai(m, t)
+            return
+        if m.brain is not None:
+            m.brain.tick(m, t)
             return
         target = self.room.players.get(m.target) if m.target is not None else None
         if target is not None and (target.ko > 0 or target.linkdead > 0):
@@ -917,9 +930,11 @@ class Combat:
         self, p: Player, m: Monster, mv: MoveRule, fx: float, fy: float, gear: dict[str, Any] | None = None
     ) -> None:
         dmg, crit = self.damage_out(p, mv, m, gear)
+        if m.brain is not None:  # realm bosses: the vulnerable window, and who did how much (Phase 13)
+            dmg = m.brain.on_hit(p, dmg)
         m.hp -= dmg
         rng = self.room.rng
-        if mv.stun:
+        if mv.stun and m.brain is None:
             m.stun = max(m.stun, int(mv.stun * (0.4 if m.elite else 1.0)))
         if mv.status and rng.random() < mv.proc:
             self.apply_status(m, mv.status, dmg, p.eid)
@@ -940,7 +955,7 @@ class Combat:
         elif m.target is None:
             m.target = p.eid
         heavy = mv.shape == "spin" or mv.stamina > 0 or mv.dmg >= 20
-        if heavy and not m.elite and m.state == "windup":
+        if heavy and not m.elite and m.brain is None and m.state == "windup":
             m.state, m.st_t = "recover", 0  # stagger: a heavy hit interrupts the wind-up
         dx, dy = m.x - p.m.x, m.y - p.m.y
         d = math.hypot(dx, dy) or 1.0
@@ -961,6 +976,19 @@ class Combat:
         self._broadcast(m.x, m.y, [EV["DEATH"], m.id, m.x, m.y, m.key, 1 if m.elite else 0])
         self._remove(m, killed=True)
         spec = self.en.biomes.get(m.biome)  # type: ignore[call-overload]
+        if m.wave:  # raiders: XP for whoever helped, no loot (the wave pays out when it's over)
+            room.defence.on_kill(m, killer)
+            xp = int(spec.xp * (self.en.elite.xp if m.elite else 1)) if spec is not None else 0
+            for eid in list(m.damagers):
+                hp = room.players.get(eid)
+                if hp is not None:
+                    hp.pending.stats["kill.wave"] += 1
+                    if xp:
+                        room.grant_xp(hp, xp)
+            return
+        if m.brain is not None:  # realm bosses hand out their own loot (sim/bosses.py)
+            m.brain.on_death(m, killer)
+            return
         el = self.en.elite
         rng = room.rng
         minion = m.minion_of is not None
@@ -1233,18 +1261,18 @@ class Combat:
                 continue
             anim = {
                 "idle": ANIM["idle"],
-                "return": ANIM["walk"],
-                "chase": ANIM["walk"],
                 "windup": ANIM["windup"],
                 "active": ANIM["active"],
                 "recover": ANIM["recover"],
                 "hidden": ANIM["hidden"],
-            }[m.state]
+            }.get(m.state, ANIM["walk"])
             if m.state == "idle" and (m.wx - m.x) ** 2 + (m.wy - m.y) ** 2 > 0.09:
                 anim = ANIM["walk"]
             flags = (1 if m.elite else 0) | (8 if m.hurt else 0) | (16 if m.night else 0)
             flags |= 32 if m.minion_of is not None else 0
             flags |= 64 if m.boss else 0
+            if m.brain is not None:
+                flags |= m.brain.flags(m)
             out.append(
                 [
                     m.id,
@@ -1301,4 +1329,5 @@ class Combat:
                         0,
                     ]
                 )
+        out.extend(self.room.defence.entities(p, x0, x1, y0, y1))
         return out

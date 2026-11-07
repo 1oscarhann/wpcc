@@ -1,0 +1,60 @@
+# Villagers, happiness and beauty (Phase 14, BALANCE §10, P10).
+#
+# Villagers live in Houses and work at your buildings. They arrive on their own while there's room and
+# the village is happy enough, and they leave if it stays miserable. Everything is settled lazily, like
+# production: nothing ticks while you're away, the next read works out who came and who went.
+arrival:
+  every: 10m
+  min_happiness: 40
+  start_with: 2               # a village's first two villagers show up straight away
+leaving:
+  below: 20
+  after: 2h                   # happiness under `below` for this long and the unhappiest one packs up
+  warn_after: 30m             # before that they grumble about it in speech bubbles
+
+food_per_villager: 4          # food/h each villager eats (P10: a rate, floored at zero, no starvation)
+
+happiness:
+  weights: { beauty: 0.35, housing: 0.25, food: 0.25, tavern: 0.15 }
+  beauty_per_tile: 0.12       # beauty_norm = min(1, beauty / (usable plot tiles × this))
+  tavern_reach: 12            # a Tavern within this many path tiles of most homes counts
+  empty: 60                   # a village with nobody in it yet
+
+jobs:
+  # worker slots by building level (1..5); a building's own entry in buildings.yaml wins
+  by_category: { production: [1, 1, 2, 2, 3], crafting: [1, 1, 1, 2, 2] }
+  production_bonus: 0.15      # +15% output per worker at a production building
+  crafting_speed: 0.1         # crafting jobs at a staffed station finish 10% faster per worker
+  auto_assign: true           # newcomers take the open job with the highest priority
+  priority: [guard_post, farm, lumber_camp, quarry, mine, herb_garden, fishing_dock, workshop, forge, tavern, alchemist, tannery, wizard_tower]
+
+beauty:
+  variety: 1.5                # per distinct decoration type
+  connected: 2                # per building linked to the Town Hall by paths
+  nature: 0.5                 # per tree, bush or flower still growing on the plot
+
+schedule:                     # what villagers do through the world day (client-side walking)
+  work: [dawn, day]
+  social: [dusk]              # to the Tavern if there is one, else a stroll
+  home: [night]
+
+names:
+  first: [Ada, Bram, Clem, Dot, Edda, Fenn, Greta, Hob, Ivo, Juno, Kip, Lark, Mabel, Ned, Odo, Pip, Quill, Rosa,
+          Sven, Tilly, Ulf, Vera, Wren, Yara, Zeb, Bertha, Corin, Dilly, Elko, Fern, Gus, Hazel, Ira, Jory, Kaia,
+          Lio, Marta, Nils, Opal, Percy, Rue, Sage, Tam, Una, Vito, Willa]
+  last: [Applebee, Bramblewood, Cobble, Dewberry, Elmsworth, Flint, Gorse, Hearth, Inkcap, Juniper, Kettle,
+         Larkspur, Millstone, Nettle, Oakley, Puddle, Quarry, Rushwick, Saltmarsh, Thistle, Underhill, Vale,
+         Wicker, Yarrow]
+traits: [loves_flowers, night_owl, foodie, homebody, chatterbox, early_bird]
+
+lines:
+  happy:   ["What a lovely day.", "I do like it here.", "Smells like fresh bread!", "Best village in the realm.", "♪ la la la ♪"]
+  hungry:  ["My tummy's rumbling…", "Is there any more food?", "We could use another farm."]
+  crowded: ["It's a bit cramped at home.", "Could we get another house?", "I share a bed with a goat."]
+  ugly:    ["Could use some flowers around here.", "It's all a bit… grey.", "A bench would be nice."]
+  bored:   ["If only we had a tavern.", "Nothing to do after work…"]
+  leaving: ["I'm thinking of moving away.", "Maybe the next village is nicer…", "I've packed a small bag. Just in case."]
+  working: ["Hard at work!", "Almost done here.", "This is honest work."]
+  greet:   ["Hello, chief!", "Oh! It's you!", "Welcome home!", "Safe travels!", "Stay a while?"]
+  gear:    ["Ooh, nice {weapon}!", "Is that a {weapon}? Fancy!"]
+  wave:    ["Monsters! Hide the bread!", "Get them, chief!", "Not the storehouse again!"]

@@ -1,0 +1,73 @@
+# Monster waves (Phase 13, BALANCE §9, P18). Every few hours a band of monsters marches on your village
+# while you're online. They walk in through your gate toward the Storehouse; guards, watchtowers, you
+# and your realm-mates stop them. The ones that reach it make off with a little of your stock. A wave
+# never destroys or damages a building.
+#
+# "Online" means a live socket (P18). A wave is announced with a 10 minute warning; if you log out
+# before it starts it's postponed, never fired while you're away.
+eligible:
+  min_town_hall: 2
+  since_last: 3h            # since the last wave ended (or since the village was founded)
+  online_before_announce: 20m   # announce + warning ≥ 30 min online: no wave in your first half hour (P18)
+  offline_grace: 60s        # sockets gone this long = offline
+warning: 10m
+director_every: 10s         # how often the server looks for villages that are due
+
+# Per Town Hall level: how many sub-waves, how big, from which roster, with how many elites.
+# The last sub-wave of a TH5 wave brings a mini-boss (an elite with `miniboss_hp` × health).
+composition:
+  2: { subwaves: 2, size: 5, biome: meadow, roster: { slime: 0.5, big_slime: 0.2, thornhare: 0.3 }, elites: 0 }
+  3: { subwaves: 3, size: 5, biome: forest, roster: { wolf: 0.45, bandit_brute: 0.2, slime: 0.35 }, elites: 1 }
+  4: { subwaves: 4, size: 6, biome: stonepeak, roster: { ram_goat: 0.35, pebbling: 0.45, rock_golem: 0.2 }, elites: 2 }
+  5: { subwaves: 4, size: 7, biome: stonepeak, roster: { wolf: 0.2, pebbling: 0.3, leechling: 0.25, snapjaw: 0.25 }, elites: 2, miniboss: rock_golem }
+miniboss_hp: 1.6
+hp_mult: 0.8                # wave monsters are a touch frailer than wild ones: they come to steal, not to duel
+subwave_gap: 25s
+spawn_distance: 7           # tiles outside the gate
+max_duration: 6m            # stragglers give up and leave after this
+aggro: 4.5                  # wave monsters break off to fight anyone this close
+leash: 8
+
+guards:
+  hp: 80
+  dmg: 8
+  per_level: 0.15           # +15% hp and damage per Guard Post level above 1
+  speed: 3.2                # tiles/s
+  aggro: 6                  # from their post
+  leash: 10
+  range: 1.4
+  attack_every: 1.0s
+  respawn: after_wave       # fallen guards are back for the next wave
+
+towers:
+  every: 1.2s
+  range: 7
+
+steal:
+  max_fraction: 0.10        # if every monster gets through: 10% of each stored raw resource
+  resources: [wood, stone, ore, food, fish, herbs, hide, crystal]
+
+win_if_through_below: 0.5   # the wave is held back if fewer than half the monsters reach the Storehouse
+rewards:
+  coins_per_th: 60
+  bundle:                   # materials by Town Hall level (into storage)
+    2: { wood: 80, stone: 60 }
+    3: { wood: 150, stone: 120, ore: 40 }
+    4: { planks: 80, bricks: 80, ore: 80 }
+    5: { planks: 150, bricks: 150, ore: 120, crystal: 10 }
+  rare_chance: 0.25         # one rare material of the wave's biome, into your bag
+  rare: { meadow: moonpetal, forest: ironbark, stonepeak: starstone }
+
+report_lines:
+  flawless:
+    - "Not a single one got through. The guards are insufferable about it."
+    - "Clean sweep! A slime asked for directions on its way out."
+    - "The horn hadn't stopped echoing before it was over."
+  held:
+    - "A few slipped past, but the storehouse door held. Mostly."
+    - "The goblins ran off with your {res}, again."
+    - "Something made off with some {res}. It left a thank-you note."
+  overrun:
+    - "Three slimes now live in your storehouse. They seem happy."
+    - "They took the {res} and, somehow, the welcome mat."
+    - "The storehouse looks like a festival happened. A hungry one."

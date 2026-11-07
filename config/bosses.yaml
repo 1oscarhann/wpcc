@@ -1,0 +1,108 @@
+# Realm bosses (Phase 13, BALANCE §7). One wakes in a realm every few days, in the ring of a biome the
+# realm has reached, and waits there for a day. Everyone who deals at least 1% of the damage gets loot.
+#
+# A boss is a data-driven brain on top of an enemies.yaml entry (sprite, base stats). Phases switch at
+# HP shares; each phase lists the attacks it rotates through. Attack shapes:
+#   circle — slam around itself (or `at_target`)       line  — charge (`lunge`) or a straight slam
+#   rain   — `count` circles dropped around each fighter  cone — breath in front (`angle` degrees)
+#   ring   — a donut: safe inside `inner` and outside `range`
+#   lines  — `count` cracks radiating out from the boss
+# `dmg` multiplies the enemy's base damage. HP is the solo figure; it scales with fighters (D-092).
+spawn:
+  every: 72h
+  stays: 24h
+  first_after: 15m          # a realm's first boss wakes this long after someone's first visit
+engage: 14                  # fighters within this many tiles count for HP scaling and the boss bar
+hp_per_fighter: 0.75        # HP × (1 + this × (fighters − 1)); the Delve Warden uses it too
+leash: 18                   # nobody within this far → it walks home and heals
+aggro: 8
+loot_min_share: 0.01        # ≥ 1% of the damage to get loot
+trophy_chance: 0.2          # first kill of each boss always drops its trophy
+
+bosses:
+  grubmaw:
+    unlock_level: 1               # the realm's best avatar level that brings this one into the rotation
+    name: Grubmaw the Slime King
+    biome: meadow
+    enemy: grubmaw
+    hp: 2400
+    lair_radius: 150
+    attacks:
+      slam:   { shape: circle, range: 3.2, windup: 1.0s, recover: 0.8s, dmg: 1.0, knockback: 2.2, trigger: 2.6 }
+      rain:   { shape: rain, count: 3, radius: 1.5, spread: 3.5, windup: 1.3s, recover: 0.6s, dmg: 0.8, trigger: 12 }
+      bounce: { shape: line, range: 7, width: 2.2, lunge: 6.5, windup: 0.9s, recover: 1.0s, dmg: 1.1, knockback: 2, trigger: 8 }
+    phases:
+      - { at: 1.0, attacks: [slam, rain, slam, bounce] }
+      - { at: 0.66, attacks: [rain, slam, bounce, rain], speed: 1.15 }
+      - { at: 0.33, attacks: [bounce, rain, slam, rain], speed: 1.3, summon: { enemy: slime, count: 4 }, note: "splits into Slimelings!" }
+    loot: { coins: [200, 350], xp: 300, rares: { moonpetal: [1, 2] }, trophy: gel_crown }
+
+  stone_colossus:
+    unlock_level: 8               # the realm's best avatar level that brings this one into the rotation
+    name: The Stone Colossus
+    biome: stonepeak
+    enemy: stone_colossus
+    hp: 5000
+    lair_radius: 235
+    attacks:
+      fist:     { shape: line, range: 6, width: 2, windup: 1.1s, recover: 1.0s, dmg: 1.2, knockback: 2.5, trigger: 6, vulnerable: 2.5s }
+      rockfall: { shape: rain, count: 4, radius: 1.4, spread: 4, windup: 1.4s, recover: 0.6s, dmg: 0.9, trigger: 12 }
+      stomp:    { shape: circle, range: 3.5, windup: 1.2s, recover: 0.9s, dmg: 1.0, knockback: 3, trigger: 2.8 }
+    phases:
+      - { at: 1.0, attacks: [fist, stomp, rockfall] }
+      - { at: 0.66, attacks: [rockfall, fist, stomp, rockfall], speed: 1.1 }
+      - { at: 0.33, attacks: [fist, rockfall, fist, stomp], speed: 1.2, note: "its core glows white-hot!" }
+    vulnerable_mult: 2.0      # the exposed core after a fist slam takes this much more damage
+    loot: { coins: [400, 700], xp: 600, rares: { starstone: [2, 3] }, trophy: colossus_core }
+
+  swamp_hydra:
+    unlock_level: 14               # the realm's best avatar level that brings this one into the rotation
+    name: The Swamp Hydra
+    biome: swamp
+    enemy: swamp_hydra
+    hp: 8000
+    lair_radius: 275
+    attacks:
+      breath: { shape: cone, range: 6, angle: 70, windup: 1.0s, recover: 0.8s, dmg: 1.0, poison: true, trigger: 5.5 }
+      snap:   { shape: circle, range: 2.6, at_target: true, windup: 0.8s, recover: 0.6s, dmg: 1.2, knockback: 1.5, trigger: 3 }
+      spit:   { shape: rain, count: 3, radius: 1.3, spread: 3, windup: 1.2s, recover: 0.6s, dmg: 0.8, poison: true, trigger: 12 }
+    phases:
+      - { at: 1.0, attacks: [breath, snap, spit] }
+      - { at: 0.66, attacks: [breath, spit, snap, breath], speed: 1.1, note: "grows another head!" }
+      - { at: 0.33, attacks: [breath, breath, spit, snap], speed: 1.2, note: "thrashes in a fury!" }
+    regen: { per_s: 0.006, unless: burn }   # heads regrow unless it's burning (fire tomes, burn procs)
+    loot: { coins: [600, 1000], xp: 900, rares: { swamp_venom: [2, 3] }, trophy: hydra_fang }
+
+  frost_matriarch:
+    unlock_level: 20               # the realm's best avatar level that brings this one into the rotation
+    name: The Frost Matriarch
+    biome: frozen
+    enemy: frost_matriarch
+    hp: 11000
+    lair_radius: 315
+    attacks:
+      ice_ring: { shape: ring, range: 6, inner: 2.2, windup: 1.3s, recover: 0.8s, dmg: 1.1, slow: true, trigger: 7 }
+      shards:   { shape: rain, count: 4, radius: 1.3, spread: 4, windup: 1.2s, recover: 0.6s, dmg: 0.8, trigger: 12 }
+      lance:    { shape: line, range: 8, width: 1.4, windup: 0.9s, recover: 0.8s, dmg: 1.2, trigger: 9 }
+    phases:
+      - { at: 1.0, attacks: [ice_ring, lance, shards] }
+      - { at: 0.66, attacks: [shards, ice_ring, lance, shards], speed: 1.1, summon: { enemy: frost_wolf, count: 2 }, note: "howls for her wolves!" }
+      - { at: 0.33, attacks: [ice_ring, shards, lance, ice_ring], speed: 1.2, blizzard: true, note: "calls a blizzard!" }
+    loot: { coins: [800, 1300], xp: 1200, rares: { frost_shard: [2, 3] }, trophy: matriarch_tiara }
+
+  cinder_tyrant:
+    unlock_level: 26               # the realm's best avatar level that brings this one into the rotation
+    name: The Cinder Tyrant
+    biome: ashen
+    enemy: cinder_tyrant
+    hp: 15000
+    lair_radius: 355
+    attacks:
+      cracks:  { shape: lines, count: 6, range: 8, width: 1.2, windup: 1.2s, recover: 0.8s, dmg: 1.0, burn: true, trigger: 9 }
+      meteors: { shape: rain, count: 4, radius: 1.6, spread: 4.5, windup: 1.4s, recover: 0.6s, dmg: 1.0, burn: true, trigger: 12 }
+      smash:   { shape: circle, range: 3.4, windup: 1.0s, recover: 0.8s, dmg: 1.2, knockback: 2.5, trigger: 2.8 }
+    phases:
+      - { at: 1.0, attacks: [smash, cracks, meteors] }
+      - { at: 0.66, attacks: [cracks, meteors, smash, meteors], speed: 1.1 }
+      - { at: 0.15, attacks: [meteors, cracks, smash, cracks], speed: 1.4, dmg: 1.25, note: "is enraged!" }
+    loot: { coins: [1000, 1800], xp: 1600, rares: { ember_core: [2, 3] }, trophy: tyrants_heart }

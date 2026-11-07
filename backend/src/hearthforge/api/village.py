@@ -161,3 +161,26 @@ async def undo(
     async with db.begin():
         ld = await svc.undo(db, st.config, auth.user.id, st.clock.now())
     return await _respond(st, ld)
+
+
+class AssignIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    building_id: str | None = Field(default=None, max_length=40)
+
+
+@router.post("/villagers/{villager_id}/assign", dependencies=[Depends(act)])
+async def assign_villager(
+    villager_id: str,
+    body: AssignIn,
+    auth: Auth = Depends(current_user),
+    st: AppState = Depends(get_state),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Phase 14: put a villager to work somewhere (or give them the day off)."""
+    from hearthforge.services import villagers as villagers_svc
+
+    async with db.begin():
+        ld = await villagers_svc.assign(
+            db, st.config, auth.user.id, villager_id, body.building_id, st.clock.now()
+        )
+    return await _respond(st, ld)

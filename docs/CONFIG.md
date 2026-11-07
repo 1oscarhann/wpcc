@@ -376,6 +376,74 @@ The loader checks that every ring with ruins has chest loot and every ring with 
   - `items.yaml` adds `ancient_rune` and `blueprint_*`.
   - `forging.yaml` makes `ancient_rune` a modifier.
 
+### `waves.yaml` (Phase 13)
+
+| Key | Meaning |
+|---|---|
+| `eligible` | Who can be raided: `min_town_hall`; `since_last` (since the last raid or the village's founding); `online_before_announce` (minutes online first); `offline_grace` (how long a dropped socket still counts as online, P18). |
+| `warning` | The countdown. |
+| `director_every` | How often the server checks. |
+| `composition` | One entry per Town Hall level (2–5): `subwaves`, `size`, `biome`, `roster` (weights; melee walkers only), `elites`, and an optional `miniboss`. |
+| `miniboss_hp` | HP multiplier for the mini-boss. |
+| `hp_mult` | HP multiplier for every raider. |
+| `subwave_gap` | Time between sub-waves. |
+| `spawn_distance` | How far outside the gate raiders appear. |
+| `max_duration` | When stragglers give up. |
+| `aggro`, `leash` | When raiders break off to fight, and how far they'll chase. |
+| `guards` | `hp`, `dmg`, `per_level`, `speed`, `aggro`, `leash`, `range`, `attack_every`. |
+| `towers` | `every`, `range`. Damage per level is `tower_dmg` on the Watchtower. |
+| `steal` | `max_fraction`, and the raw `resources` that can be taken. |
+| `win_if_through_below` | The share of raiders getting through below which the raid is held. |
+| `rewards` | `coins_per_th`, a `bundle` by Town Hall level, `rare_chance`, and a `rare` item by biome. |
+| `report_lines` | `flawless`, `held` and `overrun` pools; `{res}` becomes the most-stolen resource. |
+
+### `bosses.yaml` (Phase 13)
+
+| Key | Meaning |
+|---|---|
+| `spawn` | `every`, `stays`, `first_after`. |
+| `engage` | Fighters within this range count for scaling and the bar. |
+| `hp_per_fighter` | Party scaling; the Delve Warden uses it too. |
+| `leash`, `aggro` | When it gives up and goes home, and when it notices you. |
+| `loot_min_share` | The damage share needed for loot. |
+| `trophy_chance` | The trophy drop chance after your first kill. |
+| `bosses.<key>` | `unlock_level`, `name`, `biome`, `enemy`, solo `hp`, `lair_radius`, `attacks`, `phases`, `vulnerable_mult`, optional `regen`, and `loot` (`coins`, `xp`, `rares`, `trophy`). |
+
+- **Attacks.** Each has a `shape` (`circle`, `line`, `rain`, `cone`, `ring`, `lines`) and `windup`, `recover`, `dmg` (× base) and `trigger`. Shape-specific options: `range`, `width`, `lunge`, `at_target`, `count`, `radius`, `spread`, `angle` and `inner`. Effects: `poison`, `burn`, `slow`, and `vulnerable` (a duration).
+- **Phases.** Each has `at` (an HP share), `attacks`, and optional `speed`, `dmg`, `summon` (enemy, count), `blizzard` and `note`.
+- **Loader cross-checks.**
+  - Phases go down from 1.0.
+  - Attacks and summons exist.
+  - A ring needs `0 < inner < range`.
+  - Rares and the trophy are items, and the trophy is in the `trophy` category.
+  - Lairs are on the map.
+
+### `villagers.yaml` (Phase 14)
+
+| Key | Meaning |
+|---|---|
+| `arrival` | `every`, `min_happiness`, `start_with`. |
+| `leaving` | `below`, `after`, `warn_after`. |
+| `food_per_villager` | Food per hour each villager eats. |
+| `happiness` | `weights` (must sum to 1), `beauty_per_tile`, `tavern_reach`, and `empty` (happiness with nobody there). |
+| `jobs` | `by_category` slots, `production_bonus`, `crafting_speed`, `auto_assign`, and a `priority` list of buildings. |
+| `beauty` | `variety`, `connected`, `nature`. |
+| `schedule` | The day phases for work, socialising and home (client-side). |
+| `names`, `traits` | Pools for newcomers. |
+| `lines` | Speech pools: happy, hungry, crowded, ugly, bored, leaving, working, greet, gear, wave. |
+
+### `buildings.yaml` additions (Phases 13/14)
+
+- **New fields.**
+  - `jobs`: worker or guard slots by level.
+  - `tower_dmg`: Watchtower damage by level.
+  - `beauty`: decoration points.
+  - `walkable`: decorations only (paths and arches).
+  - `requires_item`: uses one up when placed.
+- **New buildings.** `guard_post` and `watchtower` (category `defence`), and 17 decorations (`category: decoration`, `max_level: 1`, built instantly).
+- **`enemies.yaml`.** The five boss bodies: `grubmaw`, `stone_colossus`, `swamp_hydra`, `frost_matriarch` and `cinder_tyrant`.
+- **`items.yaml`.** Five trophies: `gel_crown`, `colossus_core`, `hydra_fang`, `matriarch_tiara` and `tyrants_heart`.
+
 ## Secrets in the client bundle
 
 Sections marked secret are stripped from `GET /api/config`:

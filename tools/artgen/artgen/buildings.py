@@ -1166,6 +1166,60 @@ def _tavern_narrow(lv: int, fh: int) -> Art:
     return Art(c, top, [smoke])
 
 
+def guard_post(lv: int) -> Art:
+    """A little timber guardhouse: gable roof, spear rack, the village banner."""
+    c, top = new(2, 2, 46)
+    B = c.h - 3
+    ground_shadow(c, 2, B - 20, 29, B)
+    wall_planks(c, 3, B - 17, 26, 17, WOOD)
+    roof_gable(c, 16, B - 36, 15, 20, BLUE, "slate")
+    door(c, 12, B, 7, 11)
+    window(c, 19, B - 13, 6, 5, shutters=False)
+    # spear rack by the door
+    for k, x in enumerate((26, 28, 30)):
+        c.vline(x, B - 18 + k, B - 1, WOOD[1])
+        c.put(x, B - 19 + k, STONE[4])
+        c.put(x, B - 20 + k, STONE[3])
+    c.hline(25, 31, B - 4, WOOD[2])
+    # a shield on the wall
+    c.ellipse(6, B - 10, 2.2, 2.6, BLUE[2])
+    c.put(6, B - 10, GOLD[3])
+    adorn(c, lv, pennant_at=(16, B - 37), plinth_at=(3, B - 3, 26), banners=[(20, B - 16)], lanterns=[(4, B - 16)],
+          trim=(1, 30, B - 17), color=BLUE)
+    c.outline(INK)
+    return Art(c, top)
+
+
+def watchtower(lv: int) -> Art:
+    """A tall, narrow wooden tower: four posts, cross braces, a crenellated platform with a little roof."""
+    c, top = new(1, 1, 50 + min(lv, 4) * 2)
+    B = c.h - 3
+    plat = B - 30 - min(lv, 4) * 2
+    for x in (2, 13):  # posts
+        c.vline(x, plat, B, WOOD[1])
+        c.vline(x + 1, plat, B, WOOD[3])
+    for y in range(plat + 4, B - 2, 8):  # cross braces
+        c.line(3, y, 13, y + 6, WOOD[2])
+        c.line(13, y, 3, y + 6, WOOD[2])
+    c.vline(8, plat + 3, B, WOOD[4])  # ladder
+    for y in range(plat + 4, B, 3):
+        c.hline(7, 9, y, WOOD[2])
+    # the platform box with crenellations
+    c.rect(0, plat - 7, 16, 8, WOOD[3])
+    c.hline(0, 15, plat, WOOD[1])
+    c.hline(0, 15, plat - 7, WOOD[4])
+    for x in range(0, 16, 4):
+        c.rect(x, plat - 10, 2, 3, WOOD[3] if lv < 3 else STONE[3])
+    # an archer's bow peeking over
+    c.line(10, plat - 13, 12, plat - 9, WOOD[1])
+    c.put(11, plat - 11, CLOTH[3])
+    if lv >= 3:  # a little pointed roof from level 3
+        roof_gable(c, 7, plat - 22, 8, 10, RED, "tiles")
+    adorn(c, lv, pennant_at=(7, plat - 22 if lv >= 3 else plat - 11), color=RED)
+    c.outline(INK)
+    return Art(c, top)
+
+
 @dataclass
 class BuildingArt:
     fn: Callable[..., Art]
@@ -1190,6 +1244,8 @@ BUILDINGS: dict[str, BuildingArt] = {
     "alchemist": BuildingArt(alchemist, (2, 2)),
     "wizard_tower": BuildingArt(wizard_tower, (2, 2)),
     "tavern": BuildingArt(tavern, (3, 2), rotatable=True),
+    "guard_post": BuildingArt(guard_post, (2, 2)),
+    "watchtower": BuildingArt(watchtower, (1, 1)),
 }
 
 

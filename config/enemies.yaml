@@ -500,3 +500,55 @@ enemies:
     alt_attack: { shape: line, range: 6, width: 1.4, trigger: 7, windup: 800ms, active: 400ms, recover: 1200ms, lunge: 5.5, knockback: 2.0 }
     loot:
       - { item: ancient_rune, chance: 0.5, qty: [1, 1] }
+
+  # ── Phase 13: realm bosses. Stats here are the base; bosses.yaml sets HP, phases and attacks ──
+  grubmaw:
+    name: Grubmaw the Slime King
+    archetype: tank
+    hp: 2400
+    dmg: 14
+    defence: 2
+    speed: 2.0
+    radius: 1.4
+    group: [1, 1]
+    attack: { shape: circle, range: 3.2, trigger: 2.6, windup: 1s, active: 200ms, recover: 800ms, knockback: 2.2 }
+  stone_colossus:
+    name: The Stone Colossus
+    archetype: tank
+    hp: 5000
+    dmg: 34
+    defence: 10
+    speed: 1.8
+    radius: 1.5
+    group: [1, 1]
+    attack: { shape: circle, range: 3.5, trigger: 2.8, windup: 1.2s, active: 200ms, recover: 900ms, knockback: 3 }
+  swamp_hydra:
+    name: The Swamp Hydra
+    archetype: tank
+    hp: 8000
+    dmg: 44
+    defence: 8
+    speed: 1.6
+    radius: 1.5
+    group: [1, 1]
+    attack: { shape: circle, range: 2.6, trigger: 3, windup: 800ms, active: 200ms, recover: 600ms, knockback: 1.5 }
+  frost_matriarch:
+    name: The Frost Matriarch
+    archetype: tank
+    hp: 11000
+    dmg: 60
+    defence: 10
+    speed: 2.4
+    radius: 1.0
+    group: [1, 1]
+    attack: { shape: line, range: 8, width: 1.4, trigger: 9, windup: 900ms, active: 200ms, recover: 800ms, knockback: 1 }
+  cinder_tyrant:
+    name: The Cinder Tyrant
+    archetype: tank
+    hp: 15000
+    dmg: 85
+    defence: 14
+    speed: 2.2
+    radius: 1.3
+    group: [1, 1]
+    attack: { shape: circle, range: 3.4, trigger: 2.8, windup: 1s, active: 200ms, recover: 800ms, knockback: 2.5 }

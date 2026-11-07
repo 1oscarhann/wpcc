@@ -43,6 +43,8 @@ class Village(Base):
     likes_count: Mapped[int] = mapped_column(Integer, default=0)
     last_action: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     debris: Mapped[list[list[Any]]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    villagers_at: Mapped[datetime | None]  # arrivals are settled up to here (Phase 14)
+    unhappy_since: Mapped[datetime | None]  # happiness has been under the leaving line since
     created_at: Mapped[datetime] = created_at_col()
     updated_at: Mapped[datetime] = created_at_col()
 
@@ -99,3 +101,22 @@ class Presence(Base):
     online_since: Mapped[datetime]
     in_avatar_mode: Mapped[bool] = mapped_column(Boolean, default=False)
     realm_id: Mapped[uuid.UUID | None]
+
+
+class Villager(Base):
+    """A villager (Phase 14). Lives in a House, works at a building (or stands guard at a Guard Post)."""
+
+    __tablename__ = "villagers"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    village_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("villages.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    appearance: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    traits: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    job_building_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("village_buildings.id", ondelete="SET NULL")
+    )
+    home_building_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("village_buildings.id", ondelete="SET NULL")
+    )
+    arrived_at: Mapped[datetime] = mapped_column(nullable=False)

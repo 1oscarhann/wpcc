@@ -76,6 +76,16 @@ function noise(c: AudioContext, out: AudioNode, t: number, dur: number, gain: nu
 }
 
 const SOUNDS: Record<string, (c: AudioContext, o: AudioNode, t: number) => void> = {
+  // Phase 13: the raid horn (two long low notes) and a boss's roar
+  horn: (c, o, t) => {
+    tone(c, o, "sawtooth", 196, 190, t, 0.7, 0.13);
+    tone(c, o, "sawtooth", 147, 140, t + 0.75, 1.0, 0.13);
+    tone(c, o, "triangle", 392, 380, t, 0.7, 0.05);
+  },
+  roar: (c, o, t) => {
+    noise(c, o, t, 0.9, 0.5, "lowpass", 600, 180, 0.8);
+    tone(c, o, "sawtooth", 110, 55, t, 0.9, 0.16);
+  },
   swing: (c, o, t) => noise(c, o, t, 0.12, 0.35, "bandpass", 1800, 4200, 1.2),
   swing_heavy: (c, o, t) => noise(c, o, t, 0.22, 0.45, "bandpass", 700, 2600, 1.0),
   ability: (c, o, t) => {

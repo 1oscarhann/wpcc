@@ -1043,6 +1043,155 @@ PHASES[12] = async (page, kind) => {
   }
 };
 
+// ── Phase 13: raids and realm bosses ─────────────────────────────────────
+const villageNow = (page) => page.evaluate(() => window.__hfVillage.getState().village);
+
+async function reloadVillage(page) {
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(2000);
+}
+
+async function fightFor(page, ms, heavy = 4) {
+  await page.evaluate(([t, h]) => window.__hfGame.devFight(t, h), [ms, heavy]);
+}
+
+PHASES[13] = async (page, kind) => {
+  await freshPlayer(page, kind);
+  await apiPost(page, "/api/dev/kit", { town_hall: 3, tier: 3 });
+  const base = await placeCluster(page, [["storehouse", 0, 0], ["guard_post", 4, 0], ["watchtower", 3, 3], ["watchtower", 7, 1]]);
+  await page.waitForTimeout(12000);
+  await reloadVillage(page);
+  await page.evaluate(async () => {
+    const st = window.__hfVillage.getState();
+    const gp = st.village.buildings.find((b) => b.key === "guard_post");
+    if (gp && st.village.villagers[0]) await st.assignVillager(st.village.villagers[0].id, gp.id);
+  });
+  if (base) await page.evaluate(([x, y]) => window.__hfGame.devFocusTile?.(x, y), [base[0] + 4, base[1] + 2]);
+  await shot(page, "01-defences", kind, { wait: 1200 });
+  await apiPost(page, "/api/dev/wave", { warning: 25, town_hall: 2 });
+  await page.getByText("Raiders approaching").waitFor({ timeout: 15000 });
+  await shot(page, "02-raid-warning", kind, { wait: 800 });
+  await page.getByRole("button", { name: /Defend!/ }).click();
+  await page.waitForFunction(() => window.__hfGame?.avatar?.client);
+  await page.waitForTimeout(2500);
+  await shot(page, "03-defend-hop", kind, { wait: 0 });
+  await page.getByText("Raid on your village!").waitFor({ timeout: 60000 });
+  await page.waitForTimeout(7000); // the first band marches in through the gate
+  await shot(page, "04-raid-marching", kind, { wait: 0 });
+  const t0 = Date.now();
+  let fought = false;
+  while (Date.now() - t0 < 200000) {
+    const done = await page.getByText(/Raid beaten off|Flawless defence|Overrun/).count();
+    if (done) break;
+    const m = await page.evaluate(() => window.__hfGame.devNearestMonster());
+    if (m && m.d < 12) {
+      const f = fightFor(page, 5000);
+      if (!fought) {
+        fought = true;
+        await shot(page, "05-raid-fight", kind, { wait: 1800 });
+      }
+      await f;
+    } else await page.waitForTimeout(1500);
+  }
+  await page.getByText(/Raid beaten off|Flawless defence|Overrun/).waitFor({ timeout: 30000 });
+  await shot(page, "06-raid-report", kind, { wait: 900 });
+  await page.getByRole("button", { name: "Back to it" }).click();
+  // realm bosses, out in the meadow
+  const spot = await ringSpot(page, 150);
+  await apiPost(page, "/api/dev/teleport", { x: spot[0], y: spot[1] });
+  await page.waitForTimeout(1500);
+  await apiPost(page, "/api/dev/boss", { key: "grubmaw", distance: 5 });
+  await page.waitForTimeout(3500);
+  await shot(page, "07-grubmaw", kind, { wait: 0 });
+  const f1 = fightFor(page, 4000, 3);
+  await shot(page, "08-boss-fight", kind, { wait: 2600 });
+  await f1;
+  await apiPost(page, "/api/dev/delve-weaken", { frac: 0.3 });
+  await apiPost(page, "/api/dev/teleport", { x: spot[0], y: spot[1] });
+  await page.waitForTimeout(2200);
+  await shot(page, "09-grubmaw-slimelings", kind, { wait: 0 });
+  if (kind !== "mobile") {
+    await page.keyboard.press("m");
+    await shot(page, "10-boss-on-the-map", kind, { wait: 900 });
+    await page.keyboard.press("Escape");
+  }
+  for (const [i, key] of ["stone_colossus", "swamp_hydra", "frost_matriarch", "cinder_tyrant"].entries()) {
+    await apiPost(page, "/api/dev/teleport", { x: spot[0], y: spot[1] });
+    await page.waitForTimeout(800);
+    await apiPost(page, "/api/dev/boss", { key, distance: 5 });
+    await page.waitForTimeout(3500);
+    if (key === "frost_matriarch" || key === "cinder_tyrant") {
+      await apiPost(page, "/api/dev/delve-weaken", { frac: 0.14 });
+      await page.waitForTimeout(1600);
+    }
+    await shot(page, `${11 + i}-${key.replace(/_/g, "-")}`, kind, { wait: 0 });
+    if (kind === "mobile" && i >= 1) break;
+  }
+};
+
+// ── Phase 14: villagers and beauty ──────────────────────────────────────
+async function decorate(page, list) {
+  for (const [key, x, y] of list) {
+    let r = await apiPost(page, "/api/village/buildings", { key, x, y, rotation: 0 });
+    if (r.error?.code === "debris") {
+      // a tree or rock in the way: clear it and try again
+      const v = await villageNow(page);
+      for (const d of v.debris.filter((d) => Math.abs(d[3] - x) <= 2 && Math.abs(d[4] - y) <= 2)) {
+        await apiPost(page, `/api/village/debris/${d[0]}/clear`, {});
+      }
+      r = await apiPost(page, "/api/village/buildings", { key, x, y, rotation: 0 });
+    }
+    if (r.error) console.log("decor", key, x, y, r.error.code);
+  }
+}
+
+PHASES[14] = async (page, kind) => {
+  const name = await freshPlayer(page, kind);
+  await apiPost(page, "/api/dev/kit", { town_hall: 4, tier: 2 });
+  hf(`test-account ${name}`);
+  hf(`grant ${name} --coins 6000 --res stone=1500 --res wood=1500 --res food=600`);
+  // homes, food and a tavern so the village is lively and content (TH at 22,19; house at 17,20)
+  await decorate(page, [["house", 13, 20], ["farm", 9, 25], ["tavern", 27, 20]]);
+  await page.waitForTimeout(6000);
+  await decorate(page, [["house", 17, 15], ["lumber_camp", 30, 15]]);
+  await page.waitForTimeout(12000);
+  // paths from the Town Hall door, flowers, lamps, benches, a fountain and a statue
+  const path = [];
+  for (let y = 23; y <= 29; y++) path.push(["path_stone", 24, y], ["path_stone", 23, y]);
+  for (let x = 17; x <= 22; x++) path.push(["path_dirt", x, 23]);
+  for (let x = 25; x <= 29; x++) path.push(["path_dirt", x, 26]);
+  await decorate(page, path);
+  await decorate(page, [
+    ["flower_bed", 22, 25], ["flower_bed", 25, 25], ["flower_bed", 22, 27], ["flower_bed", 25, 28],
+    ["lantern", 22, 29], ["lantern", 25, 29], ["bench", 21, 26], ["hedge", 26, 23], ["hedge", 27, 23],
+    ["fountain", 19, 27], ["statue", 26, 28], ["young_tree", 15, 25], ["young_tree", 16, 28],
+    ["well", 29, 27], ["banner", 21, 22], ["market_stall", 27, 30], ["pumpkins", 30, 30],
+  ]);
+  hf(`fast-forward ${name} 1h`);
+  await reloadVillage(page);
+  await page.waitForFunction(() => window.__hfSky);
+  await page.evaluate(() => window.__hfSky("day,clear,summer")); // a bright summer's day for the village shots
+  await page.evaluate(() => window.__hfGame.devFocusTile?.(24, 26));
+  await page.waitForTimeout(4000); // villagers walk out to work
+  await shot(page, "01-decorated-village", kind, { wait: 500 });
+  await page.evaluate(() => window.__hfGame.villagerLife?.devSay("What a lovely day."));
+  await shot(page, "02-speech-bubble", kind, { wait: 600 });
+  await page.getByRole("button", { name: /^Build/ }).click();
+  await page.getByRole("tab", { name: "Decor" }).click();
+  await shot(page, "03-decor-menu", kind, { wait: 600 });
+  await page.keyboard.press("Escape");
+  await page.locator(".build-menu button[aria-label='Close build menu']").click().catch(() => undefined);
+  await page.getByRole("button", { name: "Villagers" }).click();
+  await shot(page, "04-villagers-panel", kind, { wait: 1200 });
+  await page.keyboard.press("Escape");
+  await enterAvatar(page);
+  const v = await villageNow(page);
+  await page.evaluate(([x, y]) => window.__hfGame.devWalkTo(x, y), [v.origin[0] + 24, v.origin[1] + 26]);
+  await page.waitForTimeout(3500);
+  await shot(page, "05-avatar-among-villagers", kind, { wait: 0 });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

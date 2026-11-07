@@ -47,6 +47,7 @@ class RoomManager:
         self._lock = asyncio.Lock()
         self.parties: dict[str, Party] = {}
         self.invites: dict[uuid.UUID, tuple[str, uuid.UUID, float]] = {}  # invitee → (party, inviter, expiry)
+        self.announced: dict[str, float] = {}  # Phase 13: owner → wave start (ms) while a wave is announced
 
     def find(self, user_id: uuid.UUID) -> tuple[RealmRoom, Player] | None:
         for room in self.rooms.values():
@@ -66,10 +67,25 @@ class RoomManager:
             from hearthforge.sim.combat import Combat
 
             room.combat = Combat(room)
+            from hearthforge.sim.bosses import Bosses
+
+            room.bosses = Bosses(room)
         self.rooms[realm.id] = room
         room.start()
         log.info("room up for realm %s", realm.id)
         return room
+
+    async def room_for_realm(self, realm_id: uuid.UUID) -> RealmRoom | None:
+        """The realm's room, started if nobody's in it yet (a wave or a boss needs simulating)."""
+        room = self.rooms.get(realm_id)
+        if room is not None and not room.closed:
+            return room
+        async with self._lock:
+            async with self.st.sessionmaker() as s:
+                realm = await s.get(Realm, realm_id)
+            if realm is None or realm.mapgen_version != self.st.config.mapgen.version:
+                return None
+            return await self._room(realm)
 
     async def load_villages(self, room: RealmRoom) -> None:
         cfg = self.st.config
@@ -392,6 +408,8 @@ class RoomManager:
             await asyncio.sleep(interval)
             now = time.monotonic()
             for rid, room in list(self.rooms.items()):
+                if room.defence.busy():
+                    continue  # a wave is on: the village needs defending even with nobody watching
                 if room.empty_since is not None and now - room.empty_since > EMPTY_ROOM_TTL:
                     del self.rooms[rid]
                     with contextlib.suppress(Exception):

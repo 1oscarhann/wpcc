@@ -182,4 +182,10 @@ items:
   blueprint_stone_fountain: { name: "Blueprint: Stone Fountain", category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
   blueprint_hedge_arch:     { name: "Blueprint: Hedge Arch",     category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
   blueprint_banner_pole:    { name: "Blueprint: Banner Pole",    category: blueprint, stackable: true, max_stack: 9, icon: icon.blueprint }
+  # Phase 13: realm boss trophies (displayed in the Trophy Hall from Phase 16; until then they sell)
+  gel_crown:       { name: Gel Crown,         category: trophy, stackable: true, max_stack: 9, icon: icon.gel_crown }
+  colossus_core:   { name: Colossus Core,     category: trophy, stackable: true, max_stack: 9, icon: icon.colossus_core }
+  hydra_fang:      { name: Hydra Fang,        category: trophy, stackable: true, max_stack: 9, icon: icon.hydra_fang }
+  matriarch_tiara: { name: "Matriarch's Tiara", category: trophy, stackable: true, max_stack: 9, icon: icon.matriarch_tiara }
+  tyrants_heart:   { name: "Tyrant's Heart",  category: trophy, stackable: true, max_stack: 9, icon: icon.tyrants_heart }
 resource_max_stack: 999

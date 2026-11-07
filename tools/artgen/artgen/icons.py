@@ -923,6 +923,69 @@ def i_blueprint(c: Canvas) -> None:
 ICONS.update({"ancient_rune": i_ancient_rune, "blueprint": i_blueprint})
 
 
+# ── Phase 13: realm boss trophies ────────────────────────────────────────────
+def _disc(c: Canvas, cx: float, cy: float, r: float, rp: list) -> None:
+    n = len(rp)
+    for y in range(16):
+        for x in range(16):
+            dx, dy = (x + 0.5 - cx) / r, (y + 0.5 - cy) / r
+            if dx * dx + dy * dy <= 1:
+                light = -(dx * 0.6 + dy * 0.8)
+                c.put(x, y, rp[max(0, min(n - 1, int((light + 1) / 2 * (n - 1) + 0.35)))])
+
+
+def i_gel_crown(c: Canvas) -> None:
+    _disc(c, 8, 11, 5.5, ramp("grass")[1:])
+    for x in range(3, 13):
+        c.put(x, 6, GOLD[2])
+        c.put(x, 7, GOLD[1])
+    for dx in (3, 6, 9, 12):
+        c.vline(dx, 3 if dx in (6, 9) else 4, 5, GOLD[3])
+    c.put(7, 7, RED[3])
+
+
+def i_colossus_core(c: Canvas) -> None:
+    _disc(c, 8, 8, 6.5, STONE[1:5])
+    _disc(c, 8, 8, 3.2, [LAVA[2], FIRE[3], FIRE[4]])
+    c.put(8, 8, (255, 255, 255, 255))
+
+
+def i_hydra_fang(c: Canvas) -> None:
+    for y in range(2, 15):
+        half = max(0, int((14 - y) * 0.28))
+        for x in range(8 - half - 1, 8 + half + 1):
+            c.put(x - (y - 2) // 5, y, CLOTH[3] if x < 8 else CLOTH[2])
+    c.hline(4, 11, 2, BOG[2])
+    c.hline(5, 10, 3, BOG[1])
+    c.put(5, 13, VENOM[2])
+
+
+def i_matriarch_tiara(c: Canvas) -> None:
+    for x in range(2, 14):
+        c.put(x, 11, GOLD[2])
+        c.put(x, 12, GOLD[1])
+    for dx, h in ((3, 3), (5, 5), (8, 8), (11, 5), (13, 3)):
+        for k in range(h):
+            c.put(dx - (1 if dx > 8 else 0), 10 - k, ICE[3] if k < h - 1 else SNOW[4])
+    c.put(8, 6, ICE[2])
+
+
+def i_tyrants_heart(c: Canvas) -> None:
+    pts = [(8, 14), (2, 7), (3, 3), (6, 2), (8, 4), (10, 2), (13, 3), (14, 7)]
+    c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: ASH[1] if x + y > 15 else ASH[2])
+    for x, y in ((5, 5), (6, 7), (8, 8), (10, 7), (11, 5), (8, 11)):
+        c.put(x, y, LAVA[3])
+
+
+ICONS.update({
+    "gel_crown": i_gel_crown,
+    "colossus_core": i_colossus_core,
+    "hydra_fang": i_hydra_fang,
+    "matriarch_tiara": i_matriarch_tiara,
+    "tyrants_heart": i_tyrants_heart,
+})
+
+
 def generate() -> dict[str, Canvas]:
     out = {}
     for name, fn in ICONS.items():

@@ -7,6 +7,7 @@ import contextlib
 import logging
 import uuid
 from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -31,9 +32,19 @@ class VillageHub:
         self._dirty: set[str] = set()
         self.poll_interval = poll_interval
         self.users: dict[str, set[Conn]] = defaultdict(set)  # every live socket, by user (Phase 9)
+        # Phase 13 (P18): online = a live socket, or one that dropped less than `offline_grace` ago
+        self.online_since: dict[str, datetime] = {}
+        self.offline_at: dict[str, datetime] = {}
 
     def register(self, ws: Conn) -> None:
-        self.users[ws.user_id].add(ws)
+        uid = ws.user_id
+        if not self.users.get(uid):
+            now = self.st.clock.now()
+            gone = self.offline_at.pop(uid, None)
+            grace = self.st.config.waves.eligible.offline_grace
+            if gone is None or (now - gone).total_seconds() > grace or uid not in self.online_since:
+                self.online_since[uid] = now
+        self.users[uid].add(ws)
 
     def unregister(self, ws: Conn) -> None:
         s = self.users.get(ws.user_id)
@@ -41,9 +52,20 @@ class VillageHub:
             s.discard(ws)
             if not s:
                 self.users.pop(ws.user_id, None)
+                self.offline_at[ws.user_id] = self.st.clock.now()
 
     def online(self) -> set[str]:
         return set(self.users)
+
+    def online_for(self, uid: str) -> float | None:
+        """Seconds this user has been online (P18), or None if they're offline."""
+        now = self.st.clock.now()
+        if uid not in self.users:
+            gone = self.offline_at.get(uid)
+            if gone is None or (now - gone).total_seconds() > self.st.config.waves.eligible.offline_grace:
+                return None
+        since = self.online_since.get(uid)
+        return (now - since).total_seconds() if since is not None else None
 
     async def notify(self, user_ids: list[str] | set[str], kind: str, payload: dict | None = None) -> None:
         """A small nudge to every socket of these users (e.g. 'realm' → refetch the realm)."""
@@ -145,4 +167,15 @@ class VillageHub:
                     )
                 )
             ).all()
-        return {str(r[0]) for r in rows}
+            # Phase 14: a villager is due to arrive (or the leaving clock ran out): push a fresh state
+            step = timedelta(seconds=self.st.config.villagers.arrival.every)
+            villagers_due = (
+                await session.execute(
+                    select(Village.user_id).where(
+                        Village.user_id.in_([uuid.UUID(o) for o in owners]),
+                        Village.villagers_at.is_not(None),
+                        Village.villagers_at + step <= now,
+                    )
+                )
+            ).all()
+        return {str(r[0]) for r in rows} | {str(r[0]) for r in villagers_due}

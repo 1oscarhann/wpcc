@@ -31,6 +31,7 @@ from hearthforge.db.models import (
     Resource,
     Village,
     VillageBuilding,
+    Villager,
     Wallet,
 )
 from hearthforge.domain import combos as combos_dom
@@ -60,6 +61,7 @@ class Loaded:
     discovered: set[str] = field(default_factory=set)  # combo keys this player has found
     new_discoveries: list[str] = field(default_factory=list)  # found during this request
     weather_seed: int | None = None  # the realm's weather timeline (P9)
+    villagers: list[Villager] = field(default_factory=list)  # Phase 14
 
 
 # ── loading & settling ──────────────────────────────────────────────────────
@@ -127,11 +129,30 @@ async def load_locked(
     weather_seed = (
         await session.execute(select(Realm.weather_seed).where(Realm.id == village.realm_id))
     ).scalar_one_or_none()
-    return Loaded(village, buildings, resources, wallet, plot_index, jobs, discovered, [], weather_seed)
+    villagers = list(
+        (
+            await session.execute(
+                select(Villager).where(Villager.village_id == village.id).order_by(Villager.arrived_at)
+            )
+        ).scalars()
+    )
+    return Loaded(
+        village, buildings, resources, wallet, plot_index, jobs, discovered, [], weather_seed, villagers
+    )
 
 
 def _views(buildings: list[VillageBuilding]) -> list[BuildingView]:
-    return [BuildingView(b.building_key, b.level, b.state.value) for b in buildings]
+    return [BuildingView(b.building_key, b.level, b.state.value, str(b.id)) for b in buildings]
+
+
+def workers(ld: Loaded) -> dict[str, int]:
+    """Building id → villagers working there (Phase 14)."""
+    out: dict[str, int] = {}
+    for v in ld.villagers:
+        if v.job_building_id is not None:
+            k = str(v.job_building_id)
+            out[k] = out.get(k, 0) + 1
+    return out
 
 
 def _settle_resources(
@@ -167,7 +188,7 @@ def weather_mults(
 
 
 def _apply_rates(cfg: GameConfig, ld: Loaded) -> None:
-    rates = rates_milli(cfg, _views(ld.buildings), ld.village.happiness)
+    rates = rates_milli(cfg, _views(ld.buildings), ld.village.happiness, workers(ld), len(ld.villagers))
     caps = caps_milli(cfg, _views(ld.buildings))
     for key, r in ld.resources.items():
         r.base_rate_milli = rates.get(key, 0)
@@ -212,6 +233,11 @@ def settle_village(
         done.append(b)
     _settle_resources(ld.resources, now, cfg, ld.weather_seed)
     sync_combos(session, cfg, ld)
+    from hearthforge.services import villagers as villagers_svc
+
+    if villagers_svc.settle(session, cfg, ld, now):
+        _apply_rates(cfg, ld)  # arrivals, departures and job changes move production and food demand
+        due = due or [(now, 2, None)]
     if due:
         ld.village.version += 1
         ld.village.updated_at = now
@@ -318,7 +344,15 @@ def village_state(cfg: GameConfig, ld: Loaded, now: datetime) -> dict[str, Any]:
         "discovered": sorted(ld.discovered),
         "new_discoveries": list(ld.new_discoveries),
         "jobs": [job_view(j) for j in ld.jobs],
+        **villagers_view(cfg, ld, now),
     }
+
+
+def villagers_view(cfg: GameConfig, ld: Loaded, now: datetime) -> dict[str, Any]:
+    """Phase 14: who lives here, what they do, and how they feel about it."""
+    from hearthforge.services import villagers as villagers_svc
+
+    return villagers_svc.view(cfg, ld, now)
 
 
 def job_view(j: CraftJob) -> dict[str, Any]:
@@ -537,8 +571,11 @@ async def place(
             debris=_debris_tiles(ld),
         )
     )
-    if _queue_used(ld) >= cfg.build_queue_slots(th):
+    decor = cfg.buildings[key].cfg.category == "decoration"
+    if not decor and _queue_used(ld) >= cfg.build_queue_slots(th):
         raise GameError("queue_full", "All your builders are busy. Wait for one to finish.")
+    if decor:
+        return await _place_decor(session, cfg, ld, now, key, x, y, rotation)
     b = VillageBuilding(
         id=new_id(),
         village_id=ld.village.id,
@@ -556,6 +593,42 @@ async def place(
     await _start_work(session, cfg, ld, b, now, paid, BuildingState.constructing)
     _remember(ld, cfg, now, "place", building_id=str(b.id))
     touch(ld, now)
+    return ld
+
+
+async def _place_decor(
+    session: AsyncSession, cfg: GameConfig, ld: Loaded, now: datetime, key: str, x: int, y: int, rotation: int
+) -> Loaded:
+    """Decorations go down instantly, finished, without a builder (Phase 14). Blueprint ones use one up."""
+    b = VillageBuilding(
+        id=new_id(),
+        village_id=ld.village.id,
+        building_key=key,
+        x=x,
+        y=y,
+        rotation=rotation,
+        level=1,
+        state=BuildingState.active,
+        created_at=now,
+    )
+    need = cfg.buildings[key].cfg.requires_item
+    if need:
+        from hearthforge.services import inventory
+
+        bag = (await inventory.bags(session, ld.village.user_id, ("inventory",)))["inventory"]
+        if await inventory.take_stack(session, bag, need, 1) < 1:
+            raise GameError("needs_blueprint", f"You need a {cfg.items[need].name} in your bag.")
+        ledger.log_item(session, ld.village.user_id, need, -1, ledger.BUILD_PLACE, container_id=bag.c.id)
+    await _pay(session, cfg, ld, cfg.buildings[key].level(1).cost, ledger.BUILD_PLACE, str(b.id))
+    session.add(b)
+    ld.buildings.append(b)
+    await session.flush()
+    _remember(ld, cfg, now, "place", building_id=str(b.id))
+    touch(ld, now)
+    from hearthforge.services import villagers as villagers_svc
+
+    villagers_svc.settle(session, cfg, ld, now, force=True)  # beauty (and happiness) just changed
+    _apply_rates(cfg, ld)
     return ld
 
 
@@ -631,6 +704,10 @@ async def demolish(
     }
     await session.delete(b)
     ld.buildings.remove(b)
+    from hearthforge.services import villagers as villagers_svc
+
+    villagers_svc.settle(session, cfg, ld, now, force=True)  # its workers and residents move out (Phase 14)
+    _apply_rates(cfg, ld)
     if undoable:
         _remember(ld, cfg, now, "demolish", building=snapshot)
     else:
@@ -918,6 +995,10 @@ async def fast_forward(session: AsyncSession, user_id: uuid.UUID, seconds: float
         snap = dict(user.away_snapshot)
         snap["at_ms"] = int(snap["at_ms"]) - int(seconds * 1000)
         user.away_snapshot = snap
+    if village.villagers_at is not None:  # Phase 14: arrivals and the leaving clock skip ahead too
+        village.villagers_at -= delta
+    if village.unhappy_since is not None:
+        village.unhappy_since -= delta
     await session.execute(
         update(Resource)
         .where(Resource.village_id == village.id)
