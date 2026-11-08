@@ -5,6 +5,7 @@ import { useSession } from "../../state/session";
 import { toast } from "../../state/toasts";
 import { Icon, Modal } from "../components/kit";
 import { CharacterCreator } from "./Auth";
+import { ControlsSection } from "./Controls";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const me = useSession((s) => s.me)!;
@@ -73,6 +74,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => void saveGraphics({ ...(me.settings.graphics ?? {}), reduce_motion: e.target.checked })} />
           Reduce screen shake and hit-stop
         </label>
+        <h3>Controls</h3>
+        <ControlsSection />
         <h3>Hero</h3>
         <button className="btn secondary" onClick={() => setEditingLook(true)}>Change my look</button>
         <h3>Account</h3>

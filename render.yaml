@@ -1,0 +1,42 @@
+# Render blueprint (PLAN §1.2, D-123). One web service serves the API, the socket and the built frontend
+# from the same origin; a background worker runs the timers; Render Postgres holds everything.
+# Point your domain at the web service (Settings → Custom Domains), e.g. play.example.com.
+databases:
+  - name: hearthforge-db
+    plan: basic-256mb
+    databaseName: hearthforge
+    user: hearthforge
+
+services:
+  - type: web
+    name: hearthforge
+    runtime: docker
+    plan: starter            # free instances sleep, which would drop live realm rooms
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    numInstances: 1          # realm rooms live in memory: exactly one API process (PLAN §1.4)
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: hearthforge-db, property: connectionString }
+      - key: HF_ENV
+        value: prod
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: FRONTEND_ORIGINS
+        value: https://play.example.com,https://hearthforge.onrender.com
+      - key: RUN_WORKER_IN_PROCESS
+        value: "false"
+      - key: DB_POOL_SIZE
+        value: "10"
+
+  - type: worker
+    name: hearthforge-worker
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python -m hearthforge.worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: hearthforge-db, property: connectionString }
+      - key: HF_ENV
+        value: prod

@@ -48,6 +48,7 @@ jobs:
       - run: npx tsc -b
       - run: npx vitest run
       - run: npx vite build
+      - run: node ../tools/budget.mjs dist   # Phase 18 performance budgets
 
   art:
     runs-on: ubuntu-latest

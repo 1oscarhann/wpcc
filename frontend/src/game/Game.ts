@@ -8,6 +8,8 @@ import { onVillageChange, useVillage, type MapMeta } from "../state/village";
 import { manifest } from "../assets/manifest";
 import { ENT, leaveAvatar, reelNow, roomLink, type RoomClient } from "../net/room";
 import { useFishing } from "../state/companions";
+import { anyDown, isKey } from "./keymap";
+import { readPad } from "./gamepad";
 import { touchInput } from "../net/touch";
 import { BTN } from "../sim/motion";
 import { ClientGrid, gridLink } from "../sim/grid";
@@ -30,6 +32,7 @@ import { safeDestroy } from "./safe";
 import { sfx } from "./sfx";
 import { type Light, Sky } from "./sky";
 import { Soundscape } from "./soundscape";
+import { Music } from "./music";
 import { DelveView } from "./delve";
 import { useDelve } from "../state/delve";
 import { biomeAt, dayPhase, useWorld } from "../state/world";
@@ -106,6 +109,7 @@ export class Game {
   private heavens: Sky | null = null;
   private delveView: DelveView | null = null;
   private sound = new Soundscape();
+  private music = new Music();
   private flowerSpots: { x: number; y: number }[] = [];
   private hoverDebris: number | null = null;
   private map: MapMeta | null = null;
@@ -315,6 +319,7 @@ export class Game {
     this.comboFx?.destroy();
     this.villagerLife?.destroy();
     this.sound.destroy();
+    this.music.destroy();
     this.delveView?.destroy();
     this.heavens?.destroy();
     this.heavens = null;
@@ -419,10 +424,10 @@ export class Game {
     const speed = 420 / this.cam.zoom;
     let kx = 0;
     let ky = 0;
-    if (this.keys.has("a") || this.keys.has("arrowleft")) kx -= 1;
-    if (this.keys.has("d") || this.keys.has("arrowright")) kx += 1;
-    if (this.keys.has("w") || this.keys.has("arrowup")) ky -= 1;
-    if (this.keys.has("s") || this.keys.has("arrowdown")) ky += 1;
+    if (anyDown(this.keys, "left")) kx -= 1;
+    if (anyDown(this.keys, "right")) kx += 1;
+    if (anyDown(this.keys, "up")) ky -= 1;
+    if (anyDown(this.keys, "down")) ky += 1;
     this.cam.x += kx * speed * dt;
     this.cam.y += ky * speed * dt;
     if (!this.dragging && !this.camTween) {
@@ -500,6 +505,9 @@ export class Game {
     }
     this.heavens.update(dt, { phase, season, weather, biome, lights });
     this.sound.update(dt, biome, phase.name === "night", weather);
+    // Phase 18: the music follows the mood: a fight, the night, or a cozy day
+    this.music.setMood(this.avatar && useAvatar.getState().inCombat ? "fight" : phase.name === "night" ? "night" : "day");
+    this.music.update();
     const open = phase.dark > 0.5;
     if (open !== this.petalsOpen) {
       this.petalsOpen = open;
@@ -678,13 +686,18 @@ export class Game {
     this.steerAutopilot(c);
     let kx = 0;
     let ky = 0;
-    if (this.keys.has("a") || this.keys.has("arrowleft")) kx -= 1;
-    if (this.keys.has("d") || this.keys.has("arrowright")) kx += 1;
-    if (this.keys.has("w") || this.keys.has("arrowup")) ky -= 1;
-    if (this.keys.has("s") || this.keys.has("arrowdown")) ky += 1;
+    if (anyDown(this.keys, "left")) kx -= 1;
+    if (anyDown(this.keys, "right")) kx += 1;
+    if (anyDown(this.keys, "up")) ky -= 1;
+    if (anyDown(this.keys, "down")) ky += 1;
     if (touchInput.active) {
       kx = touchInput.mx;
       ky = touchInput.my;
+    }
+    const pad = readPad(); // Phase 18: a gamepad, if one's plugged in
+    if (pad && (pad.mx || pad.my)) {
+      kx = pad.mx;
+      ky = pad.my;
     }
     const q = (v: number) => Math.max(-127, Math.min(127, Math.round(v * 127)));
     c.input.mx = q(kx);
@@ -692,7 +705,10 @@ export class Game {
     let ax = 0;
     let ay = 0;
     const p = c.drawPos();
-    if (this.mouse && !this.touchMode) {
+    if (pad && (pad.ax || pad.ay)) {
+      ax = pad.ax;
+      ay = pad.ay;
+    } else if (this.mouse && !this.touchMode && !pad?.active) {
       const w = this.screenToWorld(this.mouse.x, this.mouse.y);
       ax = w.x - p.x * T;
       ay = w.y - (p.y * T - 9);
@@ -709,7 +725,15 @@ export class Game {
       c.input.my = q(touchInput.my);
     }
     c.input.held =
-      (this.mouseLight || this.keys.has("j") ? BTN.light : 0) | (this.keys.has("f") ? BTN.offhand : 0) | touchInput.held;
+      (this.mouseLight || anyDown(this.keys, "attack") ? BTN.light : 0) | (anyDown(this.keys, "offhand") ? BTN.offhand : 0) |
+      touchInput.held | (pad?.held ?? 0);
+    if (pad) {
+      c.input.latched |= pad.latched;
+      if (pad.pressed.has("interact")) this.interact();
+      if (pad.pressed.has("bag")) useAvatar.getState().set({ bagOpen: !useAvatar.getState().bagOpen });
+      if (pad.pressed.has("map")) useRealm.getState().set({ mapOpen: !useRealm.getState().mapOpen, travelMode: false });
+      for (let i = 0; i < 4; i++) if (pad.pressed.has(`quick${i + 1}`)) c.useQuick(i);
+    }
     const blocking = (c.input.held & BTN.offhand) !== 0 && useAvatar.getState().offhand.type === "shield";
     if (blocking !== useAvatar.getState().blocking) useAvatar.getState().set({ blocking });
     c.input.latched |= touchInput.latched;
@@ -1585,27 +1609,27 @@ export class Game {
   private avatarKey(k: string, e: KeyboardEvent): void {
     const c = this.avatar!.client;
     const av = useAvatar.getState();
-    // Phase 16b: while the fishing bar runs, E or Space reels in (instead of dodging off the bank)
-    if ((k === " " || k === "e") && useFishing.getState().phase === "bite") {
+    // Phase 16b: while the fishing bar runs, interact or dodge reels in (instead of rolling off the bank)
+    if ((isKey(k, "dodge") || isKey(k, "interact")) && useFishing.getState().phase === "bite") {
       e.preventDefault();
       reelNow();
       return;
     }
-    if (k === "g") {
-      roomLink.send?.("RIDE");
-      return;
-    }
-    if (k === " " || k === "shift") {
+    if (isKey(k, "ride")) roomLink.send?.("RIDE");
+    else if (isKey(k, "dodge")) {
       e.preventDefault();
       c.input.latched |= BTN.dodge;
-    } else if (k === "q") c.input.latched |= BTN.ability;
-    else if (k === "k") c.input.latched |= BTN.heavy;
-    else if (k === "r") c.input.latched |= BTN.potion;
-    else if (k === "1" || k === "2" || k === "3" || k === "4") c.useQuick(Number(k) - 1);
-    else if (k === "b" || k === "i" || k === "tab") {
+    } else if (isKey(k, "ability")) c.input.latched |= BTN.ability;
+    else if (isKey(k, "heavy")) c.input.latched |= BTN.heavy;
+    else if (isKey(k, "potion")) c.input.latched |= BTN.potion;
+    else if (isKey(k, "quick1")) c.useQuick(0);
+    else if (isKey(k, "quick2")) c.useQuick(1);
+    else if (isKey(k, "quick3")) c.useQuick(2);
+    else if (isKey(k, "quick4")) c.useQuick(3);
+    else if (isKey(k, "bag")) {
       e.preventDefault();
       av.set({ bagOpen: !av.bagOpen });
-    } else if (k === "t") {
+    } else if (isKey(k, "emote")) {
       const so = useSocial.getState();
       so.set({ chatOpen: !so.chatOpen });
     } else if (k === "escape") {
@@ -1613,23 +1637,43 @@ export class Game {
       useSocial.getState().set({ chatOpen: false });
       useMarket.getState().set({ merchantOpen: false });
       useRealm.getState().set({ wildMerchant: null, lore: null });
-    } else if (k === "e") {
-      const m = useMarket.getState();
-      const r = useRealm.getState();
-      if (m.near) m.set({ merchantOpen: !m.merchantOpen });
-      else if (r.nearWaystone !== null) r.set({ mapOpen: !r.mapOpen, travelMode: true });
-      else if (useDelve.getState().near) {
-        const n = useDelve.getState().near!;
-        if (n.kind === "portal") roomLink.send?.("DUNGEON", "portal");
-        else roomLink.send?.("DUNGEON", "use", n.prop);
-      } else if (r.nearPoi !== null) {
-        const poi = r.overview?.pois[r.nearPoi];
-        if (poi?.kind === "delve") useDelve.getState().set({ panel: !useDelve.getState().panel });
-        else roomLink.send?.("INTERACT", r.nearPoi);
-      } else if (useFishing.getState().phase === "idle" && this.nearFishable()) roomLink.send?.("FISH", "cast");
-    } else if (k === "h") leaveAvatar();
+    } else if (isKey(k, "interact")) this.interact();
+    else if (isKey(k, "home")) leaveAvatar();
     else if (k === "+" || k === "=") this.zoomAvatar(1);
     else if (k === "-") this.zoomAvatar(-1);
+  }
+
+  /** E (or LT on a gamepad): trade, travel, pull a lever, open a chest, or cast a line. */
+  private interact(): void {
+    const m = useMarket.getState();
+    const r = useRealm.getState();
+    if (useFishing.getState().phase === "bite") reelNow();
+    else if (m.near) m.set({ merchantOpen: !m.merchantOpen });
+    else if (r.nearWaystone !== null) r.set({ mapOpen: !r.mapOpen, travelMode: true });
+    else if (useDelve.getState().near) {
+      const n = useDelve.getState().near!;
+      if (n.kind === "portal") roomLink.send?.("DUNGEON", "portal");
+      else roomLink.send?.("DUNGEON", "use", n.prop);
+    } else if (r.nearPoi !== null) {
+      const poi = r.overview?.pois[r.nearPoi];
+      if (poi?.kind === "delve") useDelve.getState().set({ panel: !useDelve.getState().panel });
+      else roomLink.send?.("INTERACT", r.nearPoi);
+    } else if (useFishing.getState().phase === "idle" && this.nearFishable()) roomLink.send?.("FISH", "cast");
+  }
+
+  /** Phase 18: numbers for the perf overlay (F3). */
+  perf(): { fps: number; frameMs: number; sprites: number; ents: number } {
+    let sprites = 0;
+    const count = (c: Container) => {
+      for (const ch of c.children) {
+        if (!ch.visible) continue;
+        sprites++;
+        // a terrain chunk is cached as one texture: it draws as one sprite, whatever is inside
+        if ((ch as Container).children?.length && !(ch as Container).isCachedAsTexture) count(ch as Container);
+      }
+    };
+    count(this.app.stage);
+    return { fps: this.app.ticker.FPS, frameMs: this.app.ticker.elapsedMS, sprites, ents: this.avatar?.client.ents.size ?? 0 };
   }
 
   /** Photo mode (Phase 16b): show or hide the names over heads. */

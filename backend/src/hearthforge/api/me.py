@@ -78,6 +78,8 @@ class SettingsIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     audio: AudioSettings | None = None
     graphics: dict[str, bool | int | float | str] | None = None
+    # Phase 18: rebound keys, action → up to three KeyboardEvent.key values (only the ones you changed)
+    keybinds: dict[str, list[str]] | None = Field(default=None, max_length=40)
 
 
 @router.put("/me/settings")
@@ -96,7 +98,11 @@ async def put_settings(
             if len(body.graphics) > 32:
                 body.graphics = dict(list(body.graphics.items())[:32])
             row.graphics = body.graphics
-    return {"audio": row.audio, "graphics": row.graphics}
+        if body.keybinds is not None:
+            row.keybinds = {
+                a: [k[:12] for k in keys[:3]] for a, keys in body.keybinds.items() if len(a) <= 20 and keys
+            }
+    return {"audio": row.audio, "graphics": row.graphics, "keybinds": row.keybinds}
 
 
 class AppearanceIn(BaseModel):

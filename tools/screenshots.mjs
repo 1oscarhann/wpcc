@@ -1490,6 +1490,49 @@ PHASES[17] = async (page, kind) => {
   await shot(page, "10-world-boss-damage", kind, { wait: 1500 });
 };
 
+// ── Phase 18: phone HUDs, controls, the perf overlay, the admin panel ──────
+PHASES[18] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  const name = await freshPlayer(page, kind);
+  hf(`test-account ${name}`);
+  if (mobile) {
+    await shot(page, "01-build-hud", kind, { wait: 600 });
+    await page.getByRole("button", { name: "More", exact: true }).click();
+    await shot(page, "02-build-more", kind, { wait: 400 });
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "More", exact: true }).click(); // closes it
+    await enterAvatar(page);
+    await page.waitForTimeout(1200);
+    await shot(page, "03-avatar-hud", kind, { wait: 300 });
+    await page.getByRole("button", { name: "More", exact: true }).click();
+    await shot(page, "04-avatar-more", kind, { wait: 400 });
+    return;
+  }
+  hf(`make-admin ${name}`);
+  // settings: controls and the gamepad layout
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.locator(".controls").scrollIntoViewIfNeeded();
+  await page.locator(".control-row", { hasText: "Ride your mount" }).getByRole("button").click();
+  await shot(page, "01-controls-press-a-key", kind, { wait: 300 });
+  await page.keyboard.press("v");
+  await page.locator(".control-row", { hasText: "Gamepad" }).first().scrollIntoViewIfNeeded().catch(() => undefined);
+  await shot(page, "02-controls-rebound", kind, { wait: 400 });
+  await closeModal(page);
+  // the perf overlay over the world
+  await enterAvatar(page);
+  await page.waitForTimeout(1500);
+  await page.keyboard.press("F3");
+  await shot(page, "03-perf-overlay", kind, { wait: 1300 });
+  // the admin panel
+  await page.goto(`${BASE}/admin`);
+  await page.locator(".admin-cards").waitFor({ timeout: 15000 });
+  await page.waitForTimeout(800);
+  await shot(page, "04-admin-overview", kind, { wait: 300 });
+  await page.locator(".admin-row").first().click();
+  await page.locator(".admin-detail").waitFor();
+  await shot(page, "05-admin-player", kind, { wait: 800, fullPage: true });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

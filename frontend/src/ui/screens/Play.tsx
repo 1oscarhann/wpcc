@@ -15,7 +15,9 @@ import { AwayCardModal, Guide } from "../hud/Guide";
 import { RealmPanel } from "../hud/Realm";
 import { JournalPanel } from "../hud/Journal";
 import { PhotoBar } from "../hud/Companions";
+import { isKey, loadKeymap } from "../../game/keymap";
 import { PlazaPanel } from "../hud/Plaza";
+import { PerfOverlay } from "../hud/Perf";
 import { usePlaza } from "../../state/plaza";
 import { SocialPanel, useSocialSync } from "../hud/Social";
 import { useJournal } from "../../state/journal";
@@ -83,21 +85,23 @@ export function PlayScreen() {
   const crafting = useCrafting();
   const market = useMarket();
   useVillageSync(me.user.id);
+  loadKeymap(me.settings.keybinds); // Phase 18: your saved key bindings
   useEffect(() => {
     void useTutorial.getState().load();
     void useTutorial.getState().loadAway();
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
-      if (e.key === "m" || e.key === "M") {
+      const k = e.key.toLowerCase();
+      if (isKey(k, "map")) {
         const r = useRealm.getState();
         r.set({ mapOpen: !r.mapOpen, travelMode: false });
       }
-      if (e.key === "p" || e.key === "P") {
+      if (isKey(k, "photo")) {
         const a = useAvatar.getState();
         a.set({ photo: !a.photo });
       }
-      if (e.key === "j" || e.key === "J") {
+      if (isKey(k, "journal")) {
         const j = useJournal.getState();
         j.set({ tab: j.tab ? null : "quests" });
       }
@@ -143,6 +147,7 @@ export function PlayScreen() {
         </div>
       )}
       <PhotoBar />
+      <PerfOverlay />
       {photo ? null : mode === "build" ? (
         <BuildHud onSettings={() => setSettings(true)} touch={game.current?.touchMode ?? matchMedia("(pointer: coarse)").matches}
           onZoom={(d) => game.current?.zoomBy(d)} />

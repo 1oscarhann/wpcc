@@ -14,6 +14,9 @@ import { toast } from "../state/toasts";
 import { useVillage } from "../state/village";
 import { RoomClient, roomLink, setRoomClient } from "./room";
 
+/** Phase 18: the last measured round trip, for the perf overlay (F3). */
+export const perfLink = { rtt: 0 };
+
 const C2S = Object.fromEntries(Object.entries(protocol.client_to_server).map(([k, v]) => [k, parseInt(v, 16)]));
 const S2C_NAME = Object.fromEntries(
   Object.entries(protocol.server_to_client).map(([k, v]) => [parseInt(v, 16), k]),
@@ -138,6 +141,7 @@ export class GameSocket {
         const [clientMs, serverMs] = [msg[1] as number, msg[2] as number];
         const rtt = Date.now() - clientMs;
         useSession.setState({ serverOffsetMs: serverMs + rtt / 2 - Date.now() });
+        perfLink.rtt = rtt;
         break;
       }
       case "SNAPSHOT":

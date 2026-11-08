@@ -5,6 +5,7 @@ import { useSession } from "./state/session";
 import { Panel, Toasts } from "./ui/components/kit";
 import { LoginScreen, RecoverScreen, SignupScreen } from "./ui/screens/Auth";
 import { PlayScreen } from "./ui/screens/Play";
+import { AdminScreen } from "./ui/screens/Admin";
 
 function Loading({ text = "Lighting the hearth…" }: { text?: string }) {
   return (
@@ -50,6 +51,7 @@ export function App() {
         <Route path="/signup" element={<AnonOnly><SignupScreen /></AnonOnly>} />
         <Route path="/recover" element={<RecoverScreen />} />
         <Route path="/play" element={<RequireAuth><PlayScreen /></RequireAuth>} />
+        <Route path="/admin" element={<RequireAuth><AdminScreen /></RequireAuth>} />
         <Route path="/debug" element={<DebugGallery />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

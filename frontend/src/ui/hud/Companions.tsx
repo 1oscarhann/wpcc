@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { gameLink } from "../../game/Game";
+import { keyLabel, keysFor } from "../../game/keymap";
 import { sfx } from "../../game/sfx";
 import { reelNow, roomLink } from "../../net/room";
 import { useAvatar } from "../../state/avatar";
@@ -254,7 +255,7 @@ export function FishingBar({ touch }: { touch: boolean }) {
   const zw = (f.windowMs / f.barMs) * 100;
   return (
     <div className={`panel fish-bar rarity-${f.rarity}`} role="dialog" aria-label="Something's biting!">
-      <span className="head">Something's biting! <span className="small muted">{touch ? "Tap Reel when the marker hits gold" : "Press E or Space in the gold"}</span></span>
+      <span className="head">Something's biting! <span className="small muted">{touch ? "Tap Reel when the marker hits gold" : `Press ${keyLabel(keysFor("interact")[0] ?? "e")} or ${keyLabel(keysFor("dodge")[0] ?? " ")} in the gold`}</span></span>
       <div className="fish-track" onPointerDown={() => reelNow()}>
         <span className="fish-zone" style={{ left: `${zl}%`, width: `${zw}%` }} />
         <span ref={marker} className="fish-marker" />

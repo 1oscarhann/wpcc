@@ -41,6 +41,24 @@ async def world(
     }
 
 
+@router.get("/dev/rooms")
+async def dev_rooms(auth: Auth = Depends(current_user), st: AppState = Depends(get_state)) -> dict[str, Any]:
+    """Dev only (HF_ENV=dev): every live room's tick timings, for tools/loadtest.py."""
+    if not st.settings.is_dev or st.rooms is None:
+        raise HTTPException(404)
+    return {
+        "rooms": [
+            {
+                "realm_id": str(r.realm_id),
+                "players": len(r.players),
+                "monsters": len(r.combat.monsters) if r.combat else 0,
+                "tick_ms": r.bench_stats(),
+            }
+            for r in st.rooms.rooms.values()
+        ]
+    }
+
+
 class TeleportIn(BaseModel):
     x: int = Field(ge=0)
     y: int = Field(ge=0)

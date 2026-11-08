@@ -5,7 +5,7 @@ Every non-obvious technical or design decision gets a short entry here: what was
 | ID | Decision | Status |
 |---|---|---|
 | D-001 | Top-down 3/4 pixel art instead of isometric (PLAN B1) | **Accepted** (Phase 2) |
-| D-002 | Frontend and API must be same-site (custom domain or Cloudflare proxy) for cookie auth (PLAN B2) | Proposed |
+| D-002 | Frontend and API must be same-site (custom domain or Cloudflare proxy) for cookie auth (PLAN B2) | **Settled by D-123** (Phase 18): one origin |
 | D-003 | Realm Rooms run in the API process behind a `RealmRoom` interface | Accepted (spec) |
 | D-004 | Worker → API signalling via Postgres LISTEN/NOTIFY on a direct connection | Proposed |
 | D-005 | Neon **direct** endpoint for v1, not the pooler | Proposed |
@@ -758,3 +758,30 @@ Happiness follows the formula in BALANCE §10.
 ### D-122: festivals are date windows in config
 **Decision.** A festival runs between two dates (MM-DD, UTC, may wrap the new year). While it runs, every monster kill rolls its token for each helper (double for elites), and its shop sells titles, cosmetic tokens, food and potions for tokens. Four are configured: Spring Bloom, Midsummer Lanterns, Harvest Moon and Winter Hearth. A chip under the mini-map shows the one that's on.
 - **Cut.** No festival decorations or world dressing yet (those need art); Phase 18's polish pass can add particles and a palette tint.
+
+
+### D-123: one origin for the page, the API and the socket
+**Decision.** In production the API serves the built frontend itself (`HF_STATIC_DIR`), so the page, `/api` and `/ws` share one origin. This settles D-002 / PLAN B2 without needing CORS or cross-site cookies.
+- **Why.** Safari drops cross-site cookies, and a split `pages.dev` + `onrender.com` deploy would log every iPhone player out. One origin needs no domain to work (a custom domain is still nicer) and the client keeps its relative `/api` and `location.host/ws` URLs.
+- **Caching.** Vite's hashed bundles are served for a year (`immutable`), generated art and fonts for an hour, and `index.html` never, so a deploy shows on the next load. Responses over 1 KB are gzipped.
+- **Shipping.** A two-stage `Dockerfile` (Node builds the frontend; Python serves it) and a `render.yaml` blueprint: one web service (exactly one instance, since rooms live in memory, D-003), one worker from the same image, and Render Postgres. The web service runs `alembic upgrade head` before it starts.
+- **Optional.** If the static files should come from Cloudflare Pages, `frontend/functions/_middleware.ts` proxies `/api` and `/ws` to the API (`API_ORIGIN`), which keeps it one origin to the browser. `_headers` and `_redirects` cover caching and SPA routes there.
+
+### D-124: one keymap, rebindable, and a gamepad
+**Decision.** Every keyboard action lives in `game/keymap.ts` with defaults; Settings → Controls rebinds them (click, press the new key; each key does one thing) and saves only the changed ones to `user_settings.keybinds`.
+- **A bug it fixed.** Phase 16a bound the Journal to J, which was already the keyboard light attack: in the world, J swung and opened the Journal at once. The Journal is now L ("log").
+- **Gamepads.** The browser's "standard" mapping (Xbox, PlayStation, Switch Pro): left stick walks, right stick aims, A or RT attacks, B dodges, X heavy, Y ability, LB offhand, RB potion, LT interacts (and reels in a fish), the D-pad picks quick slots, Start opens the bag and Back the map. It feeds the same input as the keyboard, so prediction doesn't care. Build Mode stays mouse, touch and keyboard.
+
+### D-125: phones get a More menu
+**Decision.** Below 640 px the Build bar keeps Build, Market, Journal, More and Explore; the Avatar top bar keeps Party, Chat, Bag, Village and More. The rest (Recipes, Friends, Plaza, Realm, Photo, zoom, Ride, Settings) moves into a More popover that carries their notification dots.
+- **Why.** At 390 px the bars ran off both edges of the screen: Explore, and in the world the Village button home, were unreachable on phones.
+
+### D-126: generative music
+**Decision.** A small generative score (`game/music.ts`), synthesized like the effects (D-047) and following the Music slider: a plucked major-pentatonic tune over I–vi–IV–V by day, a sparser minor one at night, and a soft heartbeat pulse in a fight. Pentatonic so nothing clashes, and random walks so it never quite repeats. Quiet on purpose: it sits under the ambient beds.
+
+### D-127: the admin panel is a page in the client
+**Decision.** `/admin` (role=admin) shows the server at a glance (players, online, realms, coin supply and its faucets and sinks, the player market, events, every room's tick times), player search and detail (counters, bag, the last 25 ledger lines), and actions: grant coins and items, ban and unban (a ban also pulls them out of the world), mark test accounts, start a world boss. Every action lands in `admin_audit_log` with who did it. `hf make-admin NAME` makes an admin.
+- **A bug it found.** Signup never set `last_seen_at`, so new players counted as inactive for their first five minutes (and the NPC market's population scaling and the world boss's HP undercounted them). Signup sets it now.
+
+### D-128: performance budgets in CI, a load test in tools
+**Decision.** `tools/budget.mjs` fails CI when the shipped bundle grows past its budgets (docs/PERF.md). `tools/loadtest.py` puts realms of bots in the world at 20 Hz and reports the server's tick times and what the bots felt. The F3 overlay shows the client's frame rate, frame time, sprites on stage, entities and ping against the same budgets.

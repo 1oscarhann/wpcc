@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     db_pool_size: int = Field(default=10, alias="DB_POOL_SIZE")
     enable_listener: bool = Field(default=True, alias="HF_ENABLE_LISTENER")
     monsters_enabled: bool = Field(default=True, alias="HF_MONSTERS")
+    # Phase 18: serve the built frontend from the API (one origin, so cookies and the socket just work)
+    static_dir: Path | None = Field(default=None, alias="HF_STATIC_DIR")
 
     @field_validator("database_url")
     @classmethod

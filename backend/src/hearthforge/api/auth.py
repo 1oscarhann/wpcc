@@ -66,6 +66,8 @@ def _clear_cookies(st: AppState, response: Response) -> None:
 
 def _limit_auth(st: AppState, request: Request, username: str | None = None) -> None:
     rl = st.config.game.rate_limits
+    if st.settings.is_dev and request.headers.get("x-hf-loadtest") == "1":
+        return  # dev only: tools/loadtest.py signs up dozens of bots from one address
     if not st.limiter.hit(f"auth-ip:{client_ip(request)}", rl.auth_per_ip_per_min):
         raise TooManyRequests("rate_limited", "Too many attempts. Wait a minute and try again.")
     if username and not st.limiter.hit(f"auth-user:{username.lower()}", rl.auth_per_username_per_min):

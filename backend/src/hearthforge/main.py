@@ -153,6 +153,13 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok", "config": config.hash}
 
+    from starlette.middleware.gzip import GZipMiddleware
+
+    app.add_middleware(GZipMiddleware, minimum_size=1024)  # Phase 18: bundles, art, village states
+    if settings.static_dir is not None:
+        from hearthforge.static import mount_frontend
+
+        mount_frontend(app, settings.static_dir)  # last: it catches every other GET
     return app
 
 

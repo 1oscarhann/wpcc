@@ -1,0 +1,9 @@
+# Cloudflare Pages: hashed bundles forever, generated art for an hour, the page never.
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
+/assets/gen/*
+  Cache-Control: public, max-age=3600
+/index.html
+  Cache-Control: no-cache

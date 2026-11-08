@@ -21,6 +21,10 @@ import { ChatWheel } from "./Social";
 import { JournalButton } from "./Journal";
 import { FishingBar, FishPrompt, RideButton } from "./Companions";
 import { GlobalChips, PlazaButton } from "./Plaza";
+import { MoreItem, MoreMenu, useNarrow } from "./More";
+import { journalDots, useJournal } from "../../state/journal";
+import { usePlaza } from "../../state/plaza";
+import { useCompanions } from "../../state/companions";
 
 const KO_FLAG = 2;
 
@@ -315,6 +319,13 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
   const inCombat = useAvatar((s) => s.inCombat);
   const inv = useAvatar((s) => s.inv);
   const set = useAvatar((s) => s.set);
+  const narrow = useNarrow();
+  const jv = useJournal((s) => s.view);
+  const jd = journalDots(jv);
+  const journalCount = jd.quests + jd.achievements + jd.calendar + jd.skills;
+  const plazaLive = usePlaza((s) => s.world?.event?.status === "active");
+  const ownsMount = useCompanions((s) => s.view?.mounts.some((m) => m.active) ?? false);
+  const riding = useAvatar((s) => s.riding);
   const carrying = inv.filter((s) => useSession.getState().config?.resources[s[1]]).reduce((n, s) => n + s[2], 0);
   if (mode === "entering") {
     return <div className="hud"><div className="center grow"><div className="hud-bar head">Stepping outside…</div></div></div>;
@@ -334,12 +345,16 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
             aria-label="Emotes and quick messages" title="Emotes and quick messages (T)">
             <Icon name="chat" />
           </button>
-          <JournalButton iconOnly />
-          <PlazaButton />
-          <RideButton />
-          <button className="btn secondary icon-only hide-narrow" onClick={() => set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
-            <Icon name="camera" />
-          </button>
+          {!narrow && (
+            <>
+              <JournalButton iconOnly />
+              <PlazaButton />
+              <RideButton />
+              <button className="btn secondary icon-only" onClick={() => set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
+                <Icon name="camera" />
+              </button>
+            </>
+          )}
           <button className="btn secondary icon-only" onClick={() => set({ bagOpen: !bagOpen })} aria-label="Bag" title="Bag (B)">
             <Icon name="queue" />
           </button>
@@ -347,9 +362,19 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
             title={inCombat ? "Not while fighting!" : "Back to Build Mode (H)"}>
             <Icon name="home" /> <span className="hide-narrow">Village</span>
           </button>
-          <button className="btn secondary icon-only" onClick={onSettings} aria-label="Settings">
-            <Icon name="settings" />
-          </button>
+          {narrow ? (
+            <MoreMenu up={false} dot={journalCount + (plazaLive ? 1 : 0) || undefined}>
+              <MoreItem icon="scroll" label="Journal" dot={journalCount || undefined} onClick={() => useJournal.getState().set({ tab: "quests" })} />
+              <MoreItem icon="globe" label="Plaza" dot={plazaLive ? "!" : undefined} onClick={() => usePlaza.getState().set({ tab: plazaLive ? "world" : "market" })} />
+              {ownsMount && <MoreItem icon="saddle" label={riding ? "Get off your mount" : "Ride your mount"} onClick={() => roomLink.send?.("RIDE")} />}
+              <MoreItem icon="camera" label="Photo mode" onClick={() => set({ photo: true })} />
+              <MoreItem icon="settings" label="Settings" onClick={onSettings} />
+            </MoreMenu>
+          ) : (
+            <button className="btn secondary icon-only" onClick={onSettings} aria-label="Settings">
+              <Icon name="settings" />
+            </button>
+          )}
         </div>
       </div>
       <FirstHint touch={touch} />

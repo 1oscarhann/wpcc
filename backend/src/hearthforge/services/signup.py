@@ -100,7 +100,13 @@ async def create_player(
     if await username_taken(session, username):
         raise GameError("username_taken", "That username is taken.", status=409)
 
-    user = User(id=new_id(), username=username, password_hash=passwords.hash(password), created_at=now)
+    user = User(
+        id=new_id(),
+        username=username,
+        password_hash=passwords.hash(password),
+        created_at=now,
+        last_seen_at=now,
+    )
     session.add(user)
     session.add(UserSettings(user_id=user.id, audio=dict(DEFAULT_AUDIO), keybinds={}, graphics={}, ui={}))
     await session.flush()

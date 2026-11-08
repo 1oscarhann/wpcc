@@ -2594,3 +2594,113 @@ body:has(.boss-bar) .wave-chip {
     display: none;
   }
 }
+
+/* ── Phase 18: the More menu on phones ──────────────────────────────────── */
+.more-wrap {
+  position: relative;
+  pointer-events: auto;
+}
+.more-pop {
+  position: absolute;
+  right: 0;
+  z-index: 35;
+  gap: 4px;
+  min-width: 200px;
+}
+.more-pop.up {
+  bottom: calc(100% + 6px);
+}
+.more-pop.down {
+  top: calc(100% + 6px);
+}
+.more-item {
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+.more-row {
+  display: flex;
+  gap: 4px;
+}
+
+/* ── Phase 18: the admin panel ───────────────────────────────────────────── */
+.admin {
+  min-height: 100vh;
+  padding: 16px;
+  gap: 12px;
+  background: var(--paper);
+  overflow-y: auto;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.admin-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.admin-card {
+  padding: 8px 12px;
+  gap: 0;
+}
+.admin-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+}
+.admin-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.admin-row {
+  gap: 10px;
+  padding: 3px 8px;
+  align-items: center;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.admin-row.picked {
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
+}
+.admin-ledger {
+  gap: 8px;
+  border-bottom: 1px dashed var(--paper-dark);
+  padding: 1px 0;
+}
+.admin-detail {
+  margin-top: 8px;
+  gap: 8px;
+}
+.control-row {
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px dashed var(--paper-dark);
+  padding: 1px 0;
+}
+.keycap {
+  min-width: 88px;
+  font-family: var(--font-head);
+}
+.perf-overlay {
+  position: absolute;
+  left: 8px;
+  top: 64px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 8px;
+  font-family: ui-monospace, monospace;
+  color: var(--paper-light);
+  pointer-events: none;
+}
+.perf-bad {
+  color: #ff8a7a;
+}
+.admin-detail .admin-cols > .col:first-child {
+  padding-right: 16px;
+}

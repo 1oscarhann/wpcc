@@ -1292,6 +1292,7 @@ ICONS.update({
     "moon_lantern": i_moon_lantern,
     "snow_star": i_snow_star,
     "globe": u_globe,
+    "more": lambda c: [c.ellipse(x, 8, 1.8, 1.8, PAPER[4]) for x in (3, 8, 13)] and None,
 })
 
 

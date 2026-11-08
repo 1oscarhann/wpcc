@@ -15,6 +15,9 @@ import { MiniMap } from "./WorldMap";
 import { JournalButton } from "./Journal";
 import { FriendsButton } from "./Social";
 import { GlobalChips, PlazaButton } from "./Plaza";
+import { MoreItem, MoreMenu, useNarrow } from "./More";
+import { socialDot, useSocial } from "../../state/social";
+import { usePlaza } from "../../state/plaza";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
@@ -351,6 +354,9 @@ export function BuildHud({ onSettings, touch, onZoom }: {
   const placing = useVillage((s) => s.placing);
   const undo = useVillage((s) => s.undo);
   const wsConnected = useVillage((s) => s.wsConnected);
+  const narrow = useNarrow();
+  const social = useSocial((s) => s.view);
+  const plazaLive = usePlaza((s) => s.world?.event?.status === "active");
   const [menu, setMenu] = useState(false);
   const now = useTick(250);
   const selected = useMemo(() => v?.buildings.find((b) => b.id === selectedId), [v, selectedId]);
@@ -377,36 +383,59 @@ export function BuildHud({ onSettings, touch, onZoom }: {
             <button className="btn gold" onClick={() => setMenu(true)} aria-label="Build" data-tut-target="build">
               <Icon name="build" /> Build
             </button>
-            <button className="btn secondary" onClick={() => useCrafting.getState().set({ bookOpen: true })} aria-label="Recipe Book" title="Recipe Book">
-              <Icon name="book" /> <span className="hide-narrow">Recipes</span>
+            {!narrow && (
+              <button className="btn secondary" onClick={() => useCrafting.getState().set({ bookOpen: true })} aria-label="Recipe Book" title="Recipe Book">
+                <Icon name="book" /> Recipes
+              </button>
+            )}
+            <button className={`btn secondary ${narrow ? "icon-only" : ""}`} onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant" data-tut-target="market">
+              <Icon name="market" /> {!narrow && "Market"}
             </button>
-            <button className="btn secondary" onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant" data-tut-target="market">
-              <Icon name="market" /> <span className="hide-narrow">Market</span>
-            </button>
-            <JournalButton />
-            <FriendsButton />
-            <PlazaButton />
-            <button className="btn secondary icon-only" onClick={() => useRealm.getState().set({ panel: "members" })} aria-label="Realm" title="Realm: members, stash, activity">
-              <Icon name="banner" />
-            </button>
-            <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag and bank" title="Bag and bank">
-              <Icon name="queue" />
-            </button>
+            <JournalButton iconOnly={narrow} />
+            {!narrow && (
+              <>
+                <FriendsButton />
+                <PlazaButton />
+                <button className="btn secondary icon-only" onClick={() => useRealm.getState().set({ panel: "members" })} aria-label="Realm" title="Realm: members, stash, activity">
+                  <Icon name="banner" />
+                </button>
+                <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag and bank" title="Bag and bank">
+                  <Icon name="queue" />
+                </button>
+              </>
+            )}
             {undoLeft > 0 && (
               <button className="btn secondary" onClick={undo} aria-label="Undo">
-                <Icon name="undo" /> Undo <span className="small">({undoLeft}s)</span>
+                <Icon name="undo" /> {narrow ? `${undoLeft}s` : <>Undo <span className="small">({undoLeft}s)</span></>}
               </button>
             )}
             <span className="grow" />
-            <button className="btn secondary small icon-only hide-narrow" onClick={() => useAvatar.getState().set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
-              <Icon name="camera" scale={1.5} />
-            </button>
-            <div className="row zoom-buttons" style={{ gap: 4 }}>
-              <button className="btn secondary small icon-only" onClick={() => onZoom(-1)} aria-label="Zoom out">−</button>
-              <button className="btn secondary small icon-only" onClick={() => onZoom(1)} aria-label="Zoom in">+</button>
-            </div>
+            {narrow ? (
+              <MoreMenu dot={socialDot(social) + (plazaLive ? 1 : 0) || undefined}>
+                <MoreItem icon="book" label="Recipe Book" onClick={() => useCrafting.getState().set({ bookOpen: true })} />
+                <MoreItem icon="party" label="Friends and mail" dot={socialDot(social) || undefined} onClick={() => useSocial.getState().set({ open: true, visiting: null })} />
+                <MoreItem icon="globe" label="Plaza" dot={plazaLive ? "!" : undefined} onClick={() => usePlaza.getState().set({ tab: plazaLive ? "world" : "market" })} />
+                <MoreItem icon="banner" label="Realm" onClick={() => useRealm.getState().set({ panel: "members" })} />
+                <MoreItem icon="queue" label="Bag and bank" onClick={() => useCrafting.getState().set({ bagOpen: true })} />
+                <MoreItem icon="camera" label="Photo mode" onClick={() => useAvatar.getState().set({ photo: true })} />
+                <span className="more-row">
+                  <button className="btn secondary small grow" onClick={(e) => { e.stopPropagation(); onZoom(-1); }} aria-label="Zoom out">− Zoom out</button>
+                  <button className="btn secondary small grow" onClick={(e) => { e.stopPropagation(); onZoom(1); }} aria-label="Zoom in">+ Zoom in</button>
+                </span>
+              </MoreMenu>
+            ) : (
+              <>
+                <button className="btn secondary small icon-only" onClick={() => useAvatar.getState().set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
+                  <Icon name="camera" scale={1.5} />
+                </button>
+                <div className="row zoom-buttons" style={{ gap: 4 }}>
+                  <button className="btn secondary small icon-only" onClick={() => onZoom(-1)} aria-label="Zoom out">−</button>
+                  <button className="btn secondary small icon-only" onClick={() => onZoom(1)} aria-label="Zoom in">+</button>
+                </div>
+              </>
+            )}
             <button className="btn gold" onClick={enterAvatar} aria-label="Explore" title="Step outside as your hero" data-tut-target="explore">
-              <Icon name="avatar" /> <span className="hide-narrow">Explore</span>
+              <Icon name="avatar" /> {!narrow && "Explore"}
             </button>
           </div>
         )}
