@@ -671,3 +671,15 @@ tavern = 1 if a Tavern exists within 12 tiles path-distance of most homes, else 
 | Fishing | timing bar (window 300 ms at the easiest, 120 ms for legendaries), 6–8 species per biome, seasonal specials; sell 8–200 coins. |
 | Social | 1 gift/day/friend, value cap 300; help = −25% of remaining time, at most 1 help per timer per day, at most 50% of a timer from helps; new-account gate: level 5 or 24 h (P4). |
 | Realm stash | untrusted members withdraw up to 500 value/day; first 48 h deposit-only (P3). |
+
+### 11.1 As built (Phases 15/16a)
+
+- **Skill tree.** 3 branches of 5–6 nodes (17 nodes, 41 ranks), 1 point per level after the first, so a level-30 hero fills about 70% of it and has to choose.
+  - Combat: Power +3% damage (5), Toughness +5% HP (3), Precision +2% crit (3), Guard +3 defence (3), Plunder +10% monster coins (2), Giant Slayer +15% boss damage (capstone, 8 points in the branch).
+  - Gathering: Bountiful +15% yield (3), Strong Arm 15% double hit (3), Lucky Hands +25% rare odds (2), Regrowth −15% regrow time (2), Naturalist +20% gathering XP (2), Prospector +50% rare odds (capstone, 7).
+  - Crafting: Master's Touch +1 luck (3), Quick Forge −15% time (2), Frugal −10% repair (3), Steady Hands 20% no-wear (2), Artisan +1 rare slot (capstone, 7).
+  - Respec: first free, then 40 coins × level.
+- **Quests.** As the table above; daily 150 + 25×level XP and 100–300 coins; weekly 600 + 100×level XP, 1,000–2,500 coins and a token. The main questline is 11 chapters worth 6,400 XP and 6,450 coins in all, with two titles.
+- **Achievements.** 16, worth 50–2,000 coins; 13 give titles.
+- **Calendar.** 28 days: about 6,650 coins, a few hundred of each basic resource, potions and food, 7 tokens and 4 titles over the round.
+- **Social.** As the table; help pays the helper 10 coins (10 a day at most: 100 coins, a small faucet).

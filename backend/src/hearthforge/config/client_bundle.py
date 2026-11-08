@@ -157,6 +157,38 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
             "bands": [{"biome": b.biome, "radius": b.radius} for b in cfg.mapgen.bands],
         },
         "debris": {k: {"sprites": d.sprites, "yields": d.yields} for k, d in cfg.debris.kinds.items()},
+        # Phases 15/16: the social rules a player can see, and the skill tree
+        "social": {
+            "gate": {"level": cfg.social.gate.level, "account_age_s": cfg.social.gate.account_age},
+            "friends_max": cfg.social.friends.max,
+            "gifts": cfg.social.gifts.model_dump(),
+            "help": {"cut": cfg.social.help.cut, "per_day": cfg.social.help.per_day},
+            "emotes": cfg.social.chat.emotes,
+            "quick": cfg.social.chat.quick,
+            "chat_radius": cfg.social.chat.radius,
+            "ping_s": cfg.social.pings.lasts,
+        },
+        "skills": {
+            "points_per_level": cfg.skills.points_per_level,
+            "respec": cfg.skills.respec.model_dump(),
+            "branches": {
+                bk: {
+                    "name": br.name,
+                    "nodes": {
+                        nk: {
+                            "name": n.name,
+                            "desc": n.desc,
+                            "max": n.max,
+                            "requires": n.requires,
+                            "branch_points": n.branch_points,
+                            "effects": n.effects,
+                        }
+                        for nk, n in br.nodes.items()
+                    },
+                }
+                for bk, br in cfg.skills.branches.items()
+            },
+        },
         "world_clock": {
             "day_length": cfg.world_clock.day_cycle.length,
             "phases": cfg.world_clock.day_cycle.phases,

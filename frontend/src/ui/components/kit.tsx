@@ -1,5 +1,6 @@
 // Shared UI primitives. Everything is pixel-themed; no default browser widgets.
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { Appearance } from "../../api/types";
 import { iconIndex, manifest } from "../../assets/manifest";
 import { composeAvatar, frameFor } from "../../game/avatarComposer";
@@ -40,13 +41,26 @@ export function Panel({ children, className = "", dark = false, style }: {
   );
 }
 
+const modalStack: symbol[] = [];
+
 export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    // Escape closes only the topmost modal (a gift dialog over the friends list, say)
+    const id = Symbol("modal");
+    modalStack.push(id);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && modalStack[modalStack.length - 1] === id) closeRef.current();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      modalStack.splice(modalStack.indexOf(id), 1);
+    };
+  }, []);
+  // portalled to <body>: a panel's drop-shadow filter would otherwise trap a nested modal inside it
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`panel modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="row" style={{ marginBottom: 10 }}>
@@ -58,7 +72,8 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

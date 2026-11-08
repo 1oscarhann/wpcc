@@ -930,12 +930,64 @@ class WaystoneRules(Strict):
     use_radius: float = Field(gt=0, le=8)
 
 
+class FriendsRules(Strict):
+    max: int = Field(default=50, ge=1, le=500)
+
+
+class GateRules(Strict):
+    level: int = Field(default=5, ge=1)
+    account_age: Duration = 86400
+
+
+class GiftRules(Strict):
+    per_friend_per_day: int = Field(default=1, ge=1)
+    value_cap: int = Field(default=300, ge=1)
+    daily_value_cap: int = Field(default=900, ge=1)
+    max_stacks: int = Field(default=4, ge=1, le=10)
+
+
+class LikeRules(Strict):
+    per_day: int = Field(default=20, ge=1)
+
+
+class HelpRules(Strict):
+    cut: float = Field(default=0.25, gt=0, le=1)
+    max_share: float = Field(default=0.5, gt=0, le=1)
+    per_day: int = Field(default=10, ge=1)
+    reward_coins: int = Field(default=10, ge=0)
+
+
+class ChatRules(Strict):
+    radius: float = Field(default=30, gt=0)
+    every: Duration = 1.0
+    emotes: list[str] = Field(default_factory=lambda: ["wave"])
+    quick: list[str] = Field(default_factory=lambda: ["Hello!"])
+
+
+class PingRules(Strict):
+    every: Duration = 3.0
+    lasts: Duration = 8.0
+
+
+class MailRules(Strict):
+    keep: Duration = 30 * 86400
+    max: int = Field(default=50, ge=1)
+
+
 class SocialCfg(Strict):
     realm: RealmRules
     stash: StashRules
     party: PartyRules
     fog: FogRules
     waystone: WaystoneRules
+    friends: FriendsRules = FriendsRules()
+    gate: GateRules = GateRules()
+    gifts: GiftRules = GiftRules()
+    likes: LikeRules = LikeRules()
+    help: HelpRules = HelpRules()
+    chat: ChatRules = ChatRules()
+    pings: PingRules = PingRules()
+    mail: MailRules = MailRules()
 
 
 # ── world_clock.yaml ─────────────────────────────────────────────────────────
@@ -1332,3 +1384,122 @@ class VillagersCfg(Strict):
     names: NamesCfg
     traits: list[str]
     lines: VillagerLinesCfg
+
+
+# ── skills.yaml (Phase 16) ───────────────────────────────────────────────────
+
+PerkKey = Literal[
+    "damage",
+    "hp",
+    "crit",
+    "defence",
+    "coins",
+    "boss_damage",
+    "gather_yield",
+    "double_hit",
+    "rare_odds",
+    "regrow",
+    "gather_xp",
+    "forge_luck",
+    "forge_time",
+    "repair_cost",
+    "wear_save",
+    "extra_slot",
+]
+
+
+class SkillNodeCfg(Strict):
+    name: str
+    desc: str
+    max: int = Field(ge=1, le=10)
+    requires: list[str] = []
+    branch_points: int = Field(default=0, ge=0)
+    effects: dict[PerkKey, float] = Field(min_length=1)
+
+
+class SkillBranchCfg(Strict):
+    name: str
+    nodes: dict[str, SkillNodeCfg] = Field(min_length=1)
+
+
+class RespecCfg(Strict):
+    free_first: bool = True
+    coins_per_level: int = Field(ge=0)
+
+
+class SkillsCfg(Strict):
+    points_per_level: int = Field(ge=1, le=5)
+    respec: RespecCfg
+    branches: dict[str, SkillBranchCfg] = Field(min_length=1)
+
+
+# ── progression.yaml (Phase 16) ──────────────────────────────────────────────
+
+
+class QuestDefCfg(Strict):
+    key: str
+    title: str
+    stat: str
+    target: int = Field(ge=1)
+    min_level: int = Field(default=1, ge=1)
+
+
+class QuestRewardsCfg(Strict):
+    xp_base: int = Field(ge=0)
+    xp_per_level: int = Field(ge=0)
+    coins: Range
+    token: int = Field(default=0, ge=0)
+
+
+class QuestPoolCfg(Strict):
+    count: int = Field(ge=1, le=10)
+    rewards: QuestRewardsCfg
+    pool: list[QuestDefCfg] = Field(min_length=1)
+
+
+class MainRewardCfg(Strict):
+    xp: int = Field(default=0, ge=0)
+    coins: int = Field(default=0, ge=0)
+    title: str | None = None
+
+
+class MainQuestCfg(Strict):
+    key: str
+    title: str
+    stat: str | None = None
+    target: int = Field(default=1, ge=1)
+    town_hall: int | None = Field(default=None, ge=1, le=5)
+    villagers: int | None = Field(default=None, ge=1)
+    reward: MainRewardCfg
+
+
+class QuestsCfg(Strict):
+    daily: QuestPoolCfg
+    weekly: QuestPoolCfg
+    main: list[MainQuestCfg] = Field(min_length=1)
+
+
+class AchievementCfg(Strict):
+    name: str
+    desc: str
+    stat: str
+    target: int = Field(ge=1)
+    title: str | None = None
+    coins: int = Field(default=0, ge=0)
+
+
+class CalendarDayCfg(Strict):
+    coins: int = Field(default=0, ge=0)
+    res: dict[str, int] = {}
+    items: dict[str, int] = {}
+    title: str | None = None
+
+
+class CalendarCfg(Strict):
+    days: list[CalendarDayCfg] = Field(min_length=7, max_length=60)
+
+
+class ProgressionCfg(Strict):
+    quests: QuestsCfg
+    achievements: dict[str, AchievementCfg]
+    calendar: CalendarCfg

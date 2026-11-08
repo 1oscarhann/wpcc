@@ -1,4 +1,4 @@
-# Co-op rules (Phase 9). Gifts, likes and visits (P4) join in Phase 15.
+# Co-op rules (Phase 9) and the social layer (Phase 15): friends, gifts, likes, visits, help, chat, pings.
 
 realm:
   max_members: 10                  # one per plot on the ring
@@ -23,3 +23,41 @@ fog:
 waystone:
   attune_radius: 2.5               # walk this close to attune a waystone
   use_radius: 2.5                  # and this close to travel from one
+
+# ── Phase 15 ──────────────────────────────────────────────────────────────────
+friends:
+  max: 50
+
+gate:                              # P4: brand-new accounts can't send gifts, and their likes don't count,
+  level: 5                         # until their avatar reaches this level…
+  account_age: 24h                 # …or the account is this old (whichever comes first)
+
+gifts:
+  per_friend_per_day: 1
+  value_cap: 300                   # one gift is worth at most this many coins (market value)
+  daily_value_cap: 900             # and all your gifts in a UTC day at most this much
+  max_stacks: 4
+
+likes:
+  per_day: 20                      # likes you can hand out per UTC day
+
+help:                              # neighbour help on a friend's or realm-mate's building timer
+  cut: 0.25                        # takes this share of the time that's left off
+  max_share: 0.5                   # helps can't cut more than half of any one timer
+  per_day: 10                      # helps you can give per UTC day
+  reward_coins: 10                 # a thank-you per help
+
+chat:                              # no free text: emotes and preset quick messages only (no moderation needed)
+  radius: 30
+  every: 1s                        # at most one per this, per player
+  emotes: [wave, cheer, laugh, heart, angry, sleepy]
+  quick: ["Hello!", "Thanks!", "Follow me!", "Help!", "Nice one!", "Over here!", "Good night!", "Let's go!"]
+
+pings:
+  every: 3s
+  lasts: 8s
+
+mail:
+  keep: 30d                        # unclaimed mail is cleared after this
+  max: 50
+

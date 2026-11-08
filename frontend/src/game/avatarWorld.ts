@@ -64,6 +64,8 @@ export interface AvatarView {
   shadow: Graphics;
   frames: Texture[] | null;
   label: Text | null;
+  /** Phase 16: the title worn under the name ("Slime Slayer") */
+  title: Text | null;
   lastX: number;
   lastY: number;
   walkMs: number;
@@ -113,7 +115,7 @@ export class AvatarWorld {
   }
 
   // ── avatars ──────────────────────────────────────────────────────────────
-  private makeAvatar(a: Appearance, weaponType: string, name: string | null): AvatarView {
+  private makeAvatar(a: Appearance, weaponType: string, name: string | null, titleText: string | null = null): AvatarView {
     const root = new Container();
     const shadow = new Graphics().ellipse(0, 0, 5.5, 2.2).fill({ color: INK, alpha: 0.28 });
     const body = new Sprite();
@@ -133,8 +135,9 @@ export class AvatarWorld {
       this.host.screen.addChild(label);
     }
     const view: AvatarView = {
-      root, body, weapon, shadow, frames: null, label, lastX: 0, lastY: 0, walkMs: 0, swing: null, ghostCd: 0, weaponType,
+      root, body, weapon, shadow, frames: null, label, title: null, lastX: 0, lastY: 0, walkMs: 0, swing: null, ghostCd: 0, weaponType,
     };
+    if (name) this.setTitle(view, titleText);
     void avatarFrames(a).then((f) => {
       view.frames = f;
     });
@@ -145,6 +148,33 @@ export class AvatarWorld {
     v.swing?.kill();
     safeDestroy(v.root);
     v.label?.destroy();
+    v.title?.destroy();
+  }
+
+  private setTitle(v: AvatarView, title: string | null): void {
+    if (!title) {
+      v.title?.destroy();
+      v.title = null;
+      return;
+    }
+    if (!v.title) {
+      v.title = new Text({
+        text: "",
+        style: { fontFamily: "Pixelify Sans", fontSize: 11, fill: 0xf7d66a, stroke: { color: INK, width: 3 }, fontWeight: "600" },
+      });
+      v.title.anchor.set(0.5, 1);
+      this.host.screen.addChild(v.title);
+    }
+    v.title.text = title;
+  }
+
+  /** Screen position just above someone's head and nameplate (for chat bubbles). */
+  headScreen(eid: number): { x: number; y: number } | null {
+    const v = eid === this.client.eid ? this.local : this.others.get(eid);
+    if (!v || v.root.destroyed) return null;
+    const s = this.host.toScreen(v.root.x, v.root.y - 3 - 26);
+    const up = (v.label?.height ?? 0) + (v.title?.height ?? 0);
+    return { x: s.x, y: s.y - up - 2 };
   }
 
   private placeAvatar(v: AvatarView, x: number, y: number, fx: number, fy: number, moving: boolean, dms: number, ko: boolean): void {
@@ -167,7 +197,10 @@ export class AvatarWorld {
     v.body.zIndex = 0;
     if (v.label) {
       const s = this.host.toScreen(px, py - 26);
-      v.label.position.set(Math.round(s.x), Math.round(s.y));
+      if (v.title) {
+        v.title.position.set(Math.round(s.x), Math.round(s.y));
+        v.label.position.set(Math.round(s.x), Math.round(s.y - v.title.height + 2));
+      } else v.label.position.set(Math.round(s.x), Math.round(s.y));
     }
   }
 
@@ -382,7 +415,7 @@ export class AvatarWorld {
     let v = this.others.get(ent.id);
     const r = this.client.roster.get(ent.id);
     if (!v && r) {
-      v = this.makeAvatar(r.appearance, r.weapon, r.name);
+      v = this.makeAvatar(r.appearance, r.weapon, r.name, r.title);
       this.others.set(ent.id, v);
     }
     if (!v) return;
@@ -485,6 +518,9 @@ export class AvatarWorld {
       if (eid === c.eid && r) {
         this.local.weaponType = r.weapon;
         c.info.weapon = { ...c.info.weapon, type: r.weapon };
+      } else if (r) {
+        const o = this.others.get(eid);
+        if (o) this.setTitle(o, r.title); // a new title, or skills changed their level
       }
     } else if (kind === EV.RESPAWN) {
       const [, x, y] = ev as number[];

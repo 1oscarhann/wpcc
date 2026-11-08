@@ -21,7 +21,7 @@ from hearthforge.services import inventory
 from hearthforge.services import village as village_svc
 from hearthforge.sim import motion as mo
 from hearthforge.sim.room import EMPTY_ROOM_TTL, Player, RealmRoom
-from hearthforge.sim.stats import stats_for
+from hearthforge.sim.stats import stats_for, xp_to_next
 
 if TYPE_CHECKING:
     from hearthforge.realtime.conn import Conn
@@ -150,12 +150,16 @@ class RoomManager:
                 from hearthforge.services import world as world_svc
 
                 fog = await world_svc.load_fog(s, self.st.config, user_id, realm.id)
+                from hearthforge.services import social as social_svc
+
+                blocked = await social_svc.blocked_ids(s, user_id)
                 attuned = await world_svc.attuned(s, user_id)
                 poi_uses = await world_svc.poi_uses(s, user_id)
             room = await self._room(realm)
             p = self._make_player(room, conn, user, avatar, member.plot_index, loadout)
             p.fog = fog
             p.attuned = attuned
+            p.blocked = blocked
             room.set_offhand(p, loadout.get("offhand") or {})
             room.recompute_mods(p)
             p.pois = poi_uses
@@ -182,7 +186,10 @@ class RoomManager:
         size = vstate["size"] if vstate else cfg.mapgen.plot.start_size
         lo = (cfg.mapgen.plot.frame - size) // 2
         door = (ox + tpl.door[0] + 0.5, oy + tpl.door[1] + 0.5)
-        stats = stats_for(cfg, av.level)
+        from hearthforge.domain import skills as skills_dom
+
+        perks = skills_dom.perks(cfg, av.skills or {})
+        stats = stats_for(cfg, av.level, perks)
         x, y = door
         if av.location == AvatarLocation.wild and av.realm_id == room.realm_id:
             px, py = float(av.pos_x), float(av.pos_y)
@@ -208,7 +215,31 @@ class RoomManager:
             home_door=door,
             armour=int(loadout.get("armour", 0)),
             armour_key=loadout.get("armour_key"),
+            title=av.title,
+            perks=perks,
         )
+
+    async def reload_progress(self, user_id: uuid.UUID) -> None:
+        """Phase 16: skills, title or block list changed over REST: refresh the room's copy."""
+        found = self.find(user_id)
+        if found is None:
+            return
+        room, p = found
+        from hearthforge.domain import skills as skills_dom
+        from hearthforge.realtime.protocol import EV
+        from hearthforge.services import social as social_svc
+
+        async with self.st.sessionmaker() as s:
+            av = (await s.execute(select(Avatar).where(Avatar.user_id == user_id))).scalar_one()
+            p.blocked = await social_svc.blocked_ids(s, user_id)
+        p.perks = skills_dom.perks(self.st.config, av.skills or {})
+        p.title = av.title
+        frac = p.hp / p.stats.hp_max if p.stats.hp_max else 1.0
+        p.stats = stats_for(self.st.config, p.level, p.perks)
+        p.hp = max(1.0, p.stats.hp_max * frac)
+        p.ev.append([EV["XP"], 0, p.level, p.xp, xp_to_next(self.st.config, p.level), 0, p.stats.hp_max])
+        for o in room.players.values():
+            o.ev.append([EV["PLAYER"], *room.roster_entry(p)])
 
     async def leave(self, user_id: uuid.UUID, conn: Conn | None = None) -> None:
         """LEAVE_AVATAR. Refused while combat-locked."""

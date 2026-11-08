@@ -46,6 +46,19 @@ from hearthforge.db.models.realm import (
     RealmRole,
     RealmVisibility,
 )
+from hearthforge.db.models.social import (
+    Block,
+    Friendship,
+    Gift,
+    LoginReward,
+    Mail,
+    NeighbourHelp,
+    QuestProgress,
+    UserAchievement,
+    UserCosmetic,
+    VillageLike,
+    VillageVisit,
+)
 from hearthforge.db.models.village import (
     BuildingState,
     Presence,
@@ -57,6 +70,17 @@ from hearthforge.db.models.village import (
 from hearthforge.db.models.world import DeathDrop, NodeHarvest
 
 __all__ = [
+    "Block",
+    "Friendship",
+    "Gift",
+    "LoginReward",
+    "Mail",
+    "NeighbourHelp",
+    "QuestProgress",
+    "UserAchievement",
+    "UserCosmetic",
+    "VillageLike",
+    "VillageVisit",
     "BossDamage",
     "MonsterWave",
     "RealmBoss",

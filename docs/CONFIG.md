@@ -444,6 +444,40 @@ The loader checks that every ring with ruins has chest loot and every ring with 
 - **`enemies.yaml`.** The five boss bodies: `grubmaw`, `stone_colossus`, `swamp_hydra`, `frost_matriarch` and `cinder_tyrant`.
 - **`items.yaml`.** Five trophies: `gel_crown`, `colossus_core`, `hydra_fang`, `matriarch_tiara` and `tyrants_heart`.
 
+### `social.yaml` additions (Phase 15)
+
+| Key | Meaning |
+|---|---|
+| `friends.max` | Friends per player (50). |
+| `gate` | The P4 new-account gate: `level` (5) or `account_age` (24h). Gifts need it; likes below it don't count. |
+| `gifts` | `per_friend_per_day`, `value_cap` (per gift), `daily_value_cap`, `max_stacks`. |
+| `likes.per_day` | Likes a player can hand out a day. |
+| `help` | `cut` (share of the time left), `max_share` (of a whole timer), `per_day` (per helper), `reward_coins`. |
+| `chat` | `radius` (tiles), `every` (seconds between bubbles), `emotes` (keys; each needs an `emote_<key>` icon), `quick` (the preset phrases). |
+| `pings` | `every`, `lasts`. |
+| `mail` | `keep`, `max`. |
+
+### `skills.yaml` (Phase 16)
+
+| Key | Meaning |
+|---|---|
+| `points_per_level` | Points per level after the first. |
+| `respec` | `free_first`, `coins_per_level`. |
+| `branches.<key>` | `name` and `nodes`. A node has `name`, `desc`, `max` (ranks), `requires` (nodes in the same branch, at rank 1), `branch_points` (capstones) and `effects` per rank. |
+
+Effect keys (all server-side, D-109): `damage`, `hp`, `crit`, `defence`, `coins`, `boss_damage`, `gather_yield`, `double_hit`, `rare_odds`, `regrow`, `gather_xp`, `forge_luck`, `forge_time`, `repair_cost`, `wear_save`, `extra_slot`. The loader checks that `requires` stays in the branch and node keys are unique.
+
+### `progression.yaml` (Phase 16)
+
+| Key | Meaning |
+|---|---|
+| `quests.daily`, `quests.weekly` | `count`, `rewards` (`xp_base`, `xp_per_level`, `coins: [lo, hi]`, `token`) and a `pool` of `{key, title, stat, target, min_level}`. |
+| `quests.main` | The questline in order. Each step has exactly one of `stat`+`target`, `town_hall` or `villagers`, and a `reward` (`xp`, `coins`, `title`). |
+| `achievements.<key>` | `name`, `desc`, `stat`, `target`, `title`, `coins`. |
+| `calendar.days` | 28 days of `coins`, `res`, `items` and `title`. |
+
+Stats are the `user_stats` counters: `kill.<enemy>`, `kill.any`, `kill.realm_boss`, `gather.<item>`, `gather.any`, `sell.any`, `forge.any`, `forge.<rarity>`, `forge.epic_plus`, `brew.any`, `build.place`, `build.upgrade`, `delve.cleared`, `wave.won`, `poi.any`, `poi.chest`, `lore.read`, `help.given`, `gift.sent`, `like.given`, `visit.any`, `friend.made`, `chat.any`, `discover.combo` (counted from discoveries) and `quest.<period>`. `items.yaml` gains `cosmetic_token`.
+
 ## Secrets in the client bundle
 
 Sections marked secret are stripped from `GET /api/config`:

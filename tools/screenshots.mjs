@@ -1192,6 +1192,147 @@ PHASES[14] = async (page, kind) => {
   await shot(page, "05-avatar-among-villagers", kind, { wait: 0 });
 };
 
+// ── Phase 15: friends, gifts, visits, likes, help, chat and pings ────────
+const closeModal = (page) => page.locator(".modal button[aria-label='Close']").last().click();
+
+PHASES[15] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  const ada = await freshPlayer(page, kind);
+  hf(`test-account ${ada}`);
+  hf(`grant ${ada} --level 6 --item slime_gel=12 --item herbs=8 --item bread=4`);
+  // Bram, in another browser: a busy builder with a Town Hall upgrade on the go
+  const ctx2 = await page.context().browser().newContext(VIEWPORTS[kind]);
+  const p2 = await ctx2.newPage();
+  p2.on("pageerror", (e) => console.error(`[bram] page error:`, e.message));
+  const bram = await freshPlayer(p2, kind);
+  hf(`test-account ${bram}`);
+  hf(`grant ${bram} --coins 6000 --level 9`);
+  await apiPost(p2, "/api/dev/kit", { town_hall: 2, tier: 1 });
+  await decorate(p2, [["house", 13, 20], ["farm", 9, 25], ["lumber_camp", 28, 16]]);
+  await p2.waitForTimeout(4000);
+  await reloadVillage(p2);
+  // two long jobs for a neighbour to help with: the Town Hall to 3 and the farm to 2
+  const bv = await villageNow(p2);
+  for (const key of ["town_hall", "farm"]) {
+    const b = bv.buildings.find((x) => x.key === key);
+    const r = await apiPost(p2, `/api/village/buildings/${b.id}/upgrade`, {});
+    if (r.error) console.log("upgrade", key, r.error.code);
+  }
+
+  // Ada adds Bram by name
+  await page.getByRole("button", { name: /^Friends and mail/ }).click();
+  await page.getByLabel("Friend's username").fill(bram);
+  await shot(page, "01-add-friend", kind, { wait: 500 });
+  await page.getByRole("button", { name: "Add friend" }).click();
+  await page.getByText("Waiting for an answer").waitFor();
+  await closeModal(page);
+
+  // Bram sees the request (pushed over the socket) and accepts
+  await p2.locator(".has-dot .dot-count").first().waitFor({ timeout: 15000 });
+  await shot(p2, "02-request-dot", kind, { wait: 400 });
+  await p2.getByRole("button", { name: /^Friends and mail/ }).click();
+  await p2.getByRole("button", { name: "Accept" }).waitFor();
+  await shot(p2, "03-incoming-request", kind, { wait: 500 });
+  await p2.getByRole("button", { name: "Accept" }).click();
+  await p2.waitForTimeout(800);
+  await closeModal(p2);
+
+  // Ada's friends list, then a gift
+  await page.getByRole("button", { name: /^Friends and mail/ }).click();
+  await page.locator(".friend-row", { hasText: bram }).waitFor();
+  await page.waitForTimeout(800);
+  await shot(page, "04-friends-list", kind, { wait: 600 });
+  await page.getByRole("button", { name: `Send ${bram} a gift` }).click();
+  await page.getByRole("button", { name: "One more Slime Gel" }).click();
+  await page.getByRole("button", { name: "One more Slime Gel" }).click();
+  await page.getByRole("button", { name: "One more Slime Gel" }).click();
+  await page.getByRole("button", { name: "One more Bread" }).click();
+  await shot(page, "05-gift", kind, { wait: 400 });
+  await page.getByRole("button", { name: /^Send \d/ }).click();
+  await page.waitForTimeout(800);
+
+  // a visit: the village drawn from the atlas, a like and a helping hand
+  await page.locator(".friend-row", { hasText: bram }).getByRole("button", { name: "Visit" }).click();
+  await page.locator(".visit-canvas").waitFor();
+  await shot(page, "06-visit", kind, { wait: 1200 });
+  await page.getByRole("button", { name: /Like/ }).click();
+  await page.getByRole("button", { name: "Help", exact: false }).first().click();
+  await page.waitForTimeout(1200);
+  await shot(page, "07-liked-and-helped", kind, { wait: 500 });
+  await closeModal(page);
+
+  // Bram's mailbox
+  await p2.getByRole("button", { name: /^Friends and mail/ }).click();
+  await p2.getByRole("tab", { name: /Mail/ }).click();
+  await p2.locator(".mail-row").waitFor({ timeout: 15000 });
+  await shot(p2, "08-mailbox", kind, { wait: 500 });
+  await ctx2.close();
+
+  // Avatar Mode: the emote wheel, a bubble, a quick message, a ping
+  await enterAvatar(page);
+  await page.waitForTimeout(1200);
+  await page.getByRole("button", { name: "Emotes and quick messages" }).click();
+  await shot(page, "09-chat-wheel", kind, { wait: 500 });
+  await page.getByRole("button", { name: "wave" }).click();
+  await shot(page, "10-emote-bubble", kind, { wait: 500 });
+  await page.waitForTimeout(1200);
+  await page.getByRole("button", { name: "Emotes and quick messages" }).click();
+  await page.getByRole("button", { name: "Nice one!" }).click();
+  await shot(page, "11-quick-message", kind, { wait: 500 });
+  if (mobile) return;
+  await page.keyboard.press("m");
+  const map = page.locator(".full-map");
+  await map.waitFor();
+  const me = await page.evaluate(() => window.__hfGame.avatar.client.drawPos());
+  const ov = await page.evaluate(() => {
+    const o = window.__hfRealm?.getState().overview;
+    return o ? { n: o.n, cs: o.chunk_size } : null;
+  });
+  const box = await map.boundingBox();
+  const tiles = ov ? ov.n * ov.cs : 512;
+  // one ping far off (it shows on the big map), one just ahead of you (a ring on the ground)
+  await page.mouse.click(box.x + ((me.x + 40) / tiles) * box.width, box.y + ((me.y + 28) / tiles) * box.height);
+  await shot(page, "12-map-ping", kind, { wait: 700 });
+  await page.waitForTimeout(3200); // pings are rate limited to one every 3 s
+  await page.mouse.click(box.x + ((me.x + 3) / tiles) * box.width, box.y + ((me.y + 2) / tiles) * box.height);
+  await closeModal(page);
+  await shot(page, "13-ping-in-world", kind, { wait: 900 });
+};
+
+// ── Phase 16: quests, skills, feats and titles, the collection, the calendar ─
+PHASES[16] = async (page, kind) => {
+  const name = await freshPlayer(page, kind);
+  hf(`test-account ${name}`);
+  hf(`grant ${name} --level 9 --coins 800 --stat kill.slime=520 --stat kill.any=640 --stat kill.wolf=60 --stat kill.spider=24 ` +
+    `--stat gather.wood=180 --stat gather.stone=95 --stat gather.any=275 --stat forge.sword=2 --stat brew.potion_red=6 --stat poi.any=3`);
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(2500);
+  await shot(page, "01-hud-journal-dot", kind, { wait: 400 });
+  await page.getByRole("button", { name: /^Journal/ }).click();
+  await page.locator(".journal-tabs").waitFor();
+  await page.getByRole("tab", { name: /Quests/ }).click();
+  await shot(page, "02-quests", kind, { wait: 600 });
+  await page.getByRole("tab", { name: /Skills/ }).click();
+  for (const k of ["Power", "Power", "Toughness", "Precision", "Bountiful", "Master's Touch"]) {
+    await page.locator(".skill-node", { hasText: k }).getByRole("button", { name: /Learn/ }).click().catch(() => undefined);
+    await page.waitForTimeout(250);
+  }
+  await shot(page, "03-skills", kind, { wait: 500 });
+  await page.getByRole("tab", { name: /Feats/ }).click();
+  await page.locator(".ach-card", { hasText: "Slime Slayer" }).getByRole("button", { name: "Claim" }).click();
+  await page.waitForTimeout(900);
+  await page.locator(".title-picker").getByRole("button", { name: "Slime Slayer" }).click();
+  await shot(page, "04-feats-and-titles", kind, { wait: 600 });
+  await page.getByRole("tab", { name: /Collection/ }).click();
+  await page.locator(".shelf").first().waitFor();
+  await shot(page, "05-collection", kind, { wait: 1200 });
+  await page.getByRole("tab", { name: /Calendar/ }).click();
+  await shot(page, "06-calendar", kind, { wait: 500 });
+  await page.getByRole("button", { name: /Collect day/ }).click();
+  await shot(page, "07-calendar-claimed", kind, { wait: 900 });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

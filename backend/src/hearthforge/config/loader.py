@@ -47,6 +47,8 @@ FILES: dict[str, type[BaseModel]] = {
     "waves": s.WavesCfg,
     "bosses": s.BossesCfg,
     "villagers": s.VillagersCfg,
+    "skills": s.SkillsCfg,
+    "progression": s.ProgressionCfg,
 }
 
 
@@ -120,6 +122,8 @@ class GameConfig:
     waves: s.WavesCfg
     bosses: s.BossesCfg
     villagers: s.VillagersCfg
+    skills: s.SkillsCfg
+    progression: s.ProgressionCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -264,6 +268,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     waves: s.WavesCfg = parsed["waves"]
     bosses: s.BossesCfg = parsed["bosses"]
     villagers: s.VillagersCfg = parsed["villagers"]
+    skills: s.SkillsCfg = parsed["skills"]
+    progression: s.ProgressionCfg = parsed["progression"]
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -655,6 +661,43 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         if key not in bcfg.buildings:
             errors.append(f"villagers.yaml:jobs.priority: unknown building '{key}'")
 
+    # ── skills and progression (Phase 16) ─────────────────────────────────────
+    all_nodes = {k for br in skills.branches.values() for k in br.nodes}
+    for bk, br in skills.branches.items():
+        for nk, node in br.nodes.items():
+            for r in node.requires:
+                if r not in br.nodes:
+                    errors.append(
+                        f"skills.yaml:branches.{bk}.nodes.{nk}.requires: '{r}' isn't in this branch"
+                    )
+    if len(all_nodes) != sum(len(br.nodes) for br in skills.branches.values()):
+        errors.append("skills.yaml: node keys must be unique across branches")
+    pg = progression
+    for period in ("daily", "weekly"):
+        qp = getattr(pg.quests, period)
+        keys = [q.key for q in qp.pool]
+        if len(set(keys)) != len(keys):
+            errors.append(f"progression.yaml:quests.{period}: duplicate quest keys")
+        if qp.count > len(qp.pool):
+            errors.append(f"progression.yaml:quests.{period}.count: bigger than the pool")
+    for i, mq in enumerate(pg.quests.main):
+        conds = [mq.stat is not None, mq.town_hall is not None, mq.villagers is not None]
+        if sum(conds) != 1:
+            errors.append(
+                f"progression.yaml:quests.main[{i}]: needs exactly one of stat, town_hall, villagers"
+            )
+    if len({mq.key for mq in pg.quests.main}) != len(pg.quests.main):
+        errors.append("progression.yaml:quests.main: duplicate keys")
+    for d, day in enumerate(pg.calendar.days):
+        for it in day.items:
+            if it not in items:
+                errors.append(f"progression.yaml:calendar.days[{d}].items: unknown item '{it}'")
+        for rk in day.res:
+            if rk not in res.resources:
+                errors.append(f"progression.yaml:calendar.days[{d}].res: unknown resource '{rk}'")
+    if "cosmetic_token" not in items:
+        errors.append("items.yaml: weekly quests hand out 'cosmetic_token'; it must exist")
+
     # ── dungeons (Phase 12) ───────────────────────────────────────────────────
     dg = dungeons
     if dg.boss.enemy not in enemies.enemies or not enemies.enemies[dg.boss.enemy].roaming:
@@ -777,6 +820,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         waves=waves,
         bosses=bosses,
         villagers=villagers,
+        skills=skills,
+        progression=progression,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

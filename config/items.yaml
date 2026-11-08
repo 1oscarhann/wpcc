@@ -188,4 +188,6 @@ items:
   hydra_fang:      { name: Hydra Fang,        category: trophy, stackable: true, max_stack: 9, icon: icon.hydra_fang }
   matriarch_tiara: { name: "Matriarch's Tiara", category: trophy, stackable: true, max_stack: 9, icon: icon.matriarch_tiara }
   tyrants_heart:   { name: "Tyrant's Heart",  category: trophy, stackable: true, max_stack: 9, icon: icon.tyrants_heart }
+  # Phase 16: weekly quests and the login calendar hand these out; a cosmetics shop spends them (later)
+  cosmetic_token: { name: Cosmetic Token, category: cosmetic, stackable: true, max_stack: 99, icon: icon.cosmetic_token }
 resource_max_stack: 999

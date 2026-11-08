@@ -6,6 +6,7 @@ import type { InventoryView, InvSlotView } from "../../api/types";
 import { itemIcon, itemName, RARITY_COLOR } from "../../game/items";
 import { sfx } from "../../game/sfx";
 import { useRealm, type RealmView } from "../../state/realm";
+import { useSocial } from "../../state/social";
 import { serverNow, useSession } from "../../state/session";
 import { toast } from "../../state/toasts";
 import { CharacterPreview, Icon, Modal } from "../components/kit";
@@ -149,6 +150,12 @@ function Members({ realm, onChange }: { realm: RealmView; onChange: (r: RealmVie
                 <span className="small muted">Level {m.level} · plot {m.plot + 1}</span>
               </span>
               <span className="row member-actions" style={{ gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {!self && (
+                  <button className="btn small" onClick={() => {
+                    useRealm.getState().set({ panel: null });
+                    useSocial.getState().set({ open: true, visiting: m.user_id });
+                  }}><Icon name="home" scale={1.5} /> Visit</button>
+                )}
                 {owner && !self && (
                   <>
                     <button className="btn secondary small" onClick={async () => {

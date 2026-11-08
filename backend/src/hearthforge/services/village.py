@@ -593,6 +593,9 @@ async def place(
     await _start_work(session, cfg, ld, b, now, paid, BuildingState.constructing)
     _remember(ld, cfg, now, "place", building_id=str(b.id))
     touch(ld, now)
+    from hearthforge.services import stats as stats_svc
+
+    await stats_svc.bump(session, user_id, {"build.place": 1})  # Phase 16: quests and achievements
     return ld
 
 
@@ -737,6 +740,9 @@ async def upgrade(
     await _start_work(session, cfg, ld, b, now, paid, BuildingState.upgrading)
     _remember(ld, cfg, now, "upgrade", building_id=building_id)
     touch(ld, now)
+    from hearthforge.services import stats as stats_svc
+
+    await stats_svc.bump(session, user_id, {"build.upgrade": 1})  # Phase 16: quests and achievements
     return ld
 
 

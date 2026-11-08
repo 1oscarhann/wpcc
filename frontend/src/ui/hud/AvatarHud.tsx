@@ -16,6 +16,9 @@ import { useDelve } from "../../state/delve";
 import { MiniMap, WaystonePrompt } from "./WorldMap";
 import { PartyButton, PartyFrames } from "./Party";
 import { useTutorial } from "../../state/tutorial";
+import { useSocial } from "../../state/social";
+import { ChatWheel } from "./Social";
+import { JournalButton } from "./Journal";
 
 const KO_FLAG = 2;
 
@@ -325,6 +328,11 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
             </span>
           )}
           <PartyButton />
+          <button className="btn secondary icon-only" onClick={() => useSocial.getState().set({ chatOpen: !useSocial.getState().chatOpen })}
+            aria-label="Emotes and quick messages" title="Emotes and quick messages (T)">
+            <Icon name="chat" />
+          </button>
+          <JournalButton iconOnly />
           <button className="btn secondary icon-only" onClick={() => set({ bagOpen: !bagOpen })} aria-label="Bag" title="Bag (B)">
             <Icon name="queue" />
           </button>
@@ -353,6 +361,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
         <DelveHud touch={touch} />
         <Hotbar touch={touch} />
       </div>
+      <ChatWheel touch={touch} />
       {touch && <TouchControls />}
       {bagOpen && <Bag onClose={() => set({ bagOpen: false })} />}
       <LoreModal />

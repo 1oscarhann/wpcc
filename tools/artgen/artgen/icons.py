@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from artgen.canvas import Canvas, blob
-from artgen.palette import INK, ramp
+from artgen.palette import INK, SKIN, hx, ramp
 
 WOOD = ramp("wood")
 STONE = ramp("stone")
@@ -983,6 +983,152 @@ ICONS.update({
     "hydra_fang": i_hydra_fang,
     "matriarch_tiara": i_matriarch_tiara,
     "tyrants_heart": i_tyrants_heart,
+})
+
+
+# ── Phases 15/16: social and journal icons, emotes ──────────────────────────
+PINK = ramp("flower_red")
+SKY = ramp("roof_blue")
+SKIN_I = [hx(c) for c in SKIN["peach"]]
+
+
+def _heart(c: Canvas, cols: list) -> None:  # noqa: ANN001
+    pts = [(8, 14), (1.5, 7), (2.5, 3), (5.5, 1.8), (8, 4), (10.5, 1.8), (13.5, 3), (14.5, 7)]
+    c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: cols[1] if x + y > 14 else cols[2])
+    c.put(4, 4, (255, 255, 255, 255))
+    c.put(5, 4, cols[2])
+
+
+def u_heart(c: Canvas) -> None:  # a like
+    _heart(c, PINK)
+
+
+def u_mail(c: Canvas) -> None:  # an envelope with a wax seal
+    c.rect(1, 4, 14, 9, PAPER[3])
+    c.hline(1, 14, 12, PAPER[2])
+    c.line(1, 4, 8, 9, PAPER[1])
+    c.line(14, 4, 8, 9, PAPER[1])
+    c.line(1, 12, 6, 8, PAPER[2])
+    c.line(14, 12, 10, 8, PAPER[2])
+    c.ellipse(8, 9, 1.6, 1.6, RED[2])
+    c.put(8, 9, RED[4])
+
+
+def u_chat(c: Canvas) -> None:  # a speech bubble
+    c.ellipse(8, 7, 6.6, 5, CLOTH[3])
+    c.poly([(3, 10), (6, 11), (2, 15)], CLOTH[3])
+    c.hline(4, 12, 11, CLOTH[2])
+    for x in (5, 8, 11):
+        c.put(x, 7, INK)
+
+
+def u_trophy(c: Canvas) -> None:
+    c.rect(4, 2, 8, 6, GOLD[3])
+    c.ellipse(8, 7, 4, 3, GOLD[3])
+    c.vline(4, 2, 7, GOLD[4])
+    c.rect(11, 2, 1, 6, GOLD[2])
+    for x, y in ((2, 3), (2, 4), (3, 6), (13, 3), (13, 4), (12, 6)):
+        c.put(x, y, GOLD[2])
+    c.rect(7, 10, 2, 2, GOLD[1])
+    c.rect(5, 12, 6, 2, WOOD[3])
+    c.hline(5, 10, 12, WOOD[4])
+    c.put(6, 4, GOLD[4])
+
+
+def u_calendar(c: Canvas) -> None:
+    c.rect(2, 3, 12, 11, PAPER[4])
+    c.rect(2, 3, 12, 3, RED[2])
+    c.hline(2, 13, 3, RED[3])
+    c.vline(5, 1, 4, STONE[3])
+    c.vline(10, 1, 4, STONE[3])
+    for y in (8, 11):
+        for x in (4, 7, 10):
+            c.rect(x, y, 2, 2, PAPER[1])
+    c.rect(10, 11, 2, 2, LEAF[3])
+
+
+def u_gift(c: Canvas) -> None:  # a wrapped present
+    c.rect(2, 7, 12, 7, TEAL[2])
+    c.rect(1, 5, 14, 3, TEAL[3])
+    c.vline(7, 5, 13, GOLD[3])
+    c.vline(8, 5, 13, GOLD[2])
+    c.ellipse(5.5, 3.5, 2.2, 1.6, GOLD[3])
+    c.ellipse(10.5, 3.5, 2.2, 1.6, GOLD[3])
+    c.put(5, 3, TEAL[2])
+    c.put(10, 3, TEAL[2])
+
+
+def u_skill(c: Canvas) -> None:  # three linked nodes: the skill tree
+    c.line(8, 3, 4, 11, WOOD[2])
+    c.line(8, 3, 12, 11, WOOD[2])
+    for cx, cy, col in ((8, 3, GOLD), (4, 11, LEAF), (12, 11, SKY)):
+        c.ellipse(cx, cy, 2.6, 2.6, col[2])
+        c.put(cx - 1, cy - 1, col[3])
+
+
+def u_emote_wave(c: Canvas) -> None:  # an open hand, fingers apart
+    c.rect(3, 8, 9, 6, SKIN_I[2])
+    for x, top in ((3, 4), (6, 2), (9, 3)):
+        c.rect(x, top, 2, 8 - top, SKIN_I[2])
+        c.put(x, top, SKIN_I[3])
+    c.line(12, 10, 14, 7, SKIN_I[2])
+    c.line(12, 11, 14, 8, SKIN_I[2])
+    c.hline(4, 10, 13, SKIN_I[1])
+    for x, y in ((13, 2), (14, 4), (1, 2)):
+        c.put(x, y, CLOTH[3])
+
+
+def u_emote_cheer(c: Canvas) -> None:  # a burst of confetti
+    pts = [(8, 1), (10, 6), (15, 6), (11, 9), (13, 15), (8, 11), (3, 15), (5, 9), (1, 6), (6, 6)]
+    c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: FIRE[3] if x + y < 15 else FIRE[2])
+    for x, y, col in ((2, 2, PINK[2]), (13, 2, SKY[3]), (1, 11, LEAF[3]), (14, 12, PURPLE[2])):
+        c.put(x, y, col)
+
+
+def _face(c: Canvas) -> None:
+    c.ellipse(8, 8, 6.5, 6.5, GOLD[3])
+    c.ellipse(7, 6.5, 3.5, 3, GOLD[4])
+
+
+def u_emote_laugh(c: Canvas) -> None:
+    _face(c)
+    c.hline(4, 6, 6, INK)
+    c.hline(10, 12, 6, INK)
+    c.put(4, 5, INK)
+    c.put(12, 5, INK)
+    c.rect(5, 9, 7, 3, INK)
+    c.hline(6, 10, 11, PINK[2])
+
+
+def u_emote_angry(c: Canvas) -> None:  # the cross-shaped vein
+    for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        x0, y0 = 8 + dx * 2, 8 + dy * 2
+        c.line(x0, y0, x0 + dx * 4, y0 + dy * 1, PINK[1])
+        c.line(x0, y0, x0 + dx * 1, y0 + dy * 4, PINK[1])
+        c.put(x0 + dx, y0 + dy, PINK[2])
+
+
+def u_emote_sleepy(c: Canvas) -> None:  # Zz
+    for x0, y0, n, col in ((2, 6, 6, SKY[3]), (10, 2, 4, SKY[2])):
+        c.hline(x0, x0 + n - 1, y0, col)
+        c.line(x0 + n - 1, y0, x0, y0 + n - 1, col)
+        c.hline(x0, x0 + n - 1, y0 + n - 1, col)
+
+
+ICONS.update({
+    "heart": u_heart,
+    "mail": u_mail,
+    "chat": u_chat,
+    "trophy": u_trophy,
+    "calendar": u_calendar,
+    "gift": u_gift,
+    "skill": u_skill,
+    "emote_wave": u_emote_wave,
+    "emote_cheer": u_emote_cheer,
+    "emote_laugh": u_emote_laugh,
+    "emote_heart": u_heart,
+    "emote_angry": u_emote_angry,
+    "emote_sleepy": u_emote_sleepy,
 })
 
 

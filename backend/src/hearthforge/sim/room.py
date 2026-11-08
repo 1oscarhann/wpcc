@@ -218,6 +218,11 @@ class Player:
     dungeon_return: tuple[float, float] | None = None
     rules: Rules | None = None  # per-player movement rules when mods aren't all 1
     party: str | None = None  # party id (in memory, D-025)
+    title: str | None = None  # Phase 16: the title shown under your name
+    perks: dict[str, float] = field(default_factory=dict)  # Phase 16: skill-tree bonuses
+    blocked: set[uuid.UUID] = field(default_factory=set)  # Phase 15: blocked either way: their chat is silent
+    last_chat: int = -(10**9)  # tick of your last emote / quick message
+    last_ping: int = -(10**9)
 
     @property
     def w(self) -> str:
@@ -390,7 +395,7 @@ class RealmRoom:
             await conn.send_bytes(frame)
 
     def roster_entry(self, p: Player) -> list[Any]:
-        return [p.eid, str(p.user_id), p.name, p.appearance, p.w, p.level]
+        return [p.eid, str(p.user_id), p.name, p.appearance, p.w, p.level, p.title]
 
     def joined_frame(self, p: Player) -> bytes:
         now = time.time()
@@ -618,6 +623,44 @@ class RealmRoom:
                 p.pending.waystones.add(w.index)
                 p.ev.append([EV["WAYSTONE"], w.index, w.name, sorted(p.attuned)])
 
+    # ── Phase 15: emotes, quick messages and map pings ──────────────────────
+    def _hears(self, o: Player, p: Player) -> bool:
+        return o.user_id not in p.blocked and p.user_id not in o.blocked
+
+    def chat(self, p: Player, kind: str, key: Any) -> str | None:
+        """An emote or a preset quick message, heard by everyone close by (blocks silence it)."""
+        c = self.cfg.social.chat
+        if self.tick_no - p.last_chat < c.every * self.hz:
+            return "slow"
+        if kind == "emote" and key not in c.emotes:
+            return "bad"
+        if kind == "say" and not (isinstance(key, int) and 0 <= key < len(c.quick)):
+            return "bad"
+        if kind not in ("emote", "say"):
+            return "bad"
+        p.last_chat = self.tick_no
+        ev = [EV["CHAT"], p.eid, kind, key]
+        r2 = c.radius**2
+        for o in self.players.values():
+            if (o.m.x - p.m.x) ** 2 + (o.m.y - p.m.y) ** 2 <= r2 and self._hears(o, p):
+                o.ev.append(ev)
+        p.pending.stats["chat.any"] += 1
+        return None
+
+    def ping(self, p: Player, x: float, y: float) -> str | None:
+        """A ping on the map: everyone in the realm sees it for a few seconds."""
+        pc = self.cfg.social.pings
+        if self.tick_no - p.last_ping < pc.every * self.hz:
+            return "slow"
+        if not (0 <= x < self.cfg.mapgen.map_size and 0 <= y < self.cfg.mapgen.map_size):
+            return "bad"
+        p.last_ping = self.tick_no
+        ev = [EV["PING"], p.eid, p.name, round(x, 1), round(y, 1), int(pc.lasts * 1000)]
+        for o in self.players.values():
+            if self._hears(o, p):
+                o.ev.append(ev)
+        return None
+
     def go_home(self, p: Player) -> str | None:
         """Phase 13: "Defend!" — hop to just inside your own gate while a wave is coming or on."""
         owner = str(p.user_id)
@@ -729,6 +772,7 @@ class RealmRoom:
                 self.spawn_drop(p, k, q, poi.x + 0.5, poi.y + 0.9)
             mark()
             p.pending.stats["poi.chest"] += 1
+            p.pending.stats["poi.any"] += 1
             data = {"coins": coins, "loot": loot}
         elif poi.kind == "shrine":
             sh = pc.shrines
@@ -741,6 +785,7 @@ class RealmRoom:
             p.blessing = (key, self.tick_no + int(sh.duration * self.hz))
             mark()
             p.pending.stats["poi.shrine"] += 1
+            p.pending.stats["poi.any"] += 1
             data = {"blessing": key, "name": b.name, "text": b.text, "secs": int(sh.duration)}
         elif poi.kind == "lore_stone":
             entries = pc.lore[poi.biome]  # type: ignore[index]
@@ -852,29 +897,36 @@ class RealmRoom:
         node = self.cfg.nodes.nodes[key]
         nid = self.grid.node_id(tx, ty)
         hits = p.node_hits.get(nid, 0) + 1
+        if p.perks.get("double_hit") and self.rng.random() < p.perks["double_hit"]:
+            hits += 1  # Strong Arm: this swing counts twice
         if hits < node.hits:
             p.node_hits[nid] = hits
             p.ev.append([EV["NODE"], nid, hits, node.hits, 0, 0, node.sound])
             return
         p.node_hits.pop(nid, None)
-        respawn_at = now + node.respawn
+        respawn_at = now + node.respawn * max(0.3, 1 - p.perks.get("regrow", 0.0))
         p.depleted[nid] = respawn_at
         p.pending.harvests.append((nid, respawn_at))
         p.ev.append([EV["NODE"], nid, node.hits, node.hits, 1, int(node.respawn * 1000), node.sound])
         loot: dict[str, int] = {}
         ws = self.cfg.world_clock.weather.states.get(weather)
         boost = ws.rare_node.get(key, 1.0) if ws else 1.0  # e.g. snow → frost spires give 1.5×
+        more = 1 + p.perks.get("gather_yield", 0.0)  # Bountiful
         for k, (lo, hi) in node.yields.items():
             q = self.rng.randint(lo, hi)
-            loot[k] = int(q * boost + self.rng.random()) if boost != 1.0 else q
+            if self.cfg.items.get(k) and self.cfg.items[k].category == "rare_material":
+                q = int(q * boost * (1 + p.perks.get("rare_odds", 0.0) * 0.5) + self.rng.random())
+            else:
+                q = int(q * boost * more + self.rng.random())
+            loot[k] = q
         for k, b in node.bonus.items():
-            if self.rng.random() < min(1.0, b.chance * boost):
+            if self.rng.random() < min(1.0, b.chance * boost * (1 + p.perks.get("rare_odds", 0.0))):
                 loot[k] = loot.get(k, 0) + self.rng.randint(*b.qty)
         nx, ny = tx + 0.5, ty + 0.5
         for k, q in loot.items():
             if q > 0:
                 self.spawn_drop(p, k, q, nx + (p.m.x - nx) * 0.4, ny + (p.m.y - ny) * 0.4)
-        self.grant_xp(p, node.xp)
+        self.grant_xp(p, round(node.xp * (1 + p.perks.get("gather_xp", 0.0))))
 
     # ── drops ────────────────────────────────────────────────────────────────
     def spawn_drop(
@@ -925,6 +977,8 @@ class RealmRoom:
                 else:
                     p.pending.grants[d.key] += fit
                     p.pending.stats[f"gather.{d.key}"] += fit
+                    if d.key != "coins":
+                        p.pending.stats["gather.any"] += fit
                 p.ev.append([EV["INVENTORY"], p.inv])
                 if fit < d.qty:
                     d.qty -= fit
@@ -1000,7 +1054,7 @@ class RealmRoom:
         p.level, p.xp = level, xp
         p.pending.xp = True
         if gained:
-            p.stats = stats_for(self.cfg, level)
+            p.stats = stats_for(self.cfg, level, p.perks)
             p.m.st_max = p.stats.st_max
             p.hp = float(p.stats.hp_max)
             p.m.st = p.m.st_max
@@ -1225,6 +1279,18 @@ class RealmRoom:
                 dmg[(rid, uid)] = int(m.brain.dmg_by_user.get(uid, 0))
         b.dirty_damage.clear()
         done, b.done = b.done, []
+        mail, b.mail = b.mail, []
+        if mail:
+            from hearthforge.services import social as social_svc
+
+            try:
+                async with self.st.sessionmaker() as s, s.begin():
+                    for uid, items, coins, name in mail:
+                        social_svc.send_mail(
+                            s, uuid.UUID(uid), "boss", name, items, coins, note=f"Your share from {name}"
+                        )
+            except Exception:  # noqa: BLE001
+                log.exception("couldn't mail boss loot")
         for row, tally in done:
             for uid, v in tally.items():
                 dmg[(row.id, uid)] = int(v)

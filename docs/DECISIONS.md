@@ -667,3 +667,48 @@ Happiness follows the formula in BALANCE §10.
 - **Speech bubbles.** They come from `villagers.yaml`, chosen by the village's weakest happiness factor (hungry, crowded, ugly, bored, leaving) or "happy" and "working".
 - **Greetings.** Walk your avatar past and they stop, turn and greet you, sometimes admiring your weapon.
 - **Replaces.** The Phase 3 ambient walkers, which had random looks and no jobs.
+
+### D-105: friends are global, blocks are symmetric
+**Decision.** Friendships cross realms; realm-mates don't need to befriend each other to visit.
+- **One row per pair.** `friendships(user_low, user_high)` with `requested_by`, so a pair can't double up. Asking someone who already asked you accepts on the spot.
+- **Blocks.** A block ends the friendship and silences both ways: no requests, no visits, no gifts, no chat bubbles or pings in the room, whoever blocked whom. The room reloads both players' block sets on the spot.
+- **Cap.** 50 friends (`social.yaml: friends.max`).
+
+### D-106: mail is a table, not a container
+**Decision.** Parcels (gifts, boss loot you missed, login rewards that didn't fit) live in a `mail` table with `items` and `coins`, not the mailbox container SCHEMA sketched.
+- **Claiming.** Items go into the bag; whatever doesn't fit stays in the parcel; coins go to the wallet. A parcel is gone once it's empty.
+- **Why.** No slot juggling for a parcel nobody opened, and a whole bundle (coins plus three stacks) is one row with one Claim button.
+- **Keeping.** 30 days and 50 parcels (`social.yaml: mail`).
+
+### D-107: gifts, likes and help are small and gated (P4)
+- **Gifts.** One per friend a day. Stackable materials, food and potions only, never gear. Up to 4 stacks, ~300 coins of market value per gift and 900 a day, valued with the stash's `unit_value`. Sending needs the P4 gate (level 5 or a day-old account).
+- **Likes.** One per village, for good. A like from below the gate is recorded but doesn't count, so it can start counting later without a second like.
+- **Neighbour help.** −25% of the time left on a building timer. One help per timer per day (from anyone), one per building per helper per day, 10 helps a day per helper, and helps never take more than half of a timer (`helped_seconds`). The helper gets 10 coins. The scheduled completion event moves with the timer.
+- **Visits.** Friends and realm-mates. A visitor sees the village without its purse, undo, jobs or new discoveries.
+
+### D-108: chat is presets only
+**Decision.** Avatar Mode chat is emotes and eight quick phrases from `social.yaml`, sent by index. No free text.
+- **Why.** No moderation queue, no profanity filter on the hot path, nothing to report, and it works across languages later. It's a cozy game; "Thanks!" and a heart cover most of it.
+- **Reach.** Bubbles reach players within 30 tiles; pings reach the whole realm for 8 s. One bubble a second and one ping every 3 s per player.
+
+### D-109: perks are server-side only
+**Decision.** Skill perks change damage, crit, defence, HP, coins, gather yield, rare odds, regrowth, forge luck and time, repair cost and wear. None touch movement or attack timing.
+- **Why.** The client predicts movement and swings with the shared rules (D-079). Perks that changed them would break prediction.
+- **Learning.** Nodes need their `requires` at rank 1; capstones also need points spent in the branch. The first respec is free, then 40 coins per level.
+
+### D-110: quests snapshot a counter, and a board never changes mid-period
+**Decision.** Daily and weekly quests read the same `user_stats` counters as achievements.
+- **Snapshot.** When a quest is first shown in a period, its counter's value is saved as `base`; progress is `value − base`. Nothing needs to hook every action.
+- **Stable board.** The picks are seeded by `(user, period, start)`, filtered by level. Once a period's quests exist they're reused, so levelling past a quest's `min_level` mid-day doesn't swap the board and wipe progress. (A bug the screenshot run caught.)
+- **Build stats.** `settle_village` is sync, so build counters are bumped when an upgrade *starts* (`build.upgrade`), not when it finishes.
+- **Combos.** `discover.combo` is counted from the discoveries table, not a counter.
+- **Main questline.** One chapter at a time: a counter, a Town Hall level or a villager count.
+
+### D-111: XP rewards go through the room
+**Decision.** Quest XP goes through `room.grant_xp` when the player is in a room, so the level-up event, HP and perks update live; otherwise straight to the database.
+
+### D-112: the login calendar waits for you
+**Decision.** 28 days that advance only when you claim. Missing a day loses nothing. Titles on days 7, 14, 21 and 28, cosmetic tokens along the way, resources into the village (allowed over the cap, never lost), items into the bag (or the mail if it's full).
+
+### D-113: Phase 16 split in two
+**Decision.** Phase 16a shipped the skill tree, quests, the main questline, achievements and titles, the collection book and the login calendar. Pets, mounts, fishing, photo mode and the Trophy Hall are Phase 16b. Cosmetic tokens pile up until 16b gives them a shop.

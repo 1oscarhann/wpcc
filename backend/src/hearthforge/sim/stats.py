@@ -14,14 +14,16 @@ class Stats:
     crit: float
 
 
-def stats_for(cfg, level: int) -> Stats:  # noqa: ANN001 - GameConfig
+def stats_for(cfg, level: int, perks: dict[str, float] | None = None) -> Stats:  # noqa: ANN001 - GameConfig
+    """Phase 16: skill perks add max health (a share) and defence (flat)."""
     b, p = cfg.avatar.base_stats, cfg.avatar.per_level
     n = level - 1
+    pk = perks or {}
     return Stats(
-        hp_max=b.hp + p.hp * n,
+        hp_max=round((b.hp + p.hp * n) * (1 + pk.get("hp", 0.0))),
         st_max=float(b.stamina + p.stamina * n),
         attack=b.attack + p.attack * n,
-        defence=b.defence + p.defence * n,
+        defence=b.defence + p.defence * n + int(pk.get("defence", 0)),
         crit=b.crit_chance,
     )
 

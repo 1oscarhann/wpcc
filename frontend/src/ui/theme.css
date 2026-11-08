@@ -1993,3 +1993,329 @@ body:has(.boss-bar) .wave-chip {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Phases 15/16: friends, mail, visits, chat, the journal ─────────────── */
+.has-dot {
+  position: relative;
+}
+.dot-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  margin-left: 4px;
+  font: 600 12px/1 var(--font-head);
+  color: var(--paper-light);
+  background: var(--red);
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+}
+.has-dot > .dot-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  margin: 0;
+}
+.title-tag {
+  font-family: var(--font-head);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.friend-row.incoming {
+  --tint: rgb(247 214 106 / 0.25);
+}
+.add-friend input {
+  min-width: 0;
+}
+.mail-row,
+.help-row,
+.gift-row {
+  padding: 4px 8px;
+  align-items: center;
+}
+.gift-row.picked,
+.help-row.picked {
+  --tint: rgb(247 214 106 / 0.4);
+}
+.gift-list {
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.visit-canvas-wrap {
+  display: grid;
+  place-items: center;
+  background: var(--grass-dark);
+  border: 2px solid var(--ink);
+  padding: 4px;
+}
+.modal.wide:has(.visit) {
+  width: min(1040px, calc(100vw - 20px));
+}
+.visit-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 10px;
+  align-items: start;
+}
+.visit-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 230px);
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+@media (max-width: 760px) {
+  .visit-body {
+    grid-template-columns: 1fr;
+  }
+  .visit-canvas {
+    max-height: 52vh;
+  }
+}
+.visit .help-row .btn {
+  min-width: 92px;
+}
+.like-btn[aria-pressed="true"] {
+  opacity: 0.85;
+}
+
+/* Avatar Mode chat wheel */
+.chat-wheel {
+  position: absolute;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 24px));
+  pointer-events: auto;
+  z-index: 15;
+}
+.emote-btn {
+  min-height: 44px;
+}
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+.leg.diamond.ping {
+  background: var(--gold-light);
+}
+
+/* the journal */
+.modal.wide:has(.journal-tabs) {
+  width: min(1000px, calc(100vw - 20px));
+}
+.main-quest,
+.quest-row,
+.ach-card,
+.skill-node,
+.title-picker {
+  padding: 6px 10px;
+  gap: 4px;
+}
+.main-quest.ready,
+.quest-row.ready,
+.ach-card.unlocked:not(.claimed) {
+  --tint: rgb(247 214 106 / 0.35);
+}
+.quest-row.claimed,
+.ach-card.claimed {
+  opacity: 0.7;
+}
+.quest-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.skills-head {
+  align-items: center;
+}
+.skill-branches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.skill-branch {
+  gap: 6px;
+  padding: 6px;
+  border: 2px dashed var(--paper-dark);
+}
+.skill-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 6px;
+  position: relative;
+}
+.skill-row + .skill-row::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 2px;
+  height: 7px;
+  background: var(--paper-dark);
+}
+.skill-node .btn {
+  align-self: flex-start;
+}
+.skill-node.learned {
+  --tint: rgb(143 201 92 / 0.4);
+}
+.skill-node.locked {
+  opacity: 0.72;
+}
+.skill-node.capstone .head::after {
+  content: " ★";
+  color: var(--gold);
+}
+.pips {
+  display: inline-flex;
+  gap: 2px;
+}
+.pips > span {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--ink);
+  background: var(--paper-light);
+}
+.pips > span.on {
+  background: var(--leaf);
+}
+.rank {
+  font-family: var(--font-head);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+}
+.ach-card.locked .head {
+  opacity: 0.8;
+}
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 4px;
+}
+.shelf-cell {
+  align-items: center;
+  text-align: center;
+  padding: 4px 2px;
+  gap: 0;
+}
+.shelf-cell.unknown {
+  opacity: 0.7;
+}
+.shelf-name {
+  font-size: 12px;
+  line-height: 1.1;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.cal-day {
+  padding: 4px 6px;
+  gap: 2px;
+  min-height: 64px;
+}
+.cal-day.done {
+  opacity: 0.55;
+}
+.cal-day.today {
+  --tint: rgb(247 214 106 / 0.55);
+  outline: 2px solid var(--gold);
+}
+.cal-day.big {
+  --tint: rgb(162 89 255 / 0.12);
+}
+.cal-day.today.big {
+  --tint: rgb(247 214 106 / 0.55);
+}
+.day-rewards {
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.day-rewards > span {
+  gap: 1px;
+}
+.cal-title {
+  font-family: var(--font-head);
+  color: #6a3a8f;
+}
+.emote-row {
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr);
+}
+.emote-btn {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .friend-row {
+    flex-wrap: wrap;
+  }
+  .friend-row > .col {
+    flex: 1 1 160px;
+  }
+  .friend-row .member-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 760px) {
+  .quest-cols,
+  .skill-branches {
+    grid-template-columns: 1fr;
+  }
+  .calendar-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .cal-day {
+    padding: 2px 4px;
+  }
+  .journal-tabs .tab-label {
+    display: none;
+  }
+  .chat-wheel {
+    bottom: 210px;
+  }
+}
+
+/* a tint over the slot texture but under the text (the 9-slice fill paints over background-color) */
+.friend-row.incoming,
+.gift-row.picked,
+.help-row.picked,
+.main-quest.ready,
+.quest-row.ready,
+.ach-card.unlocked:not(.claimed),
+.skill-node.learned,
+.cal-day.today,
+.cal-day.big {
+  position: relative;
+  isolation: isolate;
+}
+.friend-row.incoming::before,
+.gift-row.picked::before,
+.help-row.picked::before,
+.main-quest.ready::before,
+.quest-row.ready::before,
+.ach-card.unlocked:not(.claimed)::before,
+.skill-node.learned::before,
+.cal-day.today::before,
+.cal-day.big::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--tint);
+  pointer-events: none;
+}

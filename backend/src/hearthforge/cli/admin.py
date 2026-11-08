@@ -108,8 +108,10 @@ def grant(
     coins: int = typer.Option(0),
     res: list[str] = typer.Option([], help="wood=100"),
     item: list[str] = typer.Option([], help="ironbark=2 (into the bag)"),
+    level: int = typer.Option(0, help="Set the avatar's level (playtesting skills and quests)"),
+    stat: list[str] = typer.Option([], help="kill.slime=50 (adds to a lifetime counter)"),
 ) -> None:
-    """Give coins, village resources and/or bag items (logged in the ledger as admin.grant)."""
+    """Give coins, village resources, bag items, a level or stat counts (logged as admin.grant)."""
     from sqlalchemy import select
 
     from hearthforge.db.models import AdminAuditLog, Resource, Village
@@ -144,9 +146,21 @@ def grant(
             left = await inventory.grant(session, cfg, user.id, want, ledger.ADMIN_GRANT)
             if left:
                 typer.echo(f"bag full, not granted: {left}")
+        if level:
+            from sqlalchemy import update
+
+            from hearthforge.db.models import Avatar
+
+            await session.execute(update(Avatar).where(Avatar.user_id == user.id).values(level=level, xp=0))
+        if stat:
+            from hearthforge.services import stats
+
+            await stats.bump(session, user.id, {k: int(q) for k, _, q in (s.partition("=") for s in stat)})
         session.add(
             AdminAuditLog(
-                action="grant", target=str(user.id), payload={"coins": coins, "res": res, "item": item}
+                action="grant",
+                target=str(user.id),
+                payload={"coins": coins, "res": res, "item": item, "level": level, "stat": stat},
             )
         )
 

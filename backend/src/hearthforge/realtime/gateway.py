@@ -187,6 +187,15 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     room.dungeons.use(player, fields[1])
                 elif fields[0] == "portal":
                     room.dungeons.try_portal(player)
+            elif op == "SOCIAL":
+                if player is None or room is None or not fields or not isinstance(fields[0], str):
+                    continue
+                if fields[0] in ("emote", "say") and len(fields) > 1:
+                    room.chat(player, fields[0], fields[1])
+                elif fields[0] == "ping" and len(fields) > 2:
+                    x, y = fields[1], fields[2]
+                    if isinstance(x, int | float) and isinstance(y, int | float):
+                        room.ping(player, float(x), float(y))
             elif op == "WAVE":
                 if player is None or room is None or not fields or fields[0] != "home":
                     continue

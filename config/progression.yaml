@@ -1,0 +1,99 @@
+# Quests, achievements, titles and the login calendar (Phase 16, BALANCE §11).
+#
+# Everything reads the per-player counters in user_stats. A daily or weekly quest snapshots the counter
+# when it's handed out and counts what you do after that; main quests and achievements read the total.
+# Stats (see docs/CONFIG.md for the list): kill.<enemy>, kill.any, kill.realm_boss, gather.<item>,
+# sell.any, forge.any, forge.<rarity>, brew.any, build.place, build.upgrade, delve.cleared, wave.won,
+# poi.chest, poi.shrine, lore.read, help.given, gift.sent, like.given, visit.any, discover.combo, …
+# A main quest can also check `town_hall` (level) or `villagers` (how many live in your village).
+
+quests:
+  daily:
+    count: 3
+    rewards: { xp_base: 150, xp_per_level: 25, coins: [100, 300] }
+    pool:
+      - { key: slayer,     title: "Defeat 20 monsters",              stat: kill.any,     target: 20 }
+      - { key: wolfpack,   title: "Defeat 8 wolves",                 stat: kill.wolf,    target: 8,  min_level: 4 }
+      - { key: slimes,     title: "Pop 15 slimes",                   stat: kill.slime,   target: 15 }
+      - { key: lumberjack, title: "Gather 60 wood by hand",          stat: gather.wood,  target: 60 }
+      - { key: mason,      title: "Gather 40 stone by hand",         stat: gather.stone, target: 40 }
+      - { key: herbalist,  title: "Gather 10 herbs by hand",         stat: gather.herbs, target: 10 }
+      - { key: trader,     title: "Sell 100 goods at the market",    stat: sell.any,     target: 100 }
+      - { key: smith,      title: "Forge a weapon or piece of gear", stat: forge.any,    target: 1, min_level: 3 }
+      - { key: builder,    title: "Upgrade any building",            stat: build.upgrade, target: 1 }
+      - { key: brewer,     title: "Brew 3 potions or dishes",        stat: brew.any,     target: 3, min_level: 5 }
+      - { key: neighbour,  title: "Help a neighbour's building along", stat: help.given, target: 1 }
+  weekly:
+    count: 5
+    rewards: { xp_base: 600, xp_per_level: 100, coins: [1000, 2500], token: 1 }
+    pool:
+      - { key: hunter,     title: "Defeat 150 monsters",             stat: kill.any,      target: 150 }
+      - { key: gatherer,   title: "Gather 400 materials by hand",    stat: gather.any,    target: 400 }
+      - { key: merchant,   title: "Sell 1,000 goods",                stat: sell.any,      target: 1000 }
+      - { key: forgemaster, title: "Forge 5 pieces of gear",         stat: forge.any,     target: 5,  min_level: 4 }
+      - { key: delver,     title: "Clear a delve",                   stat: delve.cleared, target: 1,  min_level: 5 }
+      - { key: defender,   title: "Beat back 2 raids",               stat: wave.won,      target: 2,  min_level: 4 }
+      - { key: architect,  title: "Finish 5 upgrades",               stat: build.upgrade, target: 5 }
+      - { key: explorer,   title: "Open 3 chests or shrines",        stat: poi.any,       target: 3 }
+      - { key: good_friend, title: "Help neighbours 5 times",        stat: help.given,    target: 5 }
+  main:                                      # the questline, in order, after the tutorial
+    - { key: hall2,    title: "Raise the Town Hall to level 2",    town_hall: 2,                      reward: { xp: 200, coins: 300 } }
+    - { key: combo,    title: "Discover a building combo",          stat: discover.combo, target: 1,  reward: { xp: 200, coins: 200 } }
+    - { key: forge,    title: "Forge your first weapon",            stat: forge.any,      target: 1,  reward: { xp: 250, coins: 200 } }
+    - { key: friends,  title: "Make a friend",                      stat: friend.made,    target: 1,  reward: { xp: 150, coins: 150 } }
+    - { key: grove,    title: "Welcome 4 villagers",                villagers: 4,                     reward: { xp: 300, coins: 300 } }
+    - { key: raid,     title: "Beat back a raid",                   stat: wave.won,       target: 1,  reward: { xp: 400, coins: 400 } }
+    - { key: delve,    title: "Clear a delve",                      stat: delve.cleared,  target: 1,  reward: { xp: 500, coins: 500 } }
+    - { key: hall3,    title: "Raise the Town Hall to level 3",    town_hall: 3,                      reward: { xp: 600, coins: 600 } }
+    - { key: boss,     title: "Help defeat a realm boss",           stat: kill.realm_boss, target: 1, reward: { xp: 800, coins: 800, title: Bossbreaker } }
+    - { key: hall4,    title: "Raise the Town Hall to level 4",    town_hall: 4,                      reward: { xp: 1000, coins: 1000 } }
+    - { key: hall5,    title: "Raise the Town Hall to level 5",    town_hall: 5,                      reward: { xp: 2000, coins: 2000, title: "Heart of the Realm" } }
+
+achievements:
+  slime_slayer:   { name: Slime Slayer,    desc: "Pop 500 slimes",                  stat: kill.slime,      target: 500,  title: Slime Slayer, coins: 500 }
+  monster_bane:   { name: Monster Bane,    desc: "Defeat 1,000 monsters",           stat: kill.any,        target: 1000, title: Monster Bane, coins: 1000 }
+  first_blood:    { name: First Blood,     desc: "Defeat a monster",                stat: kill.any,        target: 1,    coins: 50 }
+  lumberjack:     { name: Lumberjack,      desc: "Gather 1,000 wood by hand",       stat: gather.wood,     target: 1000, title: Lumberjack, coins: 400 }
+  green_thumb:    { name: Green Thumb,     desc: "Gather 200 herbs by hand",        stat: gather.herbs,    target: 200,  title: Green Thumb, coins: 300 }
+  master_smith:   { name: Master Smith,    desc: "Forge 10 Epic or better",         stat: forge.epic_plus, target: 10,   title: Master Smith, coins: 1500 }
+  apprentice:     { name: Apprentice,      desc: "Forge your first gear",           stat: forge.any,       target: 1,    coins: 100 }
+  combo_hunter:   { name: Combo Hunter,    desc: "Discover all 13 combos",          stat: discover.combo,  target: 13,   title: Combo Hunter, coins: 2000 }
+  tycoon:         { name: Tycoon,          desc: "Earn 50,000 coins at the market", stat: sell.coins,      target: 50000, title: Tycoon, coins: 1000 }
+  defender:       { name: Defender,        desc: "Beat back 10 raids",              stat: wave.won,        target: 10,   title: Defender, coins: 800 }
+  delver:         { name: Deep Delver,     desc: "Clear 10 delves",                 stat: delve.cleared,   target: 10,   title: Deep Delver, coins: 1000 }
+  bossbreaker:    { name: Kingslayer,      desc: "Help defeat 5 realm bosses",      stat: kill.realm_boss, target: 5,    title: Kingslayer, coins: 2000 }
+  good_neighbour: { name: Good Neighbour,  desc: "Help neighbours 25 times",        stat: help.given,      target: 25,   title: Good Neighbour, coins: 500 }
+  generous:       { name: Generous,        desc: "Send 10 gifts",                   stat: gift.sent,       target: 10,   title: The Generous, coins: 300 }
+  loremaster:     { name: Loremaster,      desc: "Read 10 lore stones",             stat: lore.read,       target: 10,   title: Loremaster, coins: 500 }
+  treasure_hunter: { name: Treasure Hunter, desc: "Open 20 ruined chests",          stat: poi.chest,       target: 20,   title: Treasure Hunter, coins: 500 }
+
+calendar:                                    # 28 days; the day only moves on when you claim (no streaks to lose)
+  days:
+    - { coins: 100 }
+    - { res: { wood: 100, stone: 80 } }
+    - { items: { healing_potion: 2 } }
+    - { coins: 200 }
+    - { res: { ore: 60, food: 120 } }
+    - { items: { warrior_stew: 2 } }
+    - { coins: 300, title: Regular, items: { cosmetic_token: 1 } }
+    - { res: { wood: 200, stone: 160 } }
+    - { coins: 250 }
+    - { items: { stamina_potion: 2 } }
+    - { res: { planks: 40, bricks: 40 } }
+    - { coins: 350 }
+    - { items: { healing_potion: 3 } }
+    - { coins: 400, title: Faithful, items: { cosmetic_token: 1 } }
+    - { res: { ore: 150, crystal: 6 } }
+    - { coins: 400 }
+    - { items: { swift_tart: 2 } }
+    - { res: { planks: 80, bricks: 80 } }
+    - { coins: 500 }
+    - { items: { ironbark: 1 } }
+    - { coins: 600, title: Devoted, items: { cosmetic_token: 2 } }
+    - { res: { wood: 400, stone: 300 } }
+    - { coins: 600 }
+    - { items: { starstone: 1 } }
+    - { res: { ore: 250, crystal: 10 } }
+    - { coins: 800 }
+    - { items: { ancient_rune: 1 } }
+    - { coins: 1000, title: Hearthkeeper, items: { cosmetic_token: 3 } }

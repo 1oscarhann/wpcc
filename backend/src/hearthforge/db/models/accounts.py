@@ -75,6 +75,9 @@ class Avatar(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     appearance: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    skills: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    respecs: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
+    title: Mapped[str | None] = mapped_column(Text)
     level: Mapped[int] = mapped_column(SmallInteger, default=1)
     xp: Mapped[int] = mapped_column(Integer, default=0)
     hp: Mapped[int] = mapped_column(Integer, nullable=False)

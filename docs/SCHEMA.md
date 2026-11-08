@@ -566,6 +566,14 @@ CREATE TABLE mounts (
 );
 ```
 
+### As built (migration 0010, Phases 15/16a)
+
+- `avatars` gains `skills jsonb` (node → rank), `respecs smallint` and `title text`.
+- `quest_progress` is keyed `(user_id, quest_key, period_start)` with `period`, `stat`, `base` (the counter when handed out, D-110), `target` and `claimed_at`. `period_start` is the ISO date of the day or week, or `'main'`. No status enum: done is `value − base ≥ target`.
+- `user_achievements` and `user_cosmetics` are as above; titles are cosmetics keyed `title:<name>`.
+- `login_rewards` is `(user_id, calendar_day, last_claim_day, extra)`.
+- `pets` and `mounts` wait for Phase 16b.
+
 ## 8. Social (Phase 15)
 
 ```sql
@@ -625,6 +633,14 @@ CREATE TABLE neighbour_helps (
 ```
 
 Parties are **in memory** inside the RoomManager (realm-scoped). After a restart, players re-form them. See D-025.
+
+### As built (migration 0010, Phase 15)
+
+- `friendships`, `blocks` and `village_visits` are as above.
+- `mail` replaces the mailbox container (D-106): `id, user_id, sender_id, sender_name, kind (gift|boss|system), items jsonb, coins, note, created_at, claimed_at`.
+- `gifts` is `(from_user, to_user, day)` with `items` and `value`; the per-gift and daily caps read it.
+- `village_likes` keeps `counted`; `villages.likes_count` is the denormalised total.
+- `neighbour_helps` is keyed `(helper_id, building_id, day)` with `owner_id` and `seconds`; `village_buildings.helped_seconds` enforces the 50% cap.
 
 ## 9. World events (Phases 12, 13, 17)
 

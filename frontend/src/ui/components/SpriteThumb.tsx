@@ -21,11 +21,13 @@ export function loadAtlasForDom() {
 }
 
 /** A world sprite drawn into a DOM canvas at an integer scale, fitted into a box. */
-export function SpriteThumb({ name, box = 64, maxScale = 2, dim = false }: {
+export function SpriteThumb({ name, box = 64, maxScale = 2, dim = false, silhouette = false }: {
   name: string;
   box?: number;
   maxScale?: number;
   dim?: boolean;
+  /** draw only the shape, for things you haven't found yet */
+  silhouette?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
@@ -43,11 +45,17 @@ export function SpriteThumb({ name, box = 64, maxScale = 2, dim = false }: {
       ctx.clearRect(0, 0, box, box);
       ctx.globalAlpha = dim ? 0.45 : 1;
       ctx.drawImage(img, f.x, f.y, f.w, f.h, Math.floor((box - f.w * scale) / 2), box - f.h * scale, f.w * scale, f.h * scale);
+      if (silhouette) {
+        ctx.globalCompositeOperation = "source-in";
+        ctx.fillStyle = "rgba(43,30,42,0.4)";
+        ctx.fillRect(0, 0, box, box);
+        ctx.globalCompositeOperation = "source-over";
+      }
       setReady(true);
     });
     return () => {
       alive = false;
     };
-  }, [name, box, maxScale, dim]);
+  }, [name, box, maxScale, dim, silhouette]);
   return <canvas ref={ref} width={box} height={box} className="pixel" style={{ opacity: ready ? 1 : 0 }} aria-hidden />;
 }

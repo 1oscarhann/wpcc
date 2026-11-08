@@ -115,10 +115,12 @@ def create_app(
         defence,
         dungeons,
         inventory,
+        journal,
         market,
         me,
         progress,
         realm,
+        social,
         village,
         world,
     )
@@ -135,6 +137,8 @@ def create_app(
     app.include_router(world.router)
     app.include_router(dungeons.router)
     app.include_router(defence.router)
+    app.include_router(social.router)
+    app.include_router(journal.router)
     app.include_router(admin.router)
     app.include_router(gateway.router)
 

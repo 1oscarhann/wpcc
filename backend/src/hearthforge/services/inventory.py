@@ -402,6 +402,11 @@ async def repair(
     if missing <= 0:
         raise GameError("not_damaged", "It's already in perfect shape.")
     cost = forging.repair_cost(cfg, inst.tier, missing)
+    from hearthforge.services import progress as progress_svc
+
+    cut = (await progress_svc.perks_of(session, cfg, user_id)).get("repair_cost", 0.0)  # Frugal
+    if cut:
+        cost = {k: max(1, round(v * (1 - min(0.9, cut)))) for k, v in cost.items()}
     paid = await village_svc.pay(session, cfg, ld, cost, ledger.GEAR_REPAIR, str(inst.id), "item")
     inst.durability = inst.max_durability
     village_svc.touch(ld, now)

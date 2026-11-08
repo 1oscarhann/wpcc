@@ -11,6 +11,8 @@ import { WorldChip } from "./WorldChip";
 import { useDefenceSync, WaveChip, WaveReportModal } from "./Defence";
 import { HappinessChip, VillagersPanel } from "./Villagers";
 import { MiniMap } from "./WorldMap";
+import { JournalButton } from "./Journal";
+import { FriendsButton } from "./Social";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
@@ -379,7 +381,9 @@ export function BuildHud({ onSettings, touch, onZoom }: {
             <button className="btn secondary" onClick={() => useMarket.getState().set({ marketOpen: true })} aria-label="Market" title="Market: sell goods, see the merchant" data-tut-target="market">
               <Icon name="market" /> <span className="hide-narrow">Market</span>
             </button>
-            <button className="btn secondary icon-only" onClick={() => useRealm.getState().set({ panel: "members" })} aria-label="Realm" title="Realm: friends, stash, activity">
+            <JournalButton />
+            <FriendsButton />
+            <button className="btn secondary icon-only" onClick={() => useRealm.getState().set({ panel: "members" })} aria-label="Realm" title="Realm: members, stash, activity">
               <Icon name="banner" />
             </button>
             <button className="btn secondary icon-only" onClick={() => useCrafting.getState().set({ bagOpen: true })} aria-label="Bag and bank" title="Bag and bank">

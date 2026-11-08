@@ -323,8 +323,12 @@ class BossBrain:
             if dmg / total < self.ctl.cfg.loot_min_share:
                 continue
             p = room.by_user.get(uuid.UUID(uid))
-            if p is None:
-                continue  # left before the end: no loot (see D-093)
+            if p is None:  # left before the end: their share comes by mail (Phase 15)
+                items = {item: rng.randint(lo, hi) for item, (lo, hi) in loot.rares.items()}
+                if self.row.kills.get(uid, 0) == 0 or rng.random() < self.ctl.cfg.trophy_chance:
+                    items[loot.trophy] = 1
+                self.ctl.mail.append((uid, items, rng.randint(*loot.coins), self.cfg.name))
+                continue
             winners.append(p.name)
             room.grant_xp(p, loot.xp)
             coins = rng.randint(*loot.coins)
@@ -360,6 +364,7 @@ class Bosses:
         self.dirty_damage: set[tuple[str, str]] = set()
         self.done: list[tuple[BossRow, dict[str, float]]] = []  # kills, saved by the next flush
         self.reload = True  # load the waiting bosses on the next flush
+        self.mail: list[tuple[str, dict[str, int], int, str]] = []  # loot for fighters who left early
 
     def set_rows(self, rows: list[BossRow]) -> None:
         """The waiting bosses right now (from the DB). New ones wake; vanished ones (expired) fade."""

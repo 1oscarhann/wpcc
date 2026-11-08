@@ -117,6 +117,30 @@ export interface ConfigBundle {
     max_rare_inputs: number;
     armour: Record<string, number[]>;
   };
+  social: {
+    gate: { level: number; account_age_s: number };
+    friends_max: number;
+    gifts: { per_friend_per_day: number; value_cap: number; daily_value_cap: number; max_stacks: number };
+    help: { cut: number; per_day: number };
+    emotes: string[];
+    quick: string[];
+    chat_radius: number;
+    ping_s: number;
+  };
+  skills: {
+    points_per_level: number;
+    respec: { free_first: boolean; coins_per_level: number };
+    branches: Record<string, { name: string; nodes: Record<string, SkillNodeDef> }>;
+  };
+}
+
+export interface SkillNodeDef {
+  name: string;
+  desc: string;
+  max: number;
+  requires: string[];
+  branch_points: number;
+  effects: Record<string, number>;
 }
 
 export interface Me {

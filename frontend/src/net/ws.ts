@@ -4,6 +4,7 @@ import { onWaveNotify } from "../state/defence";
 import { decode, encode } from "@msgpack/msgpack";
 import protocol from "../../../shared/protocol.json";
 import { onRealmNotify, useRealm, type MateVillage } from "../state/realm";
+import { onSocialNotify } from "../state/social";
 import type { VillageState } from "../api/types";
 import { gridLink } from "../sim/grid";
 import type { Rules } from "../sim/rules";
@@ -127,6 +128,7 @@ export class GameSocket {
       case "NOTIFY":
         if (msg[1] === "realm") void onRealmNotify(useRealm.getState().realm?.id ?? null);
         else if (msg[1] === "wave") onWaveNotify(msg[2] as Record<string, unknown>);
+        else if (msg[1] === "social") onSocialNotify(msg[2] as Record<string, unknown>);
         break;
       case "PONG": {
         const [clientMs, serverMs] = [msg[1] as number, msg[2] as number];

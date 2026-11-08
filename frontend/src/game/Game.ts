@@ -17,9 +17,11 @@ import { CloudShadows, groundLighting } from "./atmosphere";
 import { AvatarWorld, type WorldHost } from "./avatarWorld";
 import { MerchantCart } from "./merchantFx";
 import { Explorer } from "./explorer";
+import { SocialFx } from "./socialFx";
 import { MateVillages } from "./mates";
 import { useRealm } from "../state/realm";
 import { useMarket } from "../state/market";
+import { useSocial } from "../state/social";
 import { CombatFx } from "./combatFx";
 import { ComboFx } from "./comboFx";
 import { localPlacementError, rotatedFootprint, usableBounds } from "./placement";
@@ -542,6 +544,7 @@ export class Game {
         this.combatFx,
         new MerchantCart(this.worldHost, this.avatar),
         new Explorer(this.worldHost, this.avatar),
+        new SocialFx(this.worldHost, this.avatar),
       );
       useVillage.getState().startPlacing(null);
       useVillage.getState().select(null);
@@ -1580,8 +1583,12 @@ export class Game {
     else if (k === "b" || k === "i" || k === "tab") {
       e.preventDefault();
       av.set({ bagOpen: !av.bagOpen });
+    } else if (k === "t") {
+      const so = useSocial.getState();
+      so.set({ chatOpen: !so.chatOpen });
     } else if (k === "escape") {
       av.set({ bagOpen: false });
+      useSocial.getState().set({ chatOpen: false });
       useMarket.getState().set({ merchantOpen: false });
       useRealm.getState().set({ wildMerchant: null, lore: null });
     } else if (k === "e") {

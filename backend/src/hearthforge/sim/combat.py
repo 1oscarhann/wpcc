@@ -857,7 +857,10 @@ class Combat:
         return bool(w.get("instance_id")) and int(w.get("durability", 1)) <= 0
 
     def effects(self, p: Player) -> dict[str, float]:
-        return forging.weapon_effects(p.weapon.get("modifiers") or [], self.is_dull(p))
+        out = forging.weapon_effects(p.weapon.get("modifiers") or [], self.is_dull(p))
+        for k in ("damage", "crit"):  # Phase 16: skill perks (they work even with a dull blade)
+            out[k] += p.perks.get(k, 0.0)
+        return out
 
     # ── statuses (Phase 11) ──────────────────────────────────────────────────
     def apply_status(self, m: Monster, kind: str, hit: float, src: int) -> None:
@@ -914,6 +917,8 @@ class Combat:
         if crit:
             dmg *= c.crit_mult
         dmg *= 1 - m.defence / (m.defence + c.defence_k)
+        if m.boss:
+            dmg *= 1 + p.perks.get("boss_damage", 0.0)  # Giant Slayer
         return max(1, round(dmg)), crit
 
     def wear(self, p: Player) -> None:
@@ -921,6 +926,8 @@ class Combat:
         w = p.weapon
         if not w.get("instance_id") or int(w.get("durability", 0)) <= 0:
             return
+        if self.room.rng.random() < p.perks.get("wear_save", 0.0):
+            return  # Steady Hands
         w["durability"] = int(w["durability"]) - 1
         p.pending.durability = True
         if w["durability"] == 0:
@@ -1015,7 +1022,11 @@ class Combat:
             # every player who helped gets their own rolls (BALANCE §6.4)
             if spec is not None:
                 lo, hi = spec.coins
-                coins = int(rng.randint(lo, hi) * (2 if m.elite else 1) * (1 + room.blessing(p, "coins")))
+                coins = int(
+                    rng.randint(lo, hi)
+                    * (2 if m.elite else 1)
+                    * (1 + room.blessing(p, "coins") + p.perks.get("coins", 0.0))
+                )
                 if coins:
                     room.spawn_drop(p, "coins", coins, m.x, m.y)
             for _ in range(el.loot_rolls if m.elite else 1):

@@ -144,6 +144,10 @@ async def start(
     if busy >= job_slots(cfg, st.building_key, st.level):
         raise GameError("station_busy", "This station is already working. Wait for it or cancel the job.")
     rares = list(rares or [])
+    from hearthforge.services import progress as progress_svc
+
+    perks = await progress_svc.perks_of(session, cfg, user_id)  # Phase 16: the crafting branch
+    max_rares = cfg.forging.max_rare_inputs + int(perks.get("extra_slot", 0))
     tier: int | None = None
     combo_key: str | None = None
     eligible = False
@@ -184,8 +188,8 @@ async def start(
             raise GameError("combo_needed", "This station needs the right neighbours to make that.")
         tier, combo_key = found
         eligible = cfg.combos.combos[combo_key].legendary_eligible
-        if len(rares) > cfg.forging.max_rare_inputs:
-            raise GameError("bad_rares", f"At most {cfg.forging.max_rare_inputs} rare materials.")
+        if len(rares) > max_rares:
+            raise GameError("bad_rares", f"At most {max_rares} rare materials.")
         for r in rares:
             if r not in cfg.forging.modifiers:
                 raise GameError("bad_rares", f"{r} doesn't go into gear.")
@@ -195,6 +199,8 @@ async def start(
         kind = "gear"
     else:
         raise GameError("unknown_recipe", "Unknown recipe.")
+    if kind in ("gear", "consumable") and perks.get("forge_time"):
+        seconds = max(1, int(seconds * max(0.3, 1 - perks["forge_time"])))  # Quick Forge
     staff = sum(
         1 for v in ld.villagers if v.job_building_id == st.id
     )  # Phase 14: staffed stations are quicker
@@ -211,7 +217,7 @@ async def start(
         quantity=quantity,
         inputs={},
         rare_inputs=rares,
-        luck=forging.luck_for(cfg, rares),
+        luck=forging.luck_for(cfg, rares) + int(perks.get("forge_luck", 0)),
         legendary_eligible=eligible,
         roll_seed=secrets.randbits(62),
         started_at=now,
@@ -337,7 +343,12 @@ async def collect(
         found.count += 1
     from hearthforge.services import stats
 
-    await stats.bump(session, user_id, {f"forge.{j.recipe_key}": 1, "forge.any": 1, f"forge.{f.rarity}": 1})
+    epic = 1 if f.rarity in ("epic", "legendary") else 0
+    await stats.bump(
+        session,
+        user_id,
+        {f"forge.{j.recipe_key}": 1, "forge.any": 1, f"forge.{f.rarity}": 1, "forge.epic_plus": epic},
+    )
     village_svc.touch(ld, now)
     await session.flush()
     return ld, item_view(cfg, inst)

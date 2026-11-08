@@ -2,7 +2,7 @@
 
 A cozy-but-action-packed browser game. You build a village in **Build Mode**, then drop into **Avatar Mode** to explore, fight monsters and gather rare loot with friends. There's no PvP: other players can only help you.
 
-**Status:** Phases 1–6 are done: plan, foundations, Build Mode, **Avatar Mode** (walk the realm, chop and mine, carry it home), **combat** (slimes, wolves, spiders, elites, sword and spear movesets, dodge, loot, XP, KO) and **combos and forging** (buildings that touch unlock gear, discovery moments, a recipe book, station jobs, tiers, rarity, modifiers, durability, repair and salvage). Next up is Phase 7, the economy. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** Phases 1–16a are done: Build Mode, Avatar Mode, combat and ten weapon movesets, combos and forging, the NPC market and wandering merchant, the tutorial, realms and co-op, six biomes with POIs and weather, dungeons, raids and realm bosses, villagers and decorations, **social** (friends, blocks, mail, gifts, visits, likes, neighbour help, emotes, quick messages, map pings) and **progression** (skill tree, daily/weekly/main quests, achievements and titles, the collection book, the login calendar). Next: pets, mounts, fishing and photo mode (16b), the global layer (17), then polish and launch (18). See [docs/PLAN.md](docs/PLAN.md).
 
 ### Controls (Avatar Mode)
 
@@ -15,6 +15,9 @@ A cozy-but-action-packed browser game. You build a village in **Build Mode**, th
 | Dodge roll (i-frames) | Space or Shift | arrows button |
 | Potion | 1 or R | potion button |
 | Bag | B, I or Tab | bag button |
+| Emotes and quick messages | T | speech-bubble button |
+| Journal (quests, skills, feats, calendar) | J | scroll button |
+| Map (tap a spot to ping it for your realm) | M | mini-map |
 | Back to Build Mode | H or the Village button (not mid-fight) | Village button |
 
 Walk into your own village to drop gathered resources into storage.
@@ -130,7 +133,7 @@ cd backend && uv run hf --help
 | `hf config check` | Validate `/config` |
 | `hf test-account NAME` | Allow fast-forward on an account |
 | `hf fast-forward NAME 2h` | Move timers and production forward |
-| `hf grant NAME --coins 500 --res wood=1000 --item ironbark=2` | Give coins, resources and bag items (written to the ledger) |
+| `hf grant NAME --coins 500 --res wood=1000 --item ironbark=2 --level 8 --stat kill.slime=50` | Give coins, resources, bag items, a level or stat counts (written to the ledger and audit log) |
 | `hf make-admin NAME` | Admin role: unlocks `GET /api/admin/economy` |
 | `hf economy` | Coin supply, faucets vs sinks by reason (24 h and 7 d) |
 | `hf market recalc` | Reprice the NPC market now (the worker does it every 10 min) |

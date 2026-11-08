@@ -9,7 +9,10 @@ import { ATK_NONE, type Rules, type WeaponRule } from "../sim/rules";
 import { useAvatar, type InvSlot, type Weapon } from "../state/avatar";
 import { delveSolid, useDelve, type DelveInfo, type DelveState } from "../state/delve";
 import { useSession } from "../state/session";
+import { addPing } from "../state/social";
+import { useJournal } from "../state/journal";
 import { toast } from "../state/toasts";
+import { sfx } from "../game/sfx";
 import type { Appearance } from "../api/types";
 
 export const EV = protocol.events;
@@ -47,6 +50,7 @@ export interface RosterEntry {
   appearance: Appearance;
   weapon: string;
   level: number;
+  title: string | null;
 }
 
 export interface RoomInfo {
@@ -283,8 +287,8 @@ export class RoomClient {
   }
 
   private addRoster(r: unknown[]): void {
-    const [eid, userId, name, appearance, weapon, level] = r as [number, string, string, Appearance, string, number];
-    this.roster.set(eid, { eid, userId, name, appearance, weapon, level });
+    const [eid, userId, name, appearance, weapon, level, title] = r as [number, string, string, Appearance, string, number, string | null];
+    this.roster.set(eid, { eid, userId, name, appearance, weapon, level, title: title ?? null });
   }
 
   get ko(): boolean {
@@ -420,7 +424,10 @@ export class RoomClient {
       case EV.XP: {
         const [, , level, xp, xpNext, gained, hpMax] = ev as number[];
         Object.assign(patch, { level, xp, xpNext, hpMax });
-        if (gained) toast(`Level up! You're level ${level}.`, "good", "star");
+        if (gained) {
+          toast(`Level up! You're level ${level}. A new skill point is waiting in your Journal.`, "good", "star");
+          void useJournal.getState().fetch();
+        }
         break;
       }
       case EV.INVENTORY:
@@ -504,6 +511,13 @@ export class RoomClient {
       case EV.PLAYER_LEFT:
         this.roster.delete(ev[1] as number);
         break;
+      case EV.PING: {
+        // Phase 15: someone (maybe you) pinged the map; the minimap, world map and world show it
+        const [, eid, name, x, y, ms] = ev as [number, number, string, number, number, number];
+        addPing({ eid, name, x, y, until: performance.now() + ms, mine: eid === this.eid });
+        sfx("ping");
+        break;
+      }
       case EV.NODE: {
         const [, nid, , , depleted, ms] = ev as number[];
         if (depleted) this.depleted.set(nid, performance.now() + ms);

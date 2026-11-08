@@ -13,6 +13,10 @@ import { BuildHud } from "../hud/BuildHud";
 import { MarketPanel, MerchantPanel } from "../hud/Market";
 import { AwayCardModal, Guide } from "../hud/Guide";
 import { RealmPanel } from "../hud/Realm";
+import { JournalPanel } from "../hud/Journal";
+import { SocialPanel, useSocialSync } from "../hud/Social";
+import { useJournal } from "../../state/journal";
+import { useSocial } from "../../state/social";
 import { MapModal } from "../hud/WorldMap";
 import { PartyInvite } from "../hud/Party";
 import { useRealm } from "../../state/realm";
@@ -86,11 +90,18 @@ export function PlayScreen() {
         const r = useRealm.getState();
         r.set({ mapOpen: !r.mapOpen, travelMode: false });
       }
+      if (e.key === "j" || e.key === "J") {
+        const j = useJournal.getState();
+        j.set({ tab: j.tab ? null : "quests" });
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   const realmPanel = useRealm((s) => s.panel);
+  const journalTab = useJournal((s) => s.tab);
+  const socialOpen = useSocial((s) => s.open);
+  useSocialSync();
 
   useEffect(() => {
     if (!host.current || !village || game.current) return;
@@ -134,6 +145,8 @@ export function PlayScreen() {
       {mode === "build" && market.marketOpen && <MarketPanel onClose={() => market.set({ marketOpen: false })} />}
       {mode === "avatar" && market.merchantOpen && <MerchantPanel onClose={() => market.set({ merchantOpen: false })} />}
       {realmPanel && mode === "build" && <RealmPanel onClose={() => useRealm.getState().set({ panel: null })} />}
+      {socialOpen && <SocialPanel onClose={() => useSocial.getState().set({ open: false, visiting: null })} />}
+      {journalTab && <JournalPanel onClose={() => useJournal.getState().set({ tab: null })} />}
       <MapModal />
       {mode === "avatar" && <PartyInvite />}
       {village && <Guide />}

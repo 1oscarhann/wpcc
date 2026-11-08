@@ -7,6 +7,7 @@ import { roomLink } from "../../net/room";
 import { useAvatar } from "../../state/avatar";
 import { useMarket } from "../../state/market";
 import { isRevealed, useRealm, type Overview } from "../../state/realm";
+import { livePings } from "../../state/social";
 import { useVillage } from "../../state/village";
 import { Icon, Modal } from "../components/kit";
 
@@ -161,6 +162,37 @@ function draw(ctx: CanvasRenderingContext2D, o: Overview, opts: DrawOpts): { x: 
     ctx.fill();
     ctx.stroke();
   }
+  // map pings (Phase 15): a pulsing ring with the pinger's name on the big map
+  const now = performance.now();
+  for (const pg of livePings()) {
+    const x = pg.x * tile;
+    const y = pg.y * tile;
+    const k = (now / 900) % 1;
+    ctx.strokeStyle = pg.mine ? "#94cdeb" : "#f7d66a";
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 1 - k;
+    ctx.beginPath();
+    ctx.arc(x, y, 3 + k * px * 2.4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = pg.mine ? "#94cdeb" : "#f7d66a";
+    ctx.strokeStyle = "#2b1e2a";
+    ctx.beginPath();
+    ctx.moveTo(x, y - 5);
+    ctx.lineTo(x + 4, y);
+    ctx.lineTo(x, y + 5);
+    ctx.lineTo(x - 4, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    if (opts.showLabels) {
+      ctx.font = "600 12px 'Pixelify Sans'";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 3;
+      ctx.strokeText(pg.name, x, y - 8);
+      ctx.fillText(pg.name, x, y - 8);
+    }
+  }
   // you
   if (opts.me) {
     ctx.fillStyle = "#ffffff";
@@ -262,10 +294,19 @@ export function MapModal() {
           onClick={(e) => {
             const i = pick(e);
             if (i !== null && travel && overview.attuned.includes(i) && i !== near) go(i);
+            else if (!travel && roomLink.client) {
+              // Phase 15: tap the map to ping that spot for everyone in the realm
+              const r = ref.current!.getBoundingClientRect();
+              const tile = px / overview.chunk_size;
+              const tx = (((e.clientX - r.left) / r.width) * ref.current!.width) / tile;
+              const ty = (((e.clientY - r.top) / r.height) * ref.current!.height) / tile;
+              roomLink.send?.("SOCIAL", "ping", Math.round(tx * 10) / 10, Math.round(ty * 10) / 10);
+            }
           }} />
         <div className="col map-side" style={{ gap: 6 }}>
           <span className="small muted">
             {travel ? "Tap an attuned stone (blue) to travel there." : "Walk up to a waystone to attune it. Then travel between attuned stones for free."}
+            {!travel && roomLink.client ? " Tap anywhere else to ping it for your realm." : ""}
           </span>
           <div className="col" style={{ gap: 3 }}>
             {overview.waystones.filter((w) => overview.attuned.includes(w.index)).map((w) => {
@@ -295,6 +336,7 @@ export function MapModal() {
             <span><span className="leg round" style={{ background: "#c58a52" }} /> ruins · <span className="leg round" style={{ background: "#94cdeb" }} /> shrine</span>
             <span><span className="leg round" style={{ background: "#a6cfe6" }} /> lore stone · <span className="leg round" style={{ background: "#585c6e" }} /> cave</span>
             <span><span className="leg round" style={{ background: "#f2bb97" }} /> lost villager</span>
+            <span><span className="leg diamond ping" /> a ping</span>
           </div>
         </div>
       </div>

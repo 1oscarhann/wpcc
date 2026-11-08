@@ -1,0 +1,33 @@
+# The skill tree (Phase 16, BALANCE §11). One point per avatar level after the first. Nodes need their
+# `requires` nodes at least rank 1; capstones also need `branch_points` spent in their branch.
+# Every effect is server-side (no movement or attack-timing changes, so prediction stays exact, D-079).
+points_per_level: 1
+respec: { free_first: true, coins_per_level: 40 }
+
+branches:
+  combat:
+    name: Combat
+    nodes:
+      power:      { name: Power,      desc: "+3% damage per rank",                 max: 5, effects: { damage: 0.03 } }
+      toughness:  { name: Toughness,  desc: "+5% max health per rank",             max: 3, effects: { hp: 0.05 } }
+      precision:  { name: Precision,  desc: "+2% critical chance per rank",        max: 3, requires: [power], effects: { crit: 0.02 } }
+      guard:      { name: Guard,      desc: "+3 defence per rank",                 max: 3, requires: [toughness], effects: { defence: 3 } }
+      plunder:    { name: Plunder,    desc: "+10% coins from monsters per rank",   max: 2, requires: [precision], effects: { coins: 0.10 } }
+      slayer:     { name: Giant Slayer, desc: "+15% damage to bosses",            max: 1, requires: [precision, guard], branch_points: 8, effects: { boss_damage: 0.15 } }
+  gathering:
+    name: Gathering
+    nodes:
+      bountiful:  { name: Bountiful,  desc: "+15% hand-gathered yield per rank",   max: 3, effects: { gather_yield: 0.15 } }
+      strong_arm: { name: Strong Arm, desc: "15% chance a swing counts twice per rank", max: 3, effects: { double_hit: 0.15 } }
+      lucky_hands: { name: Lucky Hands, desc: "+25% rare-find odds per rank",      max: 2, requires: [bountiful], effects: { rare_odds: 0.25 } }
+      regrowth:   { name: Regrowth,   desc: "Your nodes regrow 15% sooner per rank", max: 2, requires: [strong_arm], effects: { regrow: 0.15 } }
+      naturalist: { name: Naturalist, desc: "+20% XP from gathering per rank",     max: 2, requires: [lucky_hands], effects: { gather_xp: 0.20 } }
+      prospector: { name: Prospector, desc: "Rare finds come in pairs more often (+50% rare odds)", max: 1, requires: [lucky_hands, regrowth], branch_points: 7, effects: { rare_odds: 0.5 } }
+  crafting:
+    name: Crafting
+    nodes:
+      masters_touch: { name: "Master's Touch", desc: "+1 forging luck per rank",  max: 3, effects: { forge_luck: 1 } }
+      quick_forge:   { name: Quick Forge,  desc: "Forging and brewing 15% faster per rank", max: 2, effects: { forge_time: 0.15 } }
+      frugal:        { name: Frugal,       desc: "Repairs cost 10% less per rank", max: 3, requires: [masters_touch], effects: { repair_cost: 0.10 } }
+      steady_hands:  { name: Steady Hands, desc: "20% chance per rank that a hit doesn't wear your weapon", max: 2, requires: [quick_forge], effects: { wear_save: 0.20 } }
+      artisan:       { name: Artisan,      desc: "One more rare material slot when forging", max: 1, requires: [frugal, steady_hands], branch_points: 7, effects: { extra_slot: 1 } }

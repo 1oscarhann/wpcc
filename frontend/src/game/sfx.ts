@@ -76,6 +76,10 @@ function noise(c: AudioContext, out: AudioNode, t: number, dur: number, gain: nu
 }
 
 const SOUNDS: Record<string, (c: AudioContext, o: AudioNode, t: number) => void> = {
+  // Phases 15/16: a chat bubble pops up, a map ping, a like
+  chat: (c, o, t) => tone(c, o, "sine", 660, 990, t, 0.07, 0.05),
+  ping: (c, o, t) => [880, 1320].forEach((f, i) => tone(c, o, "sine", f, f, t + i * 0.09, 0.16, 0.06)),
+  like: (c, o, t) => [784, 1047].forEach((f, i) => tone(c, o, "triangle", f, f * 1.02, t + i * 0.06, 0.12, 0.08)),
   // Phase 13: the raid horn (two long low notes) and a boss's roar
   horn: (c, o, t) => {
     tone(c, o, "sawtooth", 196, 190, t, 0.7, 0.13);
