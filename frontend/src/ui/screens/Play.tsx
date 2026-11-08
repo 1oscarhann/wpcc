@@ -14,6 +14,7 @@ import { MarketPanel, MerchantPanel } from "../hud/Market";
 import { AwayCardModal, Guide } from "../hud/Guide";
 import { RealmPanel } from "../hud/Realm";
 import { JournalPanel } from "../hud/Journal";
+import { PhotoBar } from "../hud/Companions";
 import { SocialPanel, useSocialSync } from "../hud/Social";
 import { useJournal } from "../../state/journal";
 import { useSocial } from "../../state/social";
@@ -90,6 +91,10 @@ export function PlayScreen() {
         const r = useRealm.getState();
         r.set({ mapOpen: !r.mapOpen, travelMode: false });
       }
+      if (e.key === "p" || e.key === "P") {
+        const a = useAvatar.getState();
+        a.set({ photo: !a.photo });
+      }
       if (e.key === "j" || e.key === "J") {
         const j = useJournal.getState();
         j.set({ tab: j.tab ? null : "quests" });
@@ -100,6 +105,7 @@ export function PlayScreen() {
   }, []);
   const realmPanel = useRealm((s) => s.panel);
   const journalTab = useJournal((s) => s.tab);
+  const photo = useAvatar((s) => s.photo);
   const socialOpen = useSocial((s) => s.open);
   useSocialSync();
 
@@ -133,7 +139,8 @@ export function PlayScreen() {
           <Panel><div className="head">Your browser couldn't start the renderer (WebGL).</div></Panel>
         </div>
       )}
-      {mode === "build" ? (
+      <PhotoBar />
+      {photo ? null : mode === "build" ? (
         <BuildHud onSettings={() => setSettings(true)} touch={game.current?.touchMode ?? matchMedia("(pointer: coarse)").matches}
           onZoom={(d) => game.current?.zoomBy(d)} />
       ) : (

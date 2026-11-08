@@ -712,3 +712,27 @@ Happiness follows the formula in BALANCE §10.
 
 ### D-113: Phase 16 split in two
 **Decision.** Phase 16a shipped the skill tree, quests, the main questline, achievements and titles, the collection book and the login calendar. Pets, mounts, fishing, photo mode and the Trophy Hall are Phase 16b. Cosmetic tokens pile up until 16b gives them a shop.
+
+### D-114: pets are perks with legs; mounts are a speed multiplier
+**Decision.** A pet is one small perk (≤10%, the same keys as the skill tree, D-109) plus a sprite that trots after you. It doesn't fight. A mount multiplies your walking speed while you ride.
+- **Why no fighting pets.** A pet that attacks needs AI, targeting, balance and a network entity. A perk gets the same "my fox helps me" feeling, and other players still see your pet follow you (the roster carries it).
+- **Getting them.** Two pets cost cosmetic tokens (finally something to spend them on); three are unlocked by counters (300 slimes, the Frost Matriarch, the Cinder Tyrant). The horse costs 2,500 coins and needs Town Hall 3; the ram costs 6 tokens.
+- **Riding.** G toggles it. Speed goes through MOVE_MODS like plate armour and swift food, so prediction stays exact (D-079). The room throws you off in a fight, in a delve, when you're KO'd and when you cast a line.
+- **Cut.** There's no Stable building: mounts are bought from the Journal's Pets tab. It would need a new building's art and adds nothing to play.
+
+### D-115: fishing is server-timed
+**Decision.** The server rolls the fish (by biome, season and time of day), picks when it bites and where the gold zone sits, and checks the press against its own clock.
+- **The press.** The client reports how far along the bar its marker was. The server accepts it if it's in the zone (±60 ms of slack) and arrived no more than 0.9 s after it was made (network, and slow frames on phones; the screenshot run showed 600 ms was too tight).
+- **What it can't stop.** A bot that reads the zone from the bite event can press perfectly. That's acceptable: fish are worth 8–200 coins at the NPC market, under its soft caps.
+- **Where.** Water, ice in the Frozen North and lava in the Ashen Wastes. Village ponds count. Walking off reels the line in.
+- **Records.** Every catch has a weight; your heaviest of each species is a `best.fish.<key>` counter kept at its maximum (`stats.record`). No new table.
+
+### D-116: one source of truth for fish
+**Decision.** `fishing.yaml` lists the species once. The loader makes each one a stackable bag item (category `fish`) and an NPC market entry priced from the species; the art generator draws an icon per species from its two colours.
+
+### D-117: the Trophy Hall is a Journal tab
+**Decision.** Boss trophies, biggest catches and lifetime totals live in the Journal, not in a building.
+- **Why.** A hall building needs new art, a placement slot and a way to put things on shelves. The tab shows the same pride for none of that cost.
+
+### D-118: photo mode is client-only
+**Decision.** P hides the HUD, offers CSS filters (Golden, Dusk, Old map, Ink), toggles names and a paper frame, and saves a PNG made from Pixi's renderer (`extract.canvas`) with the same filter. You can keep walking while framing the shot.

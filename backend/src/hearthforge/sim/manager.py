@@ -188,7 +188,7 @@ class RoomManager:
         door = (ox + tpl.door[0] + 0.5, oy + tpl.door[1] + 0.5)
         from hearthforge.domain import skills as skills_dom
 
-        perks = skills_dom.perks(cfg, av.skills or {})
+        perks = skills_dom.with_pet(cfg, av.skills or {}, av.pet)
         stats = stats_for(cfg, av.level, perks)
         x, y = door
         if av.location == AvatarLocation.wild and av.realm_id == room.realm_id:
@@ -217,6 +217,8 @@ class RoomManager:
             armour_key=loadout.get("armour_key"),
             title=av.title,
             perks=perks,
+            pet=av.pet,
+            mount=av.mount,
         )
 
     async def reload_progress(self, user_id: uuid.UUID) -> None:
@@ -232,8 +234,13 @@ class RoomManager:
         async with self.st.sessionmaker() as s:
             av = (await s.execute(select(Avatar).where(Avatar.user_id == user_id))).scalar_one()
             p.blocked = await social_svc.blocked_ids(s, user_id)
-        p.perks = skills_dom.perks(self.st.config, av.skills or {})
+        p.perks = skills_dom.with_pet(self.st.config, av.skills or {}, av.pet)
         p.title = av.title
+        p.pet = av.pet
+        if p.mount != av.mount:
+            p.mount = av.mount
+            if p.mounted:
+                room.set_mounted(p, False)
         frac = p.hp / p.stats.hp_max if p.stats.hp_max else 1.0
         p.stats = stats_for(self.st.config, p.level, p.perks)
         p.hp = max(1.0, p.stats.hp_max * frac)

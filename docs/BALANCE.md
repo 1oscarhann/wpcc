@@ -683,3 +683,10 @@ tavern = 1 if a Tavern exists within 12 tiles path-distance of most homes, else 
 - **Achievements.** 16, worth 50–2,000 coins; 13 give titles.
 - **Calendar.** 28 days: about 6,650 coins, a few hundred of each basic resource, potions and food, 7 tokens and 4 titles over the round.
 - **Social.** As the table; help pays the helper 10 coins (10 a day at most: 100 coins, a small faucet).
+
+### 11.2 As built (Phase 16b)
+
+- **Pets.** Fox +5% gathering (3 tokens), Owl +10% rare finds (5 tokens), Pet Slime +5% monster coins (300 slimes), Frost Pup +2 defence (the Frost Matriarch), Ember Salamander +5% damage (the Cinder Tyrant). One out at a time.
+- **Mounts.** Horse ×1.6 speed (2,500 coins, Town Hall 3); Mountain Ram ×1.45 (6 tokens).
+- **Fishing.** 23 species across six waters. A bite comes after 1.5–4.5 s; the bar takes 1.8 s; the zone is 300 / 220 / 160 / 120 ms wide for common / uncommon / rare / legendary. Rarity odds 70 / 22 / 7 / 1. Prices 8–200 coins, soft cap 60 a day per species. 6 XP a catch (12 rare, 30 legendary). Seasonal: Blossom Trout (spring), Sunscale (summer), Aurora Cod (winter); night: Moonfin, Lantern Gar, Old Whiskers.
+- **Faucet check.** A steady angler lands about one fish every 6–8 s of attempts; at ~15 coins average that's under 150 coins a minute before soft caps, about the same as hand-gathering and selling.

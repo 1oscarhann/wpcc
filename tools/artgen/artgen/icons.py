@@ -1132,6 +1132,104 @@ ICONS.update({
 })
 
 
+# ── Phase 16b: fish, and the camera / pet / mount / rod UI icons ─────────────
+_EELS = {"bog_eel", "cinder_eel"}
+_WHISKERS = {"catfish", "old_whiskers"}
+
+
+def _fish(c: Canvas, body: list, fin: list, kind: str, sparkle: bool) -> None:
+    if kind == "eel":
+        for x in range(2, 14):
+            y = 8 + int(round(1.6 * __import__("math").sin(x * 0.7)))
+            c.put(x, y, body[3])
+            c.put(x, y + 1, body[2])
+            c.put(x, y + 2, body[1] if x % 3 else fin[2])
+        c.put(2, 8, INK)
+    elif kind == "ray":
+        pts = [(8, 2), (14, 8), (8, 12), (2, 8)]
+        c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: body[3] if x + y < 15 else body[2])
+        c.line(8, 12, 9, 15, body[1])
+        c.put(6, 7, fin[3])
+        c.put(10, 7, fin[3])
+    elif kind == "crab":
+        c.ellipse(8, 9, 5, 3.4, body[2])
+        c.ellipse(7.5, 8.5, 3, 1.8, body[3])
+        for x in (3, 13):
+            c.ellipse(x, 5, 1.8, 1.6, body[2])
+        for x in (4, 6, 10, 12):
+            c.put(x, 13, body[1])
+        c.put(6, 7, INK)
+        c.put(10, 7, INK)
+    else:
+        c.ellipse(7, 8, 5.4, 3.6, body[2])
+        c.ellipse(6.5, 7, 4, 1.8, body[3])
+        c.hline(3, 10, 10, fin[1])
+        c.poly([(11, 8), (15, 4), (15, 12)], fin[2])  # tail
+        c.put(5, 4, fin[2])
+        c.put(6, 4, fin[2])
+        c.put(4, 7, INK)  # eye
+        c.put(4, 6, (255, 255, 255, 255))
+        if kind == "whiskers":
+            c.line(2, 9, 0, 11, STONE[4])
+            c.line(2, 9, 0, 8, STONE[4])
+    if sparkle:
+        c.put(13, 1, GOLD[4])
+        c.put(12, 2, GOLD[3])
+        c.put(14, 2, GOLD[3])
+        c.put(13, 3, GOLD[3])
+
+
+def fish_icons(species: dict) -> dict[str, Canvas]:
+    out = {}
+    for key, sp in species.items():
+        body, fin = (ramp(n) for n in sp["colors"])
+        kind = "eel" if key in _EELS else "ray" if key == "magma_ray" else "crab" if key == "ash_crab" else (
+            "whiskers" if key in _WHISKERS else "fish"
+        )
+        c = Canvas(16, 16)
+        _fish(c, body + [body[-1]] * (5 - len(body)), fin + [fin[-1]] * (5 - len(fin)), kind, sp["rarity"] == "legendary")
+        c.outline(INK)
+        out[f"icon.fish_{key}"] = c
+    return out
+
+
+def u_camera(c: Canvas) -> None:
+    c.rect(1, 5, 14, 9, STONE[1])
+    c.hline(1, 14, 5, STONE[2])
+    c.rect(4, 3, 5, 2, STONE[1])
+    c.ellipse(8, 9.5, 3.4, 3.4, STONE[0])
+    c.ellipse(8, 9.5, 2, 2, WATER[2])
+    c.put(7, 8, WATER[5])
+    c.put(12, 7, RED[3])
+
+
+def u_paw(c: Canvas) -> None:
+    c.ellipse(8, 10.5, 3.6, 3, WOOD[3])
+    for x, y in ((3.5, 6), (6.5, 3.5), (9.5, 3.5), (12.5, 6)):
+        c.ellipse(x, y, 1.6, 1.8, WOOD[3])
+    c.put(7, 9, WOOD[4])
+
+
+def u_saddle(c: Canvas) -> None:  # a mount
+    c.poly([(2, 7), (6, 4), (10, 6), (14, 3), (14, 9), (2, 10)], WOOD[2])
+    c.hline(3, 13, 6, WOOD[4])
+    c.vline(8, 9, 14, STONE[3])
+    c.rect(7, 13, 3, 2, GOLD[3])
+    c.put(4, 8, RED[3])
+
+
+def u_rod(c: Canvas) -> None:  # fishing
+    c.line(2, 14, 12, 2, WOOD[3])
+    c.line(3, 14, 13, 2, WOOD[1])
+    c.line(12, 2, 14, 9, CLOTH[2])
+    c.ellipse(14, 11, 1.4, 1.6, RED[3])
+    c.put(14, 10, (255, 255, 255, 255))
+    c.rect(3, 11, 3, 2, STONE[2])
+
+
+ICONS.update({"camera": u_camera, "paw": u_paw, "saddle": u_saddle, "rod": u_rod})
+
+
 def generate() -> dict[str, Canvas]:
     out = {}
     for name, fn in ICONS.items():

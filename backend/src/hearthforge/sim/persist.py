@@ -106,6 +106,8 @@ async def flush_player(room: RealmRoom, p: Player, ops: Pending) -> FlushResult:
                 av.updated_at = now
         if ops.stats:
             await stats.bump(s, p.user_id, ops.stats)
+        if ops.records:
+            await stats.record(s, p.user_id, ops.records)
         if ops.fog or ops.waystones:
             from hearthforge.services import world as world_svc
 

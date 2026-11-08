@@ -1,12 +1,13 @@
 // Build Mode renderer (PixiJS v8, imperative — D-019). React only renders the DOM HUD on top.
 import { decode } from "@msgpack/msgpack";
 import gsap from "gsap";
-import { AnimatedSprite, Application, Container, Graphics, Sprite, Text } from "pixi.js";
+import { AnimatedSprite, Application, Container, Graphics, Rectangle, Sprite, Text } from "pixi.js";
 import type { BuildingDef, BuildingState, VillageState } from "../api/types";
 import { serverNow, useSession } from "../state/session";
 import { onVillageChange, useVillage, type MapMeta } from "../state/village";
 import { manifest } from "../assets/manifest";
-import { ENT, leaveAvatar, roomLink, type RoomClient } from "../net/room";
+import { ENT, leaveAvatar, reelNow, roomLink, type RoomClient } from "../net/room";
+import { useFishing } from "../state/companions";
 import { touchInput } from "../net/touch";
 import { BTN } from "../sim/motion";
 import { ClientGrid, gridLink } from "../sim/grid";
@@ -49,6 +50,9 @@ const TREE_PREFIXES = ["obj.oak", "obj.big_oak", "obj.birch", "obj.pine", "obj.a
 const DEBRIS_LEAVES = new Set(["oak", "big_oak", "birch", "pine", "apple", "bush", "weeds"]);
 
 const T = 16;
+
+/** The live Game, for HUD pieces that ask it things (is there water here? a photo, please). */
+export const gameLink: { game: Game | null } = { game: null };
 const ZOOMS = [2, 3, 4];
 const INK = 0x2b1e2a;
 
@@ -93,6 +97,7 @@ export class Game {
   private fence: Sprite[] = [];
   private fenceKey = "";
   private waterTiles = new Set<string>();
+  private fishTiles = new Set<string>();
   private treeSpots: { x: number; y: number }[] = [];
   // Phase 10: things that glow at night, and moonpetals (only open after dark)
   private lightSpots: { x: number; y: number; r: number; color: number; flicker: boolean }[] = [];
@@ -288,6 +293,7 @@ export class Game {
     roomLink.listeners.add(this.onRoomClient);
     if (roomLink.client) this.onRoomClient(roomLink.client);
     this.app.ticker.add((t) => this.tick(t.deltaMS));
+    gameLink.game = this;
     if (import.meta.env.DEV) {
       // for screenshot tests
       const w = window as unknown as { __hfGame?: Game; __hfVillage?: typeof useVillage; __hfDelve?: typeof useDelve; __hfRealm?: typeof useRealm };
@@ -295,11 +301,14 @@ export class Game {
       w.__hfVillage = useVillage;
       w.__hfDelve = useDelve;
       w.__hfRealm = useRealm;
+      (window as unknown as { __hfFishing?: typeof useFishing; __hfRoomLink?: typeof roomLink }).__hfFishing = useFishing;
+      (window as unknown as { __hfRoomLink?: typeof roomLink }).__hfRoomLink = roomLink;
     }
   }
 
   destroy(): void {
     this.destroyed = true;
+    if (gameLink.game === this) gameLink.game = null;
     roomLink.listeners.delete(this.onRoomClient);
     this.avatar?.destroy();
     this.avatar = null;
@@ -818,6 +827,9 @@ export class Game {
       const tx = ch.cx * cs + (i % cs);
       const ty = ch.cy * cs + Math.floor(i / cs);
       if (name.startsWith("tile.water")) this.waterTiles.add(`${tx},${ty}`);
+      if (name.startsWith("tile.water") || name.startsWith("tile.ice") || name.startsWith("tile.lava")) {
+        this.fishTiles.add(`${tx},${ty}`); // Phase 16b: somewhere to cast a line
+      }
       else if (name.startsWith("tile.lava") && (tx * 5 + ty * 3) % 4 === 0) {
         this.lightSpots.push({ x: tx * T + 8, y: ty * T + 8, r: 24, color: 0xff6a2a, flicker: true });
       }
@@ -1573,6 +1585,16 @@ export class Game {
   private avatarKey(k: string, e: KeyboardEvent): void {
     const c = this.avatar!.client;
     const av = useAvatar.getState();
+    // Phase 16b: while the fishing bar runs, E or Space reels in (instead of dodging off the bank)
+    if ((k === " " || k === "e") && useFishing.getState().phase === "bite") {
+      e.preventDefault();
+      reelNow();
+      return;
+    }
+    if (k === "g") {
+      roomLink.send?.("RIDE");
+      return;
+    }
     if (k === " " || k === "shift") {
       e.preventDefault();
       c.input.latched |= BTN.dodge;
@@ -1604,10 +1626,41 @@ export class Game {
         const poi = r.overview?.pois[r.nearPoi];
         if (poi?.kind === "delve") useDelve.getState().set({ panel: !useDelve.getState().panel });
         else roomLink.send?.("INTERACT", r.nearPoi);
-      }
+      } else if (useFishing.getState().phase === "idle" && this.nearFishable()) roomLink.send?.("FISH", "cast");
     } else if (k === "h") leaveAvatar();
     else if (k === "+" || k === "=") this.zoomAvatar(1);
     else if (k === "-") this.zoomAvatar(-1);
+  }
+
+  /** Photo mode (Phase 16b): show or hide the names over heads. */
+  setNames(show: boolean): void {
+    this.screen.visible = show;
+  }
+
+  /** Photo mode: the current frame as a canvas, exactly what's on screen (minus the HTML HUD). */
+  snapshot(): HTMLCanvasElement {
+    const frame = new Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
+    return this.app.renderer.extract.canvas({ target: this.app.stage, frame }) as HTMLCanvasElement;
+  }
+
+  /** Is there water, ice or lava within casting reach of the hero? (The server decides for real.) */
+  nearFishable(): boolean {
+    const c = this.avatar?.client;
+    const reach = useSession.getState().config?.fishing.reach ?? 1.6;
+    if (!c || c.info.weapon === undefined) return false;
+    const { x, y } = c.me;
+    const r = Math.ceil(reach);
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const tx = Math.floor(x) + dx;
+        const ty = Math.floor(y) + dy;
+        if (!this.fishTiles.has(`${tx},${ty}`)) continue;
+        const ddx = Math.max(tx - x, 0, x - (tx + 1));
+        const ddy = Math.max(ty - y, 0, y - (ty + 1));
+        if (Math.hypot(ddx, ddy) <= reach) return true;
+      }
+    }
+    return false;
   }
 
   private zoomAvatar(dir: number): void {

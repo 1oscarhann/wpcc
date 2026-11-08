@@ -168,6 +168,18 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
             "chat_radius": cfg.social.chat.radius,
             "ping_s": cfg.social.pings.lasts,
         },
+        "companions": {
+            "pets": {k: {"name": p.name, "desc": p.desc} for k, p in cfg.companions.pets.items()},
+            "mounts": {k: {"name": m.name, "speed": m.speed} for k, m in cfg.companions.mounts.items()},
+        },
+        "fishing": {
+            "species": {
+                k: {"name": sp.name, "rarity": sp.rarity, "kg": list(sp.kg), "price": sp.price}
+                for k, sp in cfg.fishing.species.items()
+            },
+            "reach": cfg.fishing.cast.reach,
+            "tiles": sorted({t for w in cfg.fishing.waters.values() for t in w.tiles}),
+        },
         "skills": {
             "points_per_level": cfg.skills.points_per_level,
             "respec": cfg.skills.respec.model_dump(),

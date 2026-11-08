@@ -49,6 +49,8 @@ FILES: dict[str, type[BaseModel]] = {
     "villagers": s.VillagersCfg,
     "skills": s.SkillsCfg,
     "progression": s.ProgressionCfg,
+    "companions": s.CompanionsCfg,
+    "fishing": s.FishingCfg,
 }
 
 
@@ -124,6 +126,8 @@ class GameConfig:
     villagers: s.VillagersCfg
     skills: s.SkillsCfg
     progression: s.ProgressionCfg
+    companions: s.CompanionsCfg
+    fishing: s.FishingCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -270,6 +274,21 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     villagers: s.VillagersCfg = parsed["villagers"]
     skills: s.SkillsCfg = parsed["skills"]
     progression: s.ProgressionCfg = parsed["progression"]
+    companions: s.CompanionsCfg = parsed["companions"]
+    fishing: s.FishingCfg = parsed["fishing"]
+
+    # every fish species is a stackable bag item with an NPC market price (Phase 16b, one source of truth)
+    for fk, sp in fishing.species.items():
+        if fk in items_cfg.items:
+            errors.append(f"fishing.yaml:species.{fk}: clashes with an item in items.yaml")
+            continue
+        items_cfg.items[fk] = s.ItemDefCfg(
+            name=sp.name, category="fish", stackable=True, max_stack=50, icon=f"icon.fish_{fk}"
+        )
+        market.items.setdefault(
+            fk,
+            s.MarketItem(base=sp.price, baseline=fishing.market.baseline, soft_cap=fishing.market.soft_cap),
+        )
 
     # ── items: every resource is also a stackable item ────────────────────────
     items: dict[str, ItemInfo] = {}
@@ -698,6 +717,27 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if "cosmetic_token" not in items:
         errors.append("items.yaml: weekly quests hand out 'cosmetic_token'; it must exist")
 
+    # ── companions and fishing (Phase 16b) ────────────────────────────────────
+    for pk, pet in companions.pets.items():
+        if (pet.cost is None) == (pet.unlock is None):
+            errors.append(f"companions.yaml:pets.{pk}: needs exactly one of cost or unlock")
+        if any(abs(v) > 0.1 for k, v in pet.perks.items() if k != "defence"):
+            errors.append(f"companions.yaml:pets.{pk}.perks: pet bonuses stay at 10% or less (BALANCE §11)")
+    biomes = {"meadow", *(b.biome for b in mapgen.bands)}
+    for wk, w in fishing.waters.items():
+        if wk not in biomes:
+            errors.append(f"fishing.yaml:waters.{wk}: unknown biome")
+        for fk in w.species:
+            if fk not in fishing.species:
+                errors.append(f"fishing.yaml:waters.{wk}.species: unknown species '{fk}'")
+    for fk, sp in fishing.species.items():
+        if sp.season is not None and sp.season not in world_clock.seasons:
+            errors.append(f"fishing.yaml:species.{fk}.season: unknown season '{sp.season}'")
+        if not 0 < sp.kg[0] <= sp.kg[1]:
+            errors.append(f"fishing.yaml:species.{fk}.kg: needs 0 < low <= high")
+        if sp.rarity not in fishing.windows:
+            errors.append(f"fishing.yaml:species.{fk}: no timing window for {sp.rarity}")
+
     # ── dungeons (Phase 12) ───────────────────────────────────────────────────
     dg = dungeons
     if dg.boss.enemy not in enemies.enemies or not enemies.enemies[dg.boss.enemy].roaming:
@@ -822,6 +862,8 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         villagers=villagers,
         skills=skills,
         progression=progression,
+        companions=companions,
+        fishing=fishing,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

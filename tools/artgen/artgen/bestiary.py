@@ -223,7 +223,28 @@ def quad(s: QuadSpec, phase: int, pose: str = "run") -> Canvas:
     # head
     hy = by - 3 + (2 if pose == "windup" else 0)
     hx0 = x0 - 5
-    if s.head == "croc":  # long flat head with a big jaw
+    if s.head == "horse":  # Phase 16b mount: a raised neck, a long face, a dark mane
+        bob = 1 if pose == "run" and phase % 2 else 0
+        mane = s.horn  # reuse the horn ramp for the mane
+        for k in range(7):  # the neck, leaning forward as it rises
+            nx = x0 - k // 2
+            ny = by - k + bob
+            for x in range(nx, nx + 4):
+                c.put(x, ny, s.body[3] if x == nx else s.body[2])
+            c.put(nx + 4, ny, mane[1])
+            c.put(nx + 3, ny, mane[2] if k % 2 else mane[1])
+        top = by - 9 + bob
+        for y in range(top, top + 4):  # the head, nose pointing left and a little down
+            for x in range(x0 - 9 + (y - top) // 2, x0 - 1):
+                c.put(x, y, s.body[3] if y == top else s.body[2])
+        c.hline(x0 - 8, x0 - 6, top + 3, s.belly[1])  # muzzle
+        c.put(x0 - 8 + 1, top + 2, INK)  # nostril
+        c.put(x0 - 4, top + 1, s.eye)
+        c.put(x0 - 2, top - 1, s.body[3])  # ear
+        c.put(x0 - 2, top - 2, s.body[2])
+        c.put(x0 - 1, top, mane[1])
+        c.put(x0, top + 1, mane[2])
+    elif s.head == "croc":  # long flat head with a big jaw
         hy = by
         jaw = 2 if pose in ("windup", "attack") else 0
         for x in range(hx0 - 2, x0 + 1):

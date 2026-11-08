@@ -28,9 +28,18 @@ interface Ring {
   color: number;
 }
 
+interface Bobber {
+  g: Graphics;
+  x: number;
+  y: number;
+  bit: boolean;
+  t0: number;
+}
+
 export class SocialFx {
   private bubbles = new Map<number, Bubble>();
   private rings: Ring[] = [];
+  private bobber: Bobber | null = null; // Phase 16b: your fishing line
 
   constructor(
     private host: WorldHost,
@@ -42,6 +51,22 @@ export class SocialFx {
     if (kind === EV.CHAT) {
       const [, eid, what, key] = ev as [number, number, string, string | number];
       this.bubble(eid, what, key);
+    } else if (kind === EV.FISH) {
+      const op = ev[1] as string;
+      if (op === "cast") {
+        const [, , , x, y] = ev as [number, string, number, number, number];
+        this.dropBobber();
+        const g = new Graphics();
+        this.host.fx.addChild(g);
+        this.bobber = { g, x: x * T, y: y * T, bit: false, t0: performance.now() };
+      } else if (op === "bite" && this.bobber) {
+        this.bobber.bit = true;
+        this.bobber.t0 = performance.now();
+        this.host.dust(this.bobber.x, this.bobber.y + 2);
+      } else if (op !== "bite") {
+        if (this.bobber && op === "catch") this.host.sparkles(this.bobber.x, this.bobber.y);
+        this.dropBobber();
+      }
     } else if (kind === EV.PING) {
       const [, eid, , x, y, ms] = ev as [number, number, string, number, number, number];
       this.ring(x, y, ms, eid === this.world.client.eid);
@@ -99,8 +124,33 @@ export class SocialFx {
     return true;
   }
 
+  private dropBobber(): void {
+    if (this.bobber) safeDestroy(this.bobber.g);
+    this.bobber = null;
+  }
+
+  private drawBobber(now: number): void {
+    const b = this.bobber;
+    if (!b || b.g.destroyed) return;
+    const me = this.world.local.root;
+    const t = (now - b.t0) / 1000;
+    const dip = b.bit ? 2 + Math.sin(t * 30) * 1.5 : Math.sin(t * 3) * 0.8;
+    const hx = me.x + 5;
+    const hy = me.y - 16;
+    const g = b.g.clear();
+    // the line sags a little between the rod tip and the float
+    const mx = (hx + b.x) / 2;
+    const my = Math.max(hy, b.y) + 6;
+    g.moveTo(hx, hy).quadraticCurveTo(mx, my, b.x, b.y - 2 + dip).stroke({ width: 1, color: 0xfaf2dd, alpha: 0.8 });
+    const k = (t * 0.8) % 1;
+    g.ellipse(b.x, b.y + 1, 3 + k * (b.bit ? 9 : 5), (3 + k * (b.bit ? 9 : 5)) * 0.45).stroke({ width: 1, color: 0xd5f0fa, alpha: (1 - k) * 0.7 });
+    g.circle(b.x, b.y - 1 + dip, 2.4).fill(0xfaf2dd).stroke({ width: 1, color: INK });
+    g.rect(b.x - 2.4, b.y - 3.4 + dip, 4.8, 2.2).fill(0xe05a47);
+  }
+
   update(_dms: number): void {
     const now = performance.now();
+    this.drawBobber(now);
     for (const [eid, b] of this.bubbles) {
       const left = b.until - now;
       if (left <= 0 || !this.place(eid, b.node)) {
@@ -129,6 +179,7 @@ export class SocialFx {
   }
 
   destroy(): void {
+    this.dropBobber();
     for (const b of this.bubbles.values()) safeDestroy(b.node);
     for (const r of this.rings) safeDestroy(r.g);
     this.bubbles.clear();

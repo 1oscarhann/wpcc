@@ -74,7 +74,7 @@ export interface JournalView {
   calendar: CalendarView;
 }
 
-export type JournalTab = "quests" | "skills" | "achievements" | "collection" | "calendar";
+export type JournalTab = "quests" | "skills" | "achievements" | "pets" | "trophies" | "collection" | "calendar";
 
 interface JournalStore {
   tab: JournalTab | null; // null = closed
@@ -106,7 +106,7 @@ export const useJournal = create<JournalStore>((set) => ({
 
 /** Things to collect, per tab. The HUD button shows the total as a dot. */
 export function journalDots(v: JournalView | null): Record<JournalTab, number> {
-  const out: Record<JournalTab, number> = { quests: 0, skills: 0, achievements: 0, collection: 0, calendar: 0 };
+  const out: Record<JournalTab, number> = { quests: 0, skills: 0, achievements: 0, pets: 0, trophies: 0, collection: 0, calendar: 0 };
   if (!v) return out;
   const ready = (q: { done: boolean; claimed: boolean }) => q.done && !q.claimed;
   out.quests = v.quests.daily.filter(ready).length + v.quests.weekly.filter(ready).length + (v.quests.main?.done ? 1 : 0);

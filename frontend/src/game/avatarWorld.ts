@@ -13,7 +13,7 @@ import { appearanceKey, composeAvatar, frameFor } from "./avatarComposer";
 import { safeDestroy } from "./safe";
 import { weaponSprite } from "./items";
 import { sfx } from "./sfx";
-import { iconTex, tex } from "./sprites";
+import { hasSprite, iconTex, tex } from "./sprites";
 
 const T = 16;
 const INK = 0x2b1e2a;
@@ -66,6 +66,11 @@ export interface AvatarView {
   label: Text | null;
   /** Phase 16: the title worn under the name ("Slime Slayer") */
   title: Text | null;
+  /** Phase 16b: the mount under you and the pet at your heels */
+  mount: Sprite | null;
+  mountKey: string | null;
+  face: number; // 1 = facing left (how mount sprites are drawn), -1 = right
+  pet: PetFollow | null;
   lastX: number;
   lastY: number;
   walkMs: number;
@@ -73,6 +78,19 @@ export interface AvatarView {
   ghostCd: number;
   weaponType: string;
 }
+
+interface PetFollow {
+  key: string;
+  sprite: Sprite;
+  x: number;
+  y: number;
+  walkMs: number;
+  moves: number;
+  face: number;
+}
+
+/** How high the rider sits on each mount (px above the hooves). */
+const SADDLE: Record<string, number> = { horse: 13, ram: 11 };
 
 interface DropView {
   root: Container;
@@ -101,6 +119,11 @@ export class AvatarWorld {
     appearance: Appearance,
   ) {
     this.local = this.makeAvatar(appearance, client.info.weapon.type, null);
+    const me = client.roster.get(client.eid);
+    if (me) {
+      this.setPet(this.local, me.pet);
+      this.setMount(this.local, me.mount);
+    }
     this.unsub = client.on((ev) => this.onEvent(ev));
     this.applyDepleted();
   }
@@ -136,6 +159,7 @@ export class AvatarWorld {
     }
     const view: AvatarView = {
       root, body, weapon, shadow, frames: null, label, title: null, lastX: 0, lastY: 0, walkMs: 0, swing: null, ghostCd: 0, weaponType,
+      mount: null, mountKey: null, face: 1, pet: null,
     };
     if (name) this.setTitle(view, titleText);
     void avatarFrames(a).then((f) => {
@@ -149,6 +173,70 @@ export class AvatarWorld {
     safeDestroy(v.root);
     v.label?.destroy();
     v.title?.destroy();
+    if (v.pet) safeDestroy(v.pet.sprite);
+  }
+
+  // ── Phase 16b: mounts and pets ─────────────────────────────────────────────
+  private setMount(v: AvatarView, key: string | null): void {
+    if (key === v.mountKey) return;
+    v.mountKey = key;
+    if (v.mount) {
+      v.mount.destroy();
+      v.mount = null;
+    }
+    if (key && hasSprite(`mount.${key}.idle.0`)) {
+      const s = new Sprite(tex(`mount.${key}.idle.0`));
+      s.anchor.set(0.5, 1);
+      s.position.set(0, 1);
+      s.zIndex = -2;
+      v.root.addChild(s);
+      v.mount = s;
+      sfx("dodge");
+    }
+    v.shadow.visible = !v.mount; // the mount brings its own shadow
+    if (!v.mount) v.body.y = 0;
+  }
+
+  private setPet(v: AvatarView, key: string | null): void {
+    if ((v.pet?.key ?? null) === key) return;
+    if (v.pet) safeDestroy(v.pet.sprite);
+    v.pet = null;
+    if (!key || !hasSprite(`pet.${key}.idle.0`)) return;
+    const s = new Sprite(tex(`pet.${key}.idle.0`));
+    s.anchor.set(0.5, 1);
+    this.host.objects.addChild(s);
+    v.pet = { key, sprite: s, x: v.root.x + 14, y: v.root.y, walkMs: 0, moves: hasSprite(`pet.${key}.move.3`) ? 4 : 2, face: 1 };
+  }
+
+  /** The pet trots after its owner, stopping a step short, and snaps along after a teleport. */
+  private updatePet(v: AvatarView, dms: number): void {
+    const pt = v.pet;
+    if (!pt || pt.sprite.destroyed) return;
+    const dx = v.root.x - pt.x;
+    const dy = v.root.y - pt.y;
+    const d = Math.hypot(dx, dy);
+    let moving = false;
+    if (d > 240) {
+      pt.x = v.root.x + 14;
+      pt.y = v.root.y;
+    } else if (d > 18) {
+      const k = 1 - Math.exp(-dms / 160);
+      const step = (d - 14) * k;
+      pt.x += (dx / d) * step;
+      pt.y += (dy / d) * step;
+      moving = step > 0.15;
+    }
+    if (dx < -2) pt.face = 1;
+    else if (dx > 2) pt.face = -1;
+    pt.walkMs = moving ? pt.walkMs + dms : 0;
+    const name = moving
+      ? `pet.${pt.key}.move.${Math.floor(pt.walkMs / 110) % pt.moves}`
+      : `pet.${pt.key}.idle.${Math.floor(this.time / 520) % 2}`;
+    pt.sprite.texture = tex(name);
+    pt.sprite.scale.x = pt.face;
+    const hover = pt.key === "owl" ? -5 - Math.sin(this.time / 260) * 1.5 : 0;
+    pt.sprite.position.set(Math.round(pt.x), Math.round(pt.y + hover));
+    pt.sprite.zIndex = pt.y;
   }
 
   private setTitle(v: AvatarView, title: string | null): void {
@@ -184,11 +272,22 @@ export class AvatarWorld {
     v.root.zIndex = py + 3;
     const dir = dirOf(fx, fy);
     v.walkMs = moving ? v.walkMs + dms : 0;
+    const riding = v.mount !== null && v.mountKey !== null;
     if (v.frames) {
-      const f = frameFor(dir, moving ? "walk" : "idle", moving ? v.walkMs : this.time);
+      // in the saddle you sit still (the mount's legs do the walking)
+      const f = frameFor(dir, moving && !riding ? "walk" : "idle", moving && !riding ? v.walkMs : this.time);
       v.body.texture = v.frames[f.index];
       v.body.scale.x = f.flip ? -1 : 1;
     }
+    if (riding) {
+      if (fx < -0.1) v.face = 1;
+      else if (fx > 0.1) v.face = -1;
+      const k = v.mountKey!;
+      v.mount!.texture = tex(moving ? `mount.${k}.move.${Math.floor(v.walkMs / 85) % 4}` : `mount.${k}.idle.${Math.floor(this.time / 500) % 2}`);
+      v.mount!.scale.x = v.face;
+      v.body.y = -(SADDLE[k] ?? 12) + (moving && Math.floor(v.walkMs / 170) % 2 ? -1 : 0);
+    }
+    this.updatePet(v, dms);
     v.body.rotation = ko ? Math.PI / 2 : 0;
     v.body.alpha = ko ? 0.7 : 1;
     // weapon draws behind the body when facing up
@@ -417,6 +516,8 @@ export class AvatarWorld {
     if (!v && r) {
       v = this.makeAvatar(r.appearance, r.weapon, r.name, r.title);
       this.others.set(ent.id, v);
+      this.setPet(v, r.pet);
+      this.setMount(v, r.mount);
     }
     if (!v) return;
     const moving = s.anim === ANIM.walk;
@@ -518,9 +619,16 @@ export class AvatarWorld {
       if (eid === c.eid && r) {
         this.local.weaponType = r.weapon;
         c.info.weapon = { ...c.info.weapon, type: r.weapon };
+        this.setPet(this.local, r.pet);
+        this.setMount(this.local, r.mount);
+        useAvatar.getState().set({ riding: r.mount !== null });
       } else if (r) {
         const o = this.others.get(eid);
-        if (o) this.setTitle(o, r.title); // a new title, or skills changed their level
+        if (o) {
+          this.setTitle(o, r.title); // a new title, or skills changed their level
+          this.setPet(o, r.pet);
+          this.setMount(o, r.mount);
+        }
       }
     } else if (kind === EV.RESPAWN) {
       const [, x, y] = ev as number[];

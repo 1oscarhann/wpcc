@@ -2,7 +2,7 @@
 
 A cozy-but-action-packed browser game. You build a village in **Build Mode**, then drop into **Avatar Mode** to explore, fight monsters and gather rare loot with friends. There's no PvP: other players can only help you.
 
-**Status:** Phases 1–16a are done: Build Mode, Avatar Mode, combat and ten weapon movesets, combos and forging, the NPC market and wandering merchant, the tutorial, realms and co-op, six biomes with POIs and weather, dungeons, raids and realm bosses, villagers and decorations, **social** (friends, blocks, mail, gifts, visits, likes, neighbour help, emotes, quick messages, map pings) and **progression** (skill tree, daily/weekly/main quests, achievements and titles, the collection book, the login calendar). Next: pets, mounts, fishing and photo mode (16b), the global layer (17), then polish and launch (18). See [docs/PLAN.md](docs/PLAN.md).
+**Status:** Phases 1–16a are done: Build Mode, Avatar Mode, combat and ten weapon movesets, combos and forging, the NPC market and wandering merchant, the tutorial, realms and co-op, six biomes with POIs and weather, dungeons, raids and realm bosses, villagers and decorations, **social** (friends, blocks, mail, gifts, visits, likes, neighbour help, emotes, quick messages, map pings) and **progression** (skill tree, daily/weekly/main quests, achievements and titles, the collection book, the login calendar, pets, mounts, fishing, the Trophy Hall, photo mode). Next: the global layer (17), then polish and launch (18). See [docs/PLAN.md](docs/PLAN.md).
 
 ### Controls (Avatar Mode)
 
@@ -18,6 +18,9 @@ A cozy-but-action-packed browser game. You build a village in **Build Mode**, th
 | Emotes and quick messages | T | speech-bubble button |
 | Journal (quests, skills, feats, calendar) | J | scroll button |
 | Map (tap a spot to ping it for your realm) | M | mini-map |
+| Fish (stand by water, ice or lava), then reel in the gold | E, then E or Space | Fish button, then Reel |
+| Ride your mount | G | saddle button |
+| Photo mode | P | camera button |
 | Back to Build Mode | H or the Village button (not mid-fight) | Village button |
 
 Walk into your own village to drop gathered resources into storage.

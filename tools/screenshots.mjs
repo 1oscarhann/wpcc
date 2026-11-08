@@ -1333,6 +1333,90 @@ PHASES[16] = async (page, kind) => {
   await shot(page, "07-calendar-claimed", kind, { wait: 900 });
 };
 
+// ── Phase 16b: pets, mounts, the Trophy Hall, fishing, photo mode ─────────
+PHASES["16b"] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  const name = await freshPlayer(page, kind);
+  hf(`test-account ${name}`);
+  await apiPost(page, "/api/dev/kit", { town_hall: 3, tier: 2 });
+  hf(`grant ${name} --level 9 --coins 6000 --item cosmetic_token=6 --stat kill.slime=320 --stat kill.frost_matriarch=1 ` +
+    `--stat fish.any=11 --stat fish.trout=4 --stat best.fish.trout=1840 --stat fish.minnow=5 --stat best.fish.minnow=160 ` +
+    `--stat fish.golden_carp=1 --stat best.fish.golden_carp=4200 --stat fish.pike=1 --stat best.fish.pike=6100 --stat kill.any=820`);
+  await reloadVillage(page);
+  await page.getByRole("button", { name: /^Journal/ }).click();
+  await page.getByRole("tab", { name: "Pets" }).click();
+  await page.locator(".pet-card").first().waitFor();
+  await shot(page, "01-pets-and-mounts", kind, { wait: 900 });
+  await page.locator(".pet-card", { hasText: "Fox" }).getByRole("button", { name: /Adopt/ }).click();
+  await page.waitForTimeout(500);
+  await page.locator(".pet-card", { hasText: "Frost Pup" }).getByRole("button", { name: "Take home" }).click();
+  await page.waitForTimeout(500);
+  await page.locator(".pet-card", { hasText: "Pet Slime" }).getByRole("button", { name: "Take home" }).click();
+  await page.waitForTimeout(500);
+  await page.locator(".pet-card", { hasText: "Fox" }).getByRole("button", { name: /Bring along/ }).click();
+  await page.locator(".mount-card", { hasText: "Horse" }).getByRole("button", { name: /Buy/ }).click();
+  await page.waitForTimeout(900);
+  await shot(page, "02-pets-owned", kind, { wait: 600 });
+  await page.getByRole("tab", { name: "Trophies" }).click();
+  await page.locator(".totals-row").waitFor();
+  await shot(page, "03-trophy-hall", kind, { wait: 700 });
+  await closeModal(page);
+
+  // out into the world: the fox trots along, then the horse
+  await enterAvatar(page);
+  const v = await villageNow(page);
+  const [px, py, pw] = v.water[0];
+  const shoreX = v.origin[0] + px + pw;
+  const shoreY = v.origin[1] + py + 1;
+  await page.evaluate(([x, y]) => window.__hfGame.devWalkTo(x, y), [shoreX + 5, shoreY + 1]);
+  await page.waitForTimeout(3500);
+  await shot(page, "04-pet-follows", kind, { wait: 0 });
+  await page.keyboard.press("g");
+  await page.waitForTimeout(600);
+  page.evaluate(([x, y]) => window.__hfGame.devWalkTo(x, y), [shoreX + 11, shoreY + 4]).catch(() => undefined);
+  await page.waitForTimeout(700);
+  await shot(page, "05-riding", kind, { wait: 0 });
+  await page.waitForTimeout(1500);
+  await page.keyboard.press("g");
+  await page.waitForTimeout(400);
+  // to the bank of the village pond, and cast
+  await page.evaluate(([x, y]) => window.__hfGame.devWalkTo(x, y), [shoreX, shoreY]);
+  await page.waitForTimeout(2500);
+  await page.waitForFunction(() => window.__hfGame.nearFishable(), null, { timeout: 8000 });
+  await shot(page, "06-fish-prompt", kind, { wait: 300 });
+  await page.keyboard.press("e");
+  await page.waitForFunction(() => window.__hfFishing.getState().phase === "waiting");
+  await shot(page, "07-line-in", kind, { wait: 900 });
+  await page.waitForFunction(() => window.__hfFishing.getState().phase === "bite", null, { timeout: 15000 });
+  await shot(page, "08-something-bites", kind, { wait: 250 });
+  // that one got away while we took the picture; cast again and land it this time
+  await page.waitForFunction(() => window.__hfFishing.getState().phase === "idle", null, { timeout: 8000 });
+  await page.waitForTimeout(1200);
+  // watch for the bite from inside the page and press when the marker reaches the middle of the zone
+  const landed = page.evaluate(() => new Promise((ok) => {
+    const unsub = window.__hfFishing.subscribe((f) => {
+      if (f.phase !== "bite") return;
+      unsub();
+      // headless Chromium renders in software, so timers fire ~300 ms late: send the press the
+      // player would have made (the server still checks it against its own clock)
+      window.setTimeout(() => {
+        window.__hfRoomLink.send("FISH", "reel", f.id, Math.min(f.centerMs, Math.round(performance.now() - f.shownAt)));
+        window.__hfFishing.getState().set({ phase: "waiting" });
+        ok();
+      }, Math.max(0, f.centerMs - (performance.now() - f.shownAt)));
+    });
+  }));
+  await page.keyboard.press("e");
+  await landed;
+  await page.waitForTimeout(700);
+  await shot(page, "09-catch", kind, { wait: 0 });
+  // photo mode
+  await page.keyboard.press("p");
+  await page.locator(".photo-bar").waitFor();
+  await page.getByRole("button", { name: "Golden" }).click();
+  await shot(page, "10-photo-mode", kind, { wait: 600 });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

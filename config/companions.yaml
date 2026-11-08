@@ -1,0 +1,51 @@
+# Pets and mounts (Phase 16b, BALANCE §11.2).
+#
+# A pet follows you in Avatar Mode and gives one small server-side perk (the same keys as skills.yaml,
+# D-109; never movement or attack timing). One pet out at a time. A pet is adopted with cosmetic
+# tokens, or unlocked by a counter in user_stats (kills, catches…).
+#
+# A mount multiplies your walking speed while you ride (G). It goes through the same MOVE_MODS
+# path as plate armour and swift food, so prediction stays exact (D-079). You're knocked off in a
+# fight, in a delve, when you're KO'd and when you cast a line.
+
+pets:
+  fox:
+    name: Fox
+    desc: "Sniffs out the good bits: +5% hand-gathered yield."
+    perks: { gather_yield: 0.05 }
+    cost: { tokens: 3 }
+  owl:
+    name: Owl
+    desc: "Sharp-eyed: +10% rare-find odds."
+    perks: { rare_odds: 0.10 }
+    cost: { tokens: 5 }
+  slime:
+    name: Pet Slime
+    desc: "Wobbles after you and finds loose change: +5% coins from monsters."
+    perks: { coins: 0.05 }
+    unlock: { stat: kill.slime, target: 300, hint: "Pop 300 slimes" }
+  frost_pup:
+    name: Frost Pup
+    desc: "A Frozen North wolf cub. Stands guard: +2 defence."
+    perks: { defence: 2 }
+    unlock: { stat: kill.frost_matriarch, target: 1, hint: "Help defeat the Frost Matriarch" }
+  salamander:
+    name: Ember Salamander
+    desc: "Warm little thing. Fires you up: +5% damage."
+    perks: { damage: 0.05 }
+    unlock: { stat: kill.cinder_tyrant, target: 1, hint: "Help defeat the Cinder Tyrant" }
+
+mounts:
+  horse:
+    name: Horse
+    desc: "Steady and quick. Rides 60% faster than walking."
+    speed: 1.6
+    cost: { coins: 2500 }
+    town_hall: 3
+  ram:
+    name: Mountain Ram
+    desc: "Sure-footed and a little stubborn. Rides 45% faster."
+    speed: 1.45
+    cost: { tokens: 6 }
+
+names: { min: 2, max: 16 }   # pet nicknames (profanity-filtered)

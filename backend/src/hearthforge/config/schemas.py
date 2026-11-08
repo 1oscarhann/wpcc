@@ -1503,3 +1503,86 @@ class ProgressionCfg(Strict):
     quests: QuestsCfg
     achievements: dict[str, AchievementCfg]
     calendar: CalendarCfg
+
+
+# ── companions.yaml and fishing.yaml (Phase 16b) ─────────────────────────────
+
+
+class CostCfg(Strict):
+    coins: int = Field(default=0, ge=0)
+    tokens: int = Field(default=0, ge=0)
+
+
+class UnlockCfg(Strict):
+    stat: str
+    target: int = Field(ge=1)
+    hint: str
+
+
+class PetCfg(Strict):
+    name: str
+    desc: str
+    perks: dict[PerkKey, float] = Field(min_length=1)
+    cost: CostCfg | None = None
+    unlock: UnlockCfg | None = None
+
+
+class MountCfg(Strict):
+    name: str
+    desc: str
+    speed: float = Field(gt=1, le=2.5)
+    cost: CostCfg
+    town_hall: int = Field(default=1, ge=1, le=5)
+
+
+class NameRules(Strict):
+    min: int = Field(default=2, ge=1)
+    max: int = Field(default=16, le=32)
+
+
+class CompanionsCfg(Strict):
+    pets: dict[str, PetCfg] = Field(min_length=1)
+    mounts: dict[str, MountCfg] = Field(min_length=1)
+    names: NameRules = NameRules()
+
+
+FishRarity = Literal["common", "uncommon", "rare", "legendary"]
+
+
+class CastCfg(Strict):
+    reach: float = Field(gt=0.5, le=4)
+    bite: tuple[Duration, Duration]
+    bar: Duration
+    slack: Duration
+    latency: Duration
+    every: Duration
+    xp: int = Field(ge=0)
+
+
+class WaterCfg(Strict):
+    tiles: list[Literal["water", "ice", "lava"]] = Field(min_length=1)
+    species: list[str] = Field(min_length=1)
+
+
+class SpeciesCfg(Strict):
+    name: str
+    rarity: FishRarity
+    kg: tuple[float, float]
+    price: int = Field(ge=1)
+    colors: tuple[str, str]
+    season: str | None = None
+    time: Literal["day", "night"] | None = None
+
+
+class FishMarketCfg(Strict):
+    baseline: float = Field(gt=0)
+    soft_cap: int = Field(ge=1)
+
+
+class FishingCfg(Strict):
+    cast: CastCfg
+    windows: dict[FishRarity, Duration]
+    weights: dict[FishRarity, float]
+    waters: dict[str, WaterCfg]
+    species: dict[str, SpeciesCfg] = Field(min_length=1)
+    market: FishMarketCfg

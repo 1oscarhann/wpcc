@@ -108,10 +108,12 @@ class Pending:
     waystones: set[int] = field(default_factory=set)  # newly attuned waystones (Phase 9)
     pois: dict[str, float] = field(default_factory=dict)  # POI key → when used (Phase 10)
     lore: set[str] = field(default_factory=set)  # lore entries read for the first time
+    records: dict[str, int] = field(default_factory=dict)  # personal bests, kept at the max (Phase 16b)
 
     def empty(self) -> bool:
         return not (
-            self.pois
+            self.records
+            or self.pois
             or self.lore
             or self.stats
             or self.fog
@@ -148,6 +150,23 @@ class Pending:
         self.waystones |= o.waystones
         self.pois = {**o.pois, **self.pois}
         self.lore |= o.lore
+        for k, v in o.records.items():
+            self.records[k] = max(v, self.records.get(k, 0))
+
+
+@dataclass
+class Fishing:
+    """A line in the water (Phase 16b). The server rolls the fish and times the bar."""
+
+    id: int
+    species: str
+    x0: float
+    y0: float
+    bite_tick: int
+    bar_ms: int
+    center_ms: int = 0
+    window_ms: int = 0
+    bit_at: int = 0  # tick the bite was sent; 0 until then
 
 
 @dataclass
@@ -223,6 +242,12 @@ class Player:
     blocked: set[uuid.UUID] = field(default_factory=set)  # Phase 15: blocked either way: their chat is silent
     last_chat: int = -(10**9)  # tick of your last emote / quick message
     last_ping: int = -(10**9)
+    # Phase 16b
+    pet: str | None = None  # the pet trotting after you (cosmetic here; its perk is in perks)
+    mount: str | None = None  # the mount G calls
+    mounted: bool = False
+    fishing: Fishing | None = None
+    last_cast: int = -(10**9)
 
     @property
     def w(self) -> str:
@@ -395,7 +420,17 @@ class RealmRoom:
             await conn.send_bytes(frame)
 
     def roster_entry(self, p: Player) -> list[Any]:
-        return [p.eid, str(p.user_id), p.name, p.appearance, p.w, p.level, p.title]
+        return [
+            p.eid,
+            str(p.user_id),
+            p.name,
+            p.appearance,
+            p.w,
+            p.level,
+            p.title,
+            p.pet,
+            p.mount if p.mounted else None,
+        ]
 
     def joined_frame(self, p: Player) -> bytes:
         now = time.time()
@@ -514,6 +549,10 @@ class RealmRoom:
                 if p.linkdead == 0:
                     asyncio.create_task(self.remove_player(p, ROOM_LEFT["left"]))
                 continue
+            if p.mounted and (p.ko > 0 or p.dungeon or t - p.last_combat < self.combat_lock):
+                self.set_mounted(p, False)  # thrown off in a fight, a delve or a KO
+            if p.fishing is not None:
+                self.tick_fishing(p, t)
             if p.ko > 0:
                 p.ko -= 1
                 p.inputs.clear()
@@ -622,6 +661,166 @@ class RealmRoom:
                 p.attuned.add(w.index)
                 p.pending.waystones.add(w.index)
                 p.ev.append([EV["WAYSTONE"], w.index, w.name, sorted(p.attuned)])
+
+    # ── Phase 16b: riding and fishing ────────────────────────────────────────
+    def set_mounted(self, p: Player, on: bool) -> str | None:
+        """G: climb on or off your mount. Speed goes through MOVE_MODS, so prediction stays exact."""
+        if on == p.mounted:
+            return None
+        if on:
+            if p.mount is None or p.mount not in self.cfg.companions.mounts:
+                return "no_mount"
+            if p.dungeon:
+                return "delve"
+            if p.ko > 0:
+                return "ko"
+            if self.tick_no - p.last_combat < self.combat_lock:
+                return "in_combat"
+            if p.fishing is not None:
+                self.stop_fishing(p, "cancel")
+        p.mounted = on
+        self.recompute_mods(p)
+        entry = [EV["PLAYER"], *self.roster_entry(p)]
+        for o in self.players.values():
+            o.ev.append(entry)
+        return None
+
+    def fish_spot(self, p: Player) -> tuple[str, str, int, int] | None:
+        """The nearest fishable tile in reach: (waters key, tile kind, x, y), or None."""
+        fc = self.cfg.fishing
+        biome = self.grid.gen.biome(int(p.m.x), int(p.m.y))
+        waters = fc.waters.get("meadow" if biome in ("plot", "hub") else biome)
+        if waters is None:
+            return None
+        reach = fc.cast.reach
+        r = int(reach) + 1
+        best: tuple[float, str, int, int] | None = None
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                tx, ty = int(p.m.x) + dx, int(p.m.y) + dy
+                kind = self.grid.fluid(tx, ty)
+                if kind is None or kind not in waters.tiles:
+                    continue
+                # distance from you to the tile's square
+                ddx = max(tx - p.m.x, 0.0, p.m.x - (tx + 1))
+                ddy = max(ty - p.m.y, 0.0, p.m.y - (ty + 1))
+                d = (ddx * ddx + ddy * ddy) ** 0.5
+                if d <= reach and (best is None or d < best[0]):
+                    best = (d, kind, tx, ty)
+        if best is None:
+            return None
+        return ("meadow" if biome in ("plot", "hub") else biome), best[1], best[2], best[3]
+
+    def roll_fish(self, waters_key: str) -> str:
+        from hearthforge.domain import worldclock
+
+        fc = self.cfg.fishing
+        now = self.st.clock.now()
+        season = worldclock.season(self.cfg.world_clock, now)
+        night = worldclock.is_night(self.cfg.world_clock, now)
+        pool = [
+            k
+            for k in fc.waters[waters_key].species
+            if (fc.species[k].season in (None, season))
+            and (fc.species[k].time is None or (fc.species[k].time == "night") == night)
+        ]
+        by_rarity: dict[str, list[str]] = {}
+        for k in pool:
+            by_rarity.setdefault(fc.species[k].rarity, []).append(k)
+        rar = list(by_rarity)
+        pick = self.rng.choices(rar, weights=[fc.weights.get(r_, 0.0) or 0.001 for r_ in rar])[0]
+        return self.rng.choice(by_rarity[pick])
+
+    def cast(self, p: Player) -> str | None:
+        fc = self.cfg.fishing.cast
+        if p.dungeon:
+            return "delve"
+        if p.ko > 0:
+            return "ko"
+        if self.tick_no - p.last_combat < self.combat_lock:
+            return "in_combat"
+        if p.fishing is not None:
+            return None
+        if self.tick_no - p.last_cast < fc.every * self.hz:
+            return None
+        spot = self.fish_spot(p)
+        if spot is None:
+            return "no_water"
+        if p.mounted:
+            self.set_mounted(p, False)
+        waters_key, kind, tx, ty = spot
+        species = self.roll_fish(waters_key)
+        lo, hi = fc.bite
+        p.fishing = Fishing(
+            id=self.new_id(),
+            species=species,
+            x0=p.m.x,
+            y0=p.m.y,
+            bite_tick=self.tick_no + int(self.rng.uniform(lo, hi) * self.hz),
+            bar_ms=int(fc.bar * 1000),
+        )
+        p.last_cast = self.tick_no
+        p.ev.append([EV["FISH"], "cast", p.fishing.id, tx + 0.5, ty + 0.5, kind])
+        return None
+
+    def stop_fishing(self, p: Player, why: str) -> None:
+        if p.fishing is not None:
+            p.ev.append([EV["FISH"], why, p.fishing.id])
+            p.fishing = None
+
+    def tick_fishing(self, p: Player, t: int) -> None:
+        f = p.fishing
+        assert f is not None
+        if (
+            (p.m.x - f.x0) ** 2 + (p.m.y - f.y0) ** 2 > 0.16
+            or p.ko > 0
+            or t - p.last_combat < self.combat_lock
+        ):
+            self.stop_fishing(p, "cancel")  # walked off, or something bit *you*
+            return
+        fc = self.cfg.fishing
+        if not f.bit_at and t >= f.bite_tick:
+            sp = fc.species[f.species]
+            f.bit_at = t
+            f.window_ms = int(fc.windows[sp.rarity] * 1000)
+            half = f.window_ms // 2
+            f.center_ms = int(self.rng.uniform(f.bar_ms * 0.35, f.bar_ms - half - 60))
+            p.ev.append([EV["FISH"], "bite", f.id, f.bar_ms, f.center_ms, f.window_ms, sp.rarity])
+        elif f.bit_at and (t - f.bit_at) * 1000 / self.hz > f.bar_ms + fc.cast.latency * 1000 + 400:
+            self.stop_fishing(p, "miss")  # the marker ran off the end
+
+    def reel(self, p: Player, fid: int, t_ms: float) -> None:
+        """The press. t_ms is how far along the bar the client's marker was (ms since it saw the bite)."""
+        f = p.fishing
+        if f is None or f.id != fid or not f.bit_at:
+            return
+        fc = self.cfg.fishing
+        elapsed = (self.tick_no - f.bit_at) * 1000 / self.hz
+        on_time = elapsed - fc.cast.latency * 1000 <= t_ms <= elapsed + 150  # no presses from the past
+        in_zone = abs(t_ms - f.center_ms) <= f.window_ms / 2 + fc.cast.slack * 1000
+        p.fishing = None
+        if not (on_time and in_zone):
+            p.ev.append([EV["FISH"], "miss", f.id])
+            return
+        if self.inv_fit(p, f.species, 1) <= 0:
+            self.toast(p, "bag_full")
+            p.ev.append([EV["FISH"], "miss", f.id])
+            return
+        sp = fc.species[f.species]
+        lo, hi = sp.kg
+        grams = int((lo + (hi - lo) * self.rng.random() ** 2) * 1000)  # big ones are rare
+        self.inv_add(p, f.species, 1)
+        p.pending.grants[f.species] += 1
+        p.pending.stats["fish.any"] += 1
+        p.pending.stats[f"fish.{f.species}"] += 1
+        if sp.rarity == "legendary":
+            p.pending.stats["fish.legendary"] += 1
+        key = f"best.fish.{f.species}"
+        p.pending.records[key] = max(grams, p.pending.records.get(key, 0))
+        p.ev.append([EV["INVENTORY"], p.inv])
+        p.ev.append([EV["FISH"], "catch", f.id, f.species, grams])
+        mult = {"rare": 2, "legendary": 5}.get(sp.rarity, 1)
+        self.grant_xp(p, fc.cast.xp * mult)
 
     # ── Phase 15: emotes, quick messages and map pings ──────────────────────
     def _hears(self, o: Player, p: Player) -> bool:
@@ -1116,6 +1315,9 @@ class RealmRoom:
         the same three numbers (MOVE_MODS) and builds identical rules, so prediction stays exact."""
         am = self.cfg.combat.armour_move.get(p.armour_key or "")
         speed = (am.speed if am else 1.0) * (1 + self.food(p, "speed"))
+        mount = self.cfg.companions.mounts.get(p.mount or "") if p.mounted else None
+        if mount is not None:
+            speed *= mount.speed  # Phase 16b: riding
         dodge = am.dodge if am else 1.0
         regen = 1.5 if p.regen_until > self.tick_no else 1.0
         mods = (speed, dodge, regen)

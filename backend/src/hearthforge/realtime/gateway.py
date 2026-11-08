@@ -196,6 +196,26 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     x, y = fields[1], fields[2]
                     if isinstance(x, int | float) and isinstance(y, int | float):
                         room.ping(player, float(x), float(y))
+            elif op == "RIDE":  # Phase 16b: G climbs on or off your mount
+                if player is None or room is None:
+                    continue
+                err = room.set_mounted(player, not player.mounted)
+                if err:
+                    room.toast(player, f"ride_{err}")
+            elif op == "FISH":  # ["cast"] or ["reel", id, ms along the bar]
+                if player is None or room is None or not fields or not isinstance(fields[0], str):
+                    continue
+                if fields[0] == "cast":
+                    err = room.cast(player)
+                    if err:
+                        room.toast(player, f"fish_{err}")
+                elif (
+                    fields[0] == "reel"
+                    and len(fields) > 2
+                    and isinstance(fields[1], int)
+                    and isinstance(fields[2], int | float)
+                ):
+                    room.reel(player, fields[1], float(fields[2]))
             elif op == "WAVE":
                 if player is None or room is None or not fields or fields[0] != "home":
                     continue

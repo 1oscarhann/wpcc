@@ -5,6 +5,7 @@ import { PLACEMENT_TEXT, localPlacementError } from "../../game/placement";
 import { itemName, STATION_KEYS } from "../../game/items";
 import { enterAvatar } from "../../net/room";
 import { useMarket } from "../../state/market";
+import { useAvatar } from "../../state/avatar";
 import { useTutorial } from "../../state/tutorial";
 import { useRealm } from "../../state/realm";
 import { WorldChip } from "./WorldChip";
@@ -395,6 +396,9 @@ export function BuildHud({ onSettings, touch, onZoom }: {
               </button>
             )}
             <span className="grow" />
+            <button className="btn secondary small icon-only hide-narrow" onClick={() => useAvatar.getState().set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
+              <Icon name="camera" scale={1.5} />
+            </button>
             <div className="row zoom-buttons" style={{ gap: 4 }}>
               <button className="btn secondary small icon-only" onClick={() => onZoom(-1)} aria-label="Zoom out">−</button>
               <button className="btn secondary small icon-only" onClick={() => onZoom(1)} aria-label="Zoom in">+</button>

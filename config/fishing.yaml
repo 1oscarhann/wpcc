@@ -1,0 +1,62 @@
+# Fishing (Phase 16b, BALANCE §11.2). Stand next to water (or ice, or lava in the Ashen Wastes),
+# press E to cast. After a bite the timing bar runs once: press when the marker is in the zone.
+#
+# The server rolls the fish and the bite, times the bar against its own clock, and checks your press
+# (D-115). Every species becomes a stackable bag item (category fish) with a market price; each catch
+# also has a weight, and your heaviest of each species is a record in the Trophy Hall.
+
+cast:
+  reach: 1.6            # tiles from you to the nearest fishable tile
+  bite: [1.5s, 4.5s]    # wait before a bite
+  bar: 1.8s             # how long the marker takes to cross the bar
+  slack: 0.06s          # forgiveness either side of the zone, for frame timing
+  latency: 0.9s         # how late a press may arrive (network, slow frames on phones) and still count
+  every: 1s             # between casts
+  xp: 6                 # per catch (×2 rare, ×5 legendary)
+
+windows:                # the zone's width, by rarity (BALANCE: 300 ms at the easiest, 120 for legendaries)
+  common: 0.30s
+  uncommon: 0.22s
+  rare: 0.16s
+  legendary: 0.12s
+
+weights:                # chance of each rarity when a bite comes (only rarities a spot has are rolled)
+  common: 70
+  uncommon: 22
+  rare: 7
+  legendary: 1
+
+waters:                 # which tiles you can fish, and the species there, by biome
+  meadow:    { tiles: [water], species: [minnow, sunfish, perch, golden_carp, sunscale] }
+  forest:    { tiles: [water], species: [trout, pike, perch, moonfin, blossom_trout] }
+  stonepeak: { tiles: [water], species: [char, stone_loach, trout, crystal_koi] }
+  swamp:     { tiles: [water], species: [catfish, bog_eel, mudskipper, lantern_gar, old_whiskers] }
+  frozen:    { tiles: [water, ice], species: [icefish, frost_salmon, aurora_cod] }
+  ashen:     { tiles: [lava], species: [cinder_eel, ash_crab, magma_ray] }
+
+species:
+  minnow:        { name: Minnow,          rarity: common,    kg: [0.05, 0.2],  price: 8,   colors: [water, cloth_cream] }
+  sunfish:       { name: Sunfish,         rarity: common,    kg: [0.2, 0.8],   price: 10,  colors: [flower_yellow, water] }
+  perch:         { name: Perch,           rarity: uncommon,  kg: [0.3, 1.5],  price: 28,  colors: [leaf, flower_yellow] }
+  golden_carp:   { name: Golden Carp,     rarity: rare,      kg: [1.5, 6],    price: 90,  colors: [gold, fire] }
+  sunscale:      { name: Sunscale,        rarity: legendary, kg: [8, 15],     price: 200, colors: [fire, gold], season: summer }
+  trout:         { name: Trout,           rarity: common,    kg: [0.4, 2],    price: 12,  colors: [stone, flower_pink] }
+  pike:          { name: Pike,            rarity: uncommon,  kg: [1.5, 8],    price: 32,  colors: [leaf, cloth_cream] }
+  moonfin:       { name: Moonfin,         rarity: rare,      kg: [1, 3],      price: 100, colors: [flower_purple, ice], time: night }
+  blossom_trout: { name: Blossom Trout,   rarity: rare,      kg: [0.8, 3],    price: 80,  colors: [flower_pink, flower_white], season: spring }
+  char:          { name: Mountain Char,   rarity: common,    kg: [0.5, 2],    price: 13,  colors: [roof_red, stone] }
+  stone_loach:   { name: Stone Loach,     rarity: uncommon,  kg: [0.1, 0.5],  price: 26,  colors: [stone, mud] }
+  crystal_koi:   { name: Crystal Koi,     rarity: rare,      kg: [2, 5],      price: 110, colors: [ice, flower_white] }
+  catfish:       { name: Catfish,         rarity: common,    kg: [1, 5],      price: 12,  colors: [mud, sand] }
+  bog_eel:       { name: Bog Eel,         rarity: uncommon,  kg: [0.5, 3],    price: 30,  colors: [bog, venom] }
+  mudskipper:    { name: Mudskipper,      rarity: common,    kg: [0.05, 0.3], price: 9,   colors: [mud, bog] }
+  lantern_gar:   { name: Lantern Gar,     rarity: rare,      kg: [2, 7],      price: 95,  colors: [bog, flower_yellow], time: night }
+  old_whiskers:  { name: Old Whiskers,    rarity: legendary, kg: [25, 60],    price: 200, colors: [mud, stone], time: night }
+  icefish:       { name: Icefish,         rarity: common,    kg: [0.1, 0.6],  price: 14,  colors: [ice, snow] }
+  frost_salmon:  { name: Frost Salmon,    rarity: uncommon,  kg: [2, 9],      price: 40,  colors: [flower_pink, snow] }
+  aurora_cod:    { name: Aurora Cod,      rarity: rare,      kg: [4, 12],     price: 120, colors: [venom, ice], season: winter }
+  cinder_eel:    { name: Cinder Eel,      rarity: uncommon,  kg: [0.5, 2],    price: 45,  colors: [ash, lava] }
+  ash_crab:      { name: Ash Crab,        rarity: common,    kg: [0.2, 1],    price: 18,  colors: [lava, ash] }
+  magma_ray:     { name: Magma Ray,       rarity: rare,      kg: [3, 10],     price: 140, colors: [lava, obsidian] }
+
+market: { baseline: 12, soft_cap: 60 }   # NPC market numbers for every species (base = its price)

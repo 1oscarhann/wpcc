@@ -141,3 +141,24 @@ class LoginReward(Base):
     calendar_day: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     last_claim_day: Mapped[str | None] = mapped_column(Text)
     extra: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+
+
+class Pet(Base):
+    """A pet you've adopted or unlocked (Phase 16b). Which one is out lives on avatars.pet."""
+
+    __tablename__ = "pets"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_U, ondelete="CASCADE"), primary_key=True)
+    pet_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    nickname: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text, nullable=False)  # 'tokens', 'unlock'
+    acquired_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Mount(Base):
+    __tablename__ = "mounts"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_U, ondelete="CASCADE"), primary_key=True)
+    mount_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    acquired_at: Mapped[datetime] = mapped_column(server_default=func.now())

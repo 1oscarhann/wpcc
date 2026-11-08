@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "client_to_server": {
     "HELLO": "0x01",
     "PING": "0x02",
@@ -15,7 +15,9 @@
     "USE_QUICK": "0x33",
     "DUNGEON": "0x34",
     "WAVE": "0x35",
-    "SOCIAL": "0x36"
+    "SOCIAL": "0x36",
+    "RIDE": "0x37",
+    "FISH": "0x38"
   },
   "server_to_client": {
     "WELCOME": "0x81",
@@ -69,7 +71,8 @@
     "TOWER": 44,
     "BOSS": 45,
     "CHAT": 46,
-    "PING": 47
+    "PING": 47,
+    "FISH": 48
   },
   "entity_kinds": {
     "avatar": 0,

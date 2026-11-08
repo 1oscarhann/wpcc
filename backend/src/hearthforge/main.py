@@ -111,6 +111,7 @@ def create_app(
     from hearthforge.api import (
         admin,
         auth,
+        companions,
         crafting,
         defence,
         dungeons,
@@ -139,6 +140,7 @@ def create_app(
     app.include_router(defence.router)
     app.include_router(social.router)
     app.include_router(journal.router)
+    app.include_router(companions.router)
     app.include_router(admin.router)
     app.include_router(gateway.router)
 

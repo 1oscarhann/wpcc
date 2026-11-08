@@ -127,6 +127,15 @@ export interface ConfigBundle {
     chat_radius: number;
     ping_s: number;
   };
+  companions: {
+    pets: Record<string, { name: string; desc: string }>;
+    mounts: Record<string, { name: string; speed: number }>;
+  };
+  fishing: {
+    species: Record<string, { name: string; rarity: string; kg: [number, number]; price: number }>;
+    reach: number;
+    tiles: string[];
+  };
   skills: {
     points_per_level: number;
     respec: { free_first: boolean; coins_per_level: number };

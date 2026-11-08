@@ -20,6 +20,7 @@ import { toast } from "../../state/toasts";
 import { useVillage } from "../../state/village";
 import { formatDuration, Icon, Modal } from "../components/kit";
 import { SpriteThumb } from "../components/SpriteThumb";
+import { CompanionsTab, TrophyHallTab } from "./Companions";
 
 async function post<T>(path: string, body?: unknown): Promise<T | null> {
   try {
@@ -337,6 +338,7 @@ interface CollectionView {
   gear: Entry[];
   brews: Entry[];
   trophies: (Entry & { boss: string })[];
+  fish: Entry[];
   combos: { found: string[]; total: number };
   lore: { found: number; keys: string[] };
 }
@@ -381,6 +383,7 @@ function CollectionTab() {
       <Shelf title="Materials" entries={c.materials} verb="gathered" />
       <Shelf title="Gear" entries={c.gear.map((g) => ({ ...g, icon: `icon.${itemIcon(g.key)}` }))} verb="forged" />
       <Shelf title="Brews and meals" entries={c.brews} verb="made" />
+      <Shelf title="Fish" entries={c.fish} verb="caught" />
     </div>
   );
 }
@@ -450,7 +453,9 @@ function CalendarTab() {
 const TABS: { key: JournalTab; label: string; icon: string }[] = [
   { key: "quests", label: "Quests", icon: "scroll" },
   { key: "skills", label: "Skills", icon: "skill" },
-  { key: "achievements", label: "Feats", icon: "trophy" },
+  { key: "achievements", label: "Feats", icon: "star" },
+  { key: "pets", label: "Pets", icon: "paw" },
+  { key: "trophies", label: "Trophies", icon: "trophy" },
   { key: "collection", label: "Collection", icon: "book" },
   { key: "calendar", label: "Calendar", icon: "calendar" },
 ];
@@ -478,7 +483,8 @@ export function JournalPanel({ onClose }: { onClose: () => void }) {
         ))}
       </div>
       {!view ? <p>Opening the journal…</p> : tab === "quests" ? <QuestsTab /> : tab === "skills" ? <SkillsTab />
-        : tab === "achievements" ? <AchievementsTab /> : tab === "collection" ? <CollectionTab /> : <CalendarTab />}
+        : tab === "achievements" ? <AchievementsTab /> : tab === "pets" ? <CompanionsTab /> : tab === "trophies" ? <TrophyHallTab />
+        : tab === "collection" ? <CollectionTab /> : <CalendarTab />}
     </Modal>
   );
 }

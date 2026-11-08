@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable, Mapping
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,3 +32,17 @@ async def read(
     if keys is not None:
         q = q.where(UserStat.stat_key.in_(list(keys)))
     return {k: int(v) for k, v in (await session.execute(q)).all()}
+
+
+async def record(session: AsyncSession, user_id: uuid.UUID, values: Mapping[str, int]) -> None:
+    """Personal bests ('best.fish.trout' in grams): keep the larger value (Phase 16b)."""
+    rows = [{"user_id": user_id, "stat_key": k, "value": int(v)} for k, v in values.items() if v]
+    if not rows:
+        return
+    stmt = insert(UserStat).values(rows)
+    await session.execute(
+        stmt.on_conflict_do_update(
+            index_elements=[UserStat.user_id, UserStat.stat_key],
+            set_={"value": func.greatest(UserStat.value, stmt.excluded.value)},
+        )
+    )

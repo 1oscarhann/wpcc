@@ -11,6 +11,14 @@ _SOLID_TILES = tuple(WORLD["solid_tiles"])
 _SOLID_OBJS = tuple(WORLD["solid_objects"])
 SOLID_TILE_IDS = frozenset(i for i, n in enumerate(mapgen.TILE_NAMES) if n.startswith(_SOLID_TILES))
 SOLID_OBJ_IDS = frozenset(i for i, n in enumerate(mapgen.OBJECT_NAMES) if n.startswith(_SOLID_OBJS))
+# Phase 16b: fishable tiles
+FLUIDS = ("water", "ice", "lava")
+FLUID_OF = {
+    i: k + 1
+    for i, n in enumerate(mapgen.TILE_NAMES)
+    for k, f in enumerate(FLUIDS)
+    if n.startswith(f"tile.{f}.")
+}
 
 
 class WorldGrid:
@@ -24,6 +32,7 @@ class WorldGrid:
         self.claimed: frozenset[int] = frozenset()
         self._solid: dict[tuple[int, int], bytearray] = {}
         self._objs: dict[tuple[int, int], dict[int, int]] = {}
+        self._fluid: dict[tuple[int, int], bytearray] = {}
         # node kind per object id; biome-specific kinds win over generic ones
         self._node_generic: dict[int, str] = {}
         self._node_biome: dict[tuple[int, str], str] = {}
@@ -47,10 +56,13 @@ class WorldGrid:
         ch = self.gen.chunk(cx, cy)
         cs = self.cs
         solid = bytearray(cs * cs)
+        fluid = bytearray(cs * cs)
         objs: dict[int, int] = {}
         for i, t in enumerate(ch["ground"]):
             if t in SOLID_TILE_IDS:
                 solid[i] = 1
+            fluid[i] = FLUID_OF.get(t, 0)
+        self._fluid[(cx, cy)] = fluid
         for lx, ly, oid, flag in ch["objects"]:
             if flag & mapgen.FLAG_WILD_PLOT:
                 plot = self.gen.plot_at(cx * cs + lx, cy * cs + ly)
@@ -65,8 +77,10 @@ class WorldGrid:
         if len(self._solid) > 2048:
             self._solid.clear()
             self._objs.clear()
+            self._fluid.clear()
             self._solid[(cx, cy)] = solid
             self._objs[(cx, cy)] = objs
+            self._fluid[(cx, cy)] = fluid
         return solid, objs
 
     dungeon_solid: Callable[[int, int], bool] | None = None  # sim.dungeon.DungeonSpace (Phase 12)
@@ -85,6 +99,19 @@ class WorldGrid:
         if arr is None:
             arr = self._load(cx, cy)[0]
         return arr[(y - cy * cs) * cs + (x - cx * cs)] == 1
+
+    def fluid(self, x: int, y: int) -> str | None:
+        """'water', 'ice' or 'lava' if you could fish this tile (Phase 16b)."""
+        if x < 0 or y < 0 or x >= self.size or y >= self.size or x >= self.dungeon_x0:
+            return None
+        cs = self.cs
+        cx, cy = x // cs, y // cs
+        arr = self._fluid.get((cx, cy))
+        if arr is None:
+            self._load(cx, cy)
+            arr = self._fluid[(cx, cy)]
+        k = arr[(y - cy * cs) * cs + (x - cx * cs)]
+        return FLUIDS[k - 1] if k else None
 
     def object_at(self, x: int, y: int) -> int | None:
         if x < 0 or y < 0 or x >= self.size or y >= self.size or (x, y) in self.blocks:

@@ -48,10 +48,8 @@ SKILL_RESPEC = "skill.respec"
 
 
 async def perks_of(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID) -> dict[str, float]:
-    skills = (
-        await session.execute(select(Avatar.skills).where(Avatar.user_id == user_id))
-    ).scalar_one_or_none()
-    return skills_dom.perks(cfg, skills or {})
+    row = (await session.execute(select(Avatar.skills, Avatar.pet).where(Avatar.user_id == user_id))).first()
+    return skills_dom.with_pet(cfg, (row[0] if row else None) or {}, row[1] if row else None)
 
 
 async def grant_xp(st: AppState, session: AsyncSession, user_id: uuid.UUID, amount: int) -> None:
@@ -482,6 +480,10 @@ async def collection(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID)
         for k in cfg.recipes.consumables
         if k in cfg.items
     ]
+    fish = [
+        {"key": k, "name": sp.name, "icon": f"icon.fish_{k}", "count": st.get(f"fish.{k}", 0)}
+        for k, sp in cfg.fishing.species.items()
+    ]
     combos = sorted(k for kind, k in disc if kind == DiscoveryKind.combo)
     lore = sorted(k for kind, k in disc if kind == DiscoveryKind.lore)
     trophies = [
@@ -500,6 +502,7 @@ async def collection(session: AsyncSession, cfg: GameConfig, user_id: uuid.UUID)
         "gear": gear,
         "brews": brews,
         "trophies": trophies,
+        "fish": fish,
         "combos": {"found": combos, "total": len(cfg.combos.combos)},
         "lore": {"found": len(lore), "keys": lore},
     }

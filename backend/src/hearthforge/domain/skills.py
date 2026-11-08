@@ -54,6 +54,16 @@ def perks(cfg: GameConfig, skills: Mapping[str, int]) -> dict[str, float]:
     return out
 
 
+def with_pet(cfg: GameConfig, skills: Mapping[str, int], pet: str | None) -> dict[str, float]:
+    """Skill perks plus the active pet's (Phase 16b): the one set every system reads."""
+    out = perks(cfg, skills)
+    pc = cfg.companions.pets.get(pet or "")
+    if pc is not None:
+        for eff, v in pc.perks.items():
+            out[eff] = out.get(eff, 0.0) + v
+    return out
+
+
 def respec_cost(cfg: GameConfig, level: int, respecs: int) -> int:
     if respecs == 0 and cfg.skills.respec.free_first:
         return 0

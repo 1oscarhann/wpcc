@@ -47,6 +47,8 @@ interface AvatarStore {
   abCdMax: number;
   dodgeCd: number;
   bagOpen: boolean;
+  riding: boolean; // Phase 16b: on your mount right now
+  photo: boolean; // photo mode: HUD hidden, filters, save a picture
   inCombat: boolean;
   koUntil: number; // performance.now() ms
   set: (p: Partial<AvatarStore>) => void;
@@ -73,6 +75,8 @@ export const useAvatar = create<AvatarStore>((set) => ({
   abCdMax: 1,
   dodgeCd: 0,
   bagOpen: false,
+  riding: false,
+  photo: false,
   inCombat: false,
   koUntil: 0,
   set: (p) => set(p),

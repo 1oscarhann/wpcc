@@ -11,6 +11,7 @@ import { delveSolid, useDelve, type DelveInfo, type DelveState } from "../state/
 import { useSession } from "../state/session";
 import { addPing } from "../state/social";
 import { useJournal } from "../state/journal";
+import { useFishing } from "../state/companions";
 import { toast } from "../state/toasts";
 import { sfx } from "../game/sfx";
 import type { Appearance } from "../api/types";
@@ -51,6 +52,8 @@ export interface RosterEntry {
   weapon: string;
   level: number;
   title: string | null;
+  pet: string | null; // Phase 16b: the pet trotting after them
+  mount: string | null; // the mount they're riding right now (null on foot)
 }
 
 export interface RoomInfo {
@@ -99,6 +102,14 @@ const TOASTS: Record<string, string> = {
   wave_no_wave: "There's no raid on your village right now.",
   wave_busy: "Not now: get back on your feet (or out of the delve) first.",
   wave_no_village: "Your village isn't in this realm.",
+  ride_no_mount: "You don't have a mount yet. Get one in the Journal (Pets tab).",
+  ride_delve: "No riding in a delve.",
+  ride_ko: "Not while you're knocked out.",
+  ride_in_combat: "Not mid-fight!",
+  fish_no_water: "Stand right next to water to fish.",
+  fish_delve: "Nothing to fish for down here.",
+  fish_ko: "Not while you're knocked out.",
+  fish_in_combat: "Not mid-fight!",
 };
 
 export class RoomClient {
@@ -287,8 +298,10 @@ export class RoomClient {
   }
 
   private addRoster(r: unknown[]): void {
-    const [eid, userId, name, appearance, weapon, level, title] = r as [number, string, string, Appearance, string, number, string | null];
-    this.roster.set(eid, { eid, userId, name, appearance, weapon, level, title: title ?? null });
+    const [eid, userId, name, appearance, weapon, level, title, pet, mount] = r as [
+      number, string, string, Appearance, string, number, string | null, string | null, string | null,
+    ];
+    this.roster.set(eid, { eid, userId, name, appearance, weapon, level, title: title ?? null, pet: pet ?? null, mount: mount ?? null });
   }
 
   get ko(): boolean {
@@ -511,6 +524,9 @@ export class RoomClient {
       case EV.PLAYER_LEFT:
         this.roster.delete(ev[1] as number);
         break;
+      case EV.FISH:
+        this.fishEvent(ev);
+        break;
       case EV.PING: {
         // Phase 15: someone (maybe you) pinged the map; the minimap, world map and world show it
         const [, eid, name, x, y, ms] = ev as [number, number, string, number, number, number];
@@ -540,6 +556,35 @@ export class RoomClient {
         break;
     }
     this.emit(ev);
+  }
+
+  /** Phase 16b: the line goes in, something bites, you land it (or not). */
+  private fishEvent(ev: RoomEvent): void {
+    const fish = useFishing.getState();
+    const op = ev[1] as string;
+    if (op === "cast") {
+      const [, , id, x, y] = ev as [number, string, number, number, number];
+      fish.set({ phase: "waiting", id, x, y });
+      sfx("splash");
+    } else if (op === "bite") {
+      const [, , id, barMs, centerMs, windowMs, rarity] = ev as [number, string, number, number, number, number, string];
+      if (id !== fish.id) return;
+      fish.set({ phase: "bite", barMs, centerMs, windowMs, rarity, shownAt: performance.now() });
+      sfx("telegraph");
+    } else if (op === "catch") {
+      const [, , , species, grams] = ev as [number, string, number, string, number];
+      fish.reset();
+      const sp = useSession.getState().config?.fishing.species[species];
+      const kg = grams >= 1000 ? `${(grams / 1000).toFixed(grams >= 10000 ? 0 : 1)} kg` : `${grams} g`;
+      const big = sp?.rarity === "rare" || sp?.rarity === "legendary";
+      sfx(big ? "fanfare" : "pickup");
+      toast(`${sp?.rarity === "legendary" ? "LEGENDARY! " : ""}You caught a ${sp?.name ?? species} (${kg})!`, "good", `fish_${species}`);
+    } else if (op === "miss") {
+      fish.reset();
+      toast("It got away!", "bad", "rod");
+    } else if (op === "cancel") {
+      fish.reset();
+    }
   }
 
   onBlocks(msg: unknown[]): void {
@@ -578,6 +623,15 @@ export const roomLink: { client: RoomClient | null; send: Send | null; listeners
 export function setRoomClient(c: RoomClient | null): void {
   roomLink.client = c;
   for (const fn of roomLink.listeners) fn(c);
+}
+
+/** Press while the fishing bar runs: how far along the marker is, by your own clock. */
+export function reelNow(): boolean {
+  const f = useFishing.getState();
+  if (f.phase !== "bite" || !roomLink.send) return false;
+  roomLink.send("FISH", "reel", f.id, Math.round(performance.now() - f.shownAt));
+  f.set({ phase: "waiting" });
+  return true;
 }
 
 export function enterAvatar(): void {

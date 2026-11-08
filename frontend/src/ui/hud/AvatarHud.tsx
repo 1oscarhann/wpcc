@@ -19,6 +19,7 @@ import { useTutorial } from "../../state/tutorial";
 import { useSocial } from "../../state/social";
 import { ChatWheel } from "./Social";
 import { JournalButton } from "./Journal";
+import { FishingBar, FishPrompt, RideButton } from "./Companions";
 
 const KO_FLAG = 2;
 
@@ -333,6 +334,10 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
             <Icon name="chat" />
           </button>
           <JournalButton iconOnly />
+          <RideButton />
+          <button className="btn secondary icon-only hide-narrow" onClick={() => set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
+            <Icon name="camera" />
+          </button>
           <button className="btn secondary icon-only" onClick={() => set({ bagOpen: !bagOpen })} aria-label="Bag" title="Bag (B)">
             <Icon name="queue" />
           </button>
@@ -355,7 +360,9 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       <WaveChip />
       <BossBar />
       <div className="hud-bottom">
+        <FishingBar touch={touch} />
         <TradePrompt touch={touch} />
+        <FishPrompt touch={touch} />
         <WaystonePrompt touch={touch} />
         <PoiPrompt touch={touch} />
         <DelveHud touch={touch} />

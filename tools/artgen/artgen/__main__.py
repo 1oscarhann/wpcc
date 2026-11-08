@@ -8,7 +8,21 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
-from artgen import bestiary, bosses, buildings, characters, creatures, decor, dungeon, icons, landmarks, nature, terrain, ui
+from artgen import (
+    bestiary,
+    bosses,
+    buildings,
+    characters,
+    companions,
+    creatures,
+    decor,
+    dungeon,
+    icons,
+    landmarks,
+    nature,
+    terrain,
+    ui,
+)
 from artgen.pack import pixi_json, save_json, save_png, shelf_pack
 from artgen.palette import EYES, HAIR, OUTFIT, SHADE_KEYS, SKIN
 from artgen.terrain import BLOB_MASKS
@@ -45,6 +59,7 @@ def main() -> None:
     world.update(landmarks.generate())
     world.update(dungeon.generate())
     world.update(bosses.generate())  # Phase 13 realm bosses, guards
+    world.update(companions.generate())  # Phase 16b pets and mounts
     world_img, world_rects = shelf_pack(world)
     save_png(world_img, PUBLIC / "world.png")
     save_json(pixi_json("world.png", world_img, world_rects), PUBLIC / "world.json")
@@ -59,7 +74,9 @@ def main() -> None:
     save_png(chars_img, PUBLIC / "chars.png")
 
     # icons: 16×16 grid, 16 per row
+    fishing = yaml.safe_load((ROOT / "config" / "fishing.yaml").read_text())
     ic = icons.generate()
+    ic.update(icons.fish_icons(fishing["species"]))  # Phase 16b: one icon per species
     icon_names = sorted(ic)
     cols = 16
     icons_img = Image.new("RGBA", (16 * cols, 16 * ((len(icon_names) + cols - 1) // cols)))

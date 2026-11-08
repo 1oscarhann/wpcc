@@ -574,6 +574,13 @@ CREATE TABLE mounts (
 - `login_rewards` is `(user_id, calendar_day, last_claim_day, extra)`.
 - `pets` and `mounts` wait for Phase 16b.
 
+### As built (migration 0011, Phase 16b)
+
+- `pets` is keyed `(user_id, pet_key)` with `nickname`, `source` (`tokens` or `unlock`) and `acquired_at`. No level or XP: a pet is a fixed perk (D-114).
+- `mounts` is keyed `(user_id, mount_key)` with `source` and `acquired_at`.
+- `avatars` gains `pet` (the one out) and `mount` (the one G calls).
+- Fishing records are `user_stats` rows `best.fish.<species>` in grams, kept at their maximum (D-115).
+
 ## 8. Social (Phase 15)
 
 ```sql

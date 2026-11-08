@@ -78,6 +78,8 @@ class Avatar(Base):
     skills: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     respecs: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
     title: Mapped[str | None] = mapped_column(Text)
+    pet: Mapped[str | None] = mapped_column(Text)  # Phase 16b: the pet that's out
+    mount: Mapped[str | None] = mapped_column(Text)  # the mount you ride when you press G
     level: Mapped[int] = mapped_column(SmallInteger, default=1)
     xp: Mapped[int] = mapped_column(Integer, default=0)
     hp: Mapped[int] = mapped_column(Integer, nullable=False)

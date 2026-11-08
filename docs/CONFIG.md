@@ -478,6 +478,25 @@ Effect keys (all server-side, D-109): `damage`, `hp`, `crit`, `defence`, `coins`
 
 Stats are the `user_stats` counters: `kill.<enemy>`, `kill.any`, `kill.realm_boss`, `gather.<item>`, `gather.any`, `sell.any`, `forge.any`, `forge.<rarity>`, `forge.epic_plus`, `brew.any`, `build.place`, `build.upgrade`, `delve.cleared`, `wave.won`, `poi.any`, `poi.chest`, `lore.read`, `help.given`, `gift.sent`, `like.given`, `visit.any`, `friend.made`, `chat.any`, `discover.combo` (counted from discoveries) and `quest.<period>`. `items.yaml` gains `cosmetic_token`.
 
+### `companions.yaml` (Phase 16b)
+
+| Key | Meaning |
+|---|---|
+| `pets.<key>` | `name`, `desc`, `perks` (skill-tree effect keys, at most 10% each; `defence` is flat) and exactly one of `cost: {tokens}` or `unlock: {stat, target, hint}`. Sprites: `pet.<key>.idle.0/1`, `move.0..`. |
+| `mounts.<key>` | `name`, `desc`, `speed` (multiplier while riding), `cost: {coins, tokens}`, `town_hall`. Sprites: `mount.<key>.*`; the client's `SADDLE` table says how high the rider sits. |
+| `names` | Pet nickname length (`min`, `max`); names go through the profanity filter. |
+
+### `fishing.yaml` (Phase 16b)
+
+| Key | Meaning |
+|---|---|
+| `cast` | `reach` (tiles to the nearest fishable tile), `bite` (range of waits), `bar` (how long the marker takes), `slack`, `latency` (how late a press may arrive), `every` (between casts), `xp` (per catch; ×2 rare, ×5 legendary). |
+| `windows` | The gold zone's width by rarity. |
+| `weights` | How likely each rarity is when a bite comes (only rarities a spot has are rolled). |
+| `waters.<biome>` | `tiles` (`water`, `ice`, `lava`) and the `species` you can catch there. Plots and the hub fish like the meadow. |
+| `species.<key>` | `name`, `rarity`, `kg` (weight range), `price`, `colors` (two palette ramps for the generated icon), optional `season` and `time` (`day`, `night`). Each becomes an item and a market entry (D-116). |
+| `market` | `baseline` and `soft_cap` for every species. |
+
 ## Secrets in the client bundle
 
 Sections marked secret are stripped from `GET /api/config`:
