@@ -150,13 +150,14 @@ export function BossBar() {
     return () => window.clearInterval(id);
   }, [mode, inDelve]);
   if (!boss || !config) return null;
-  const name = Object.values(config.bosses).find((b) => b.enemy === boss.key)?.name ?? boss.key;
+  const name = boss.flags & 1024 ? config.world_boss.name : Object.values(config.bosses).find((b) => b.enemy === boss.key)?.name ?? boss.key;
   const fresh = note && note.id === boss.id && Date.now() - note.at < 6000 ? note.text : null;
   const enraged = (fresh ?? "").includes("enraged") || (boss.flags & 512) !== 0;
   return (
-    <div className={`boss-bar ${enraged ? "enraged" : ""} ${boss.flags & 256 ? "exposed" : ""}`} role="status" aria-label={`${name} health`}>
+    <div className={`boss-bar ${enraged ? "enraged" : ""} ${boss.flags & 256 ? "exposed" : ""} ${boss.flags & 1024 ? "world" : ""}`} role="status" aria-label={`${name} health`}>
       <span className="head">{name}</span>
       {fresh && <span key={fresh} className="boss-note small"> {fresh}</span>}
+      {boss.flags & 1024 ? <span className="small world-note"> · one health bar for every realm</span> : null}
       <div className="boss-bar-track"><div className="boss-bar-fill" style={{ width: `${(boss.hp / 255) * 100}%` }} /></div>
     </div>
   );

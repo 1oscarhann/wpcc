@@ -214,5 +214,7 @@ export function formatDuration(s: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   if (m < 60) return r ? `${m}m ${r}s` : `${m}m`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
+  const h = Math.floor(m / 60);
+  if (h >= 48) return `${Math.floor(h / 24)}d ${h % 24}h`; // a festival's last week, not "190h"
+  return `${h}h ${m % 60}m`;
 }

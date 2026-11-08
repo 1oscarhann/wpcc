@@ -1417,6 +1417,79 @@ PHASES["16b"] = async (page, kind) => {
   await shot(page, "10-photo-mode", kind, { wait: 600 });
 };
 
+// ── Phase 17: the Plaza — player market, leaderboards, world boss, festival ──
+PHASES[17] = async (page, kind) => {
+  const mobile = kind === "mobile";
+  // Ada lists a few things
+  const ctx2 = await page.context().browser().newContext(VIEWPORTS[kind]);
+  const p2 = await ctx2.newPage();
+  p2.on("pageerror", (e) => console.error(`[ada] page error:`, e.message));
+  const ada = await freshPlayer(p2, kind);
+  hf(`test-account ${ada}`);
+  hf(`grant ${ada} --level 8 --item slime_gel=40 --item wolf_fang=12 --item golden_carp=2 --item herbs=30 --stat fish.any=14 --stat kill.any=420`);
+  await p2.reload();
+  await p2.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  for (const [item, quantity, unit_price] of [["slime_gel", 30, 4], ["wolf_fang", 10, 9], ["golden_carp", 2, 140], ["herbs", 20, 5]]) {
+    const r = await apiPost(p2, "/api/pmarket/listings", { item, quantity, unit_price });
+    if (r.error) console.log("list", item, r.error.code);
+  }
+  // Bram shops
+  const bram = await freshPlayer(page, kind);
+  hf(`test-account ${bram}`);
+  hf(`grant ${bram} --level 7 --coins 3000 --item wolf_fang=4 --item moon_lantern=75 --stat fish.any=9 --stat kill.any=610`);
+  await apiPost(page, "/api/dev/worldboss", { hours: 3, hp: 400000 });
+  await page.reload();
+  await page.waitForFunction(() => window.__hfGame && window.__hfVillage?.getState().village);
+  await page.waitForTimeout(3000);
+  await shot(page, "01-hud-festival-and-world-chips", kind, { wait: 300 });
+  await page.getByRole("button", { name: /^Plaza/ }).click();
+  await page.getByRole("tab", { name: "Player market" }).click();
+  await page.locator(".pm-list .market-row").first().waitFor();
+  await page.locator(".pm-list .market-row", { hasText: "Wolf Fang" }).click();
+  await page.locator(".listing-row").first().waitFor();
+  await shot(page, "02-market-buy", kind, { wait: 700 });
+  await page.locator(".listing-row").first().getByRole("button", { name: /^Buy for/ }).click();
+  await page.waitForTimeout(1200);
+  await shot(page, "03-bought", kind, { wait: 300 });
+  await page.getByRole("button", { name: "Sell", exact: true }).click();
+  await page.locator(".pm-sell").waitFor();
+  await shot(page, "04-sell-form", kind, { wait: 500 });
+  await page.locator(".pm-sell").getByRole("button", { name: /^List/ }).click();
+  await page.waitForTimeout(1200);
+  await shot(page, "05-my-listings", kind, { wait: 400 });
+  await page.getByRole("tab", { name: "Leaderboards" }).click();
+  await page.getByRole("button", { name: "Monster hunters" }).click();
+  await page.locator(".board-row").first().waitFor();
+  await shot(page, "06-leaderboards", kind, { wait: 600 });
+  await page.getByRole("tab", { name: "Festival" }).click();
+  await page.locator(".festival-banner").waitFor();
+  await shot(page, "07-festival", kind, { wait: 500 });
+  await page.locator(".stock-card", { hasText: "Harvest Hero" }).getByRole("button", { name: "Buy" }).click();
+  await page.waitForTimeout(900);
+  await page.getByRole("tab", { name: "World boss" }).click();
+  await page.locator(".world-card").waitFor();
+  await shot(page, "08-world-boss-tab", kind, { wait: 900 });
+  // out to the hub to fight it with the rest of the world
+  await page.getByRole("button", { name: /Head to the hub/ }).click();
+  await page.waitForFunction(() => window.__hfGame?.avatar?.client);
+  await page.waitForTimeout(1500);
+  const c = await page.evaluate(() => fetch("/api/config").then((r) => r.json()).then((cfg) => cfg.map.size / 2));
+  await apiPost(page, "/api/dev/teleport", { x: Math.floor(c), y: Math.floor(c) - 5 });
+  await page.waitForTimeout(2500);
+  const m = await page.evaluate(() => window.__hfGame.devNearestMonster());
+  if (m && m.d < 14) {
+    const f = fightFor(page, 6000);
+    await shot(page, "09-world-boss-fight", kind, { wait: 2500 });
+    await f;
+  } else await shot(page, "09-world-boss-fight", kind, { wait: 500 });
+  await ctx2.close();
+  if (mobile) return;
+  await page.waitForTimeout(2500);
+  await page.getByRole("button", { name: /^Plaza/ }).click();
+  await page.getByRole("tab", { name: "World boss" }).click();
+  await shot(page, "10-world-boss-damage", kind, { wait: 1500 });
+};
+
 const browser = await playwright.chromium.launch();
 for (const [kind, ctxOpts] of Object.entries(VIEWPORTS).filter(([k]) => !process.env.ONLY || process.env.ONLY === k)) {
   const ctx = await browser.newContext(ctxOpts);

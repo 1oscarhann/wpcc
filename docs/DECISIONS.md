@@ -736,3 +736,25 @@ Happiness follows the formula in BALANCE §10.
 
 ### D-118: photo mode is client-only
 **Decision.** P hides the HUD, offers CSS filters (Golden, Dusk, Old map, Ink), toggles names and a paper frame, and saves a PNG made from Pixi's renderer (`extract.canvas`) with the same filter. You can keep walking while framing the shot.
+
+### D-119: the player market sells stackables from escrow
+**Decision.** Players list stackable goods (materials, food, potions, fish, trophies, blueprints, tokens) at a unit price. Listing takes the goods out of your bag into the listing row; nobody can sell the same goods twice.
+- **Buying.** Partial buys are fine. The buyer pays at once and the seller is paid at once, less a 5% fee (at least 1 coin): the fee is a coin sink. Goods go to the buyer's bag; what doesn't fit goes by mail.
+- **Races.** Every buy and cancel locks the listing row; both wallets are locked in user-id order so crossing trades can't deadlock; every request carries an idempotency key. A test fires two buyers at the last three units at once: exactly one gets them and no coins go missing.
+- **Abuse (P4).** Listing needs the new-account gate. Prices must sit between 0.25× and 4× the item's reference value (its NPC market price, or the stash's value), so alts can't wash coins through silly prices. Ten listings a player.
+- **Endings.** Listings last 48 h; expired and cancelled goods come back by mail, swept every 15 s by the global loop.
+- **Cut.** No gear: instances would need their own escrow and inspection UI. That's the obvious next step.
+
+### D-120: the world boss is one HP pool in Postgres
+**Decision.** A world boss event row holds `hp_remaining` for the whole world. Every realm's room spawns the boss (the Stone Colossus's brain and body, enlarged and moonlit) at its hub.
+- **Sync.** The room tallies its players' damage; every second its flush runs `hp_remaining = GREATEST(0, hp_remaining − tally)` and takes the result as the boss's HP. Other realms' damage shows up within a second or two. No HP scaling by fighters: the pool is sized for the world (300k × realms active in the last week; BALANCE's 2M is far too much for a small server).
+- **The end.** Whichever update empties the pool marks the event defeated; rooms see it on their next read and the boss falls everywhere. Events also end when the weekend does. The global loop then pays each fighter by damage tier (×1.5 coins if it fell), by mail, exactly once (`rewarded`), and titles the fighters of the top ten realms "Worldbreaker".
+- **When.** Saturday and Sunday (UTC). `POST /api/dev/worldboss` starts one any time for testing.
+
+### D-121: leaderboards are lifetime counters, cached
+**Decision.** Global boards read existing data: village likes, level (then XP), and `user_stats` counters (monsters, fish, delves, helps). The top 50 is cached for a minute; your own rank is one count query.
+- **Cut.** No weekly boards yet: they need per-week counters or snapshots. The daily delve board (Phase 12) stays where it is.
+
+### D-122: festivals are date windows in config
+**Decision.** A festival runs between two dates (MM-DD, UTC, may wrap the new year). While it runs, every monster kill rolls its token for each helper (double for elites), and its shop sells titles, cosmetic tokens, food and potions for tokens. Four are configured: Spring Bloom, Midsummer Lanterns, Harvest Moon and Winter Hearth. A chip under the mini-map shows the one that's on.
+- **Cut.** No festival decorations or world dressing yet (those need art); Phase 18's polish pass can add particles and a palette tint.

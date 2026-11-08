@@ -1,0 +1,99 @@
+# The global layer (Phase 17, BALANCE §12): the player market, leaderboards, world boss weekends and
+# festivals. Everything here spans realms.
+
+# ── the player market (PLAN P4, D-119) ──────────────────────────────────────
+# Stackable goods only (no gear: instances would need their own escrow). Listing moves the goods out of
+# your bag into escrow; a sale pays you straight away, minus the fee (a coin sink). Unsold goods come
+# back by mail when a listing expires or you cancel it.
+pmarket:
+  fee: 0.05               # of each sale, at least 1 coin
+  listing_hours: 48
+  max_listings: 10        # active listings per player
+  max_quantity: 500       # per listing
+  price_band: [0.25, 4.0] # unit price as a share of the item's reference value (NPC price or stash value)
+  history_days: 14
+  categories: [material, rare_material, intermediate, consumable, blueprint, fish, trophy, cosmetic]
+
+# ── leaderboards ────────────────────────────────────────────────────────────
+leaderboards:
+  size: 50                # rows shown
+  cache: 60s
+  boards:
+    likes:         { name: "Loveliest villages", unit: likes }
+    level:         { name: "Most experienced",   unit: level }
+    kill.any:      { name: "Monster hunters",    unit: monsters }
+    fish.any:      { name: "Anglers",            unit: fish }
+    delve.cleared: { name: "Delvers",            unit: delves }
+    help.given:    { name: "Good neighbours",    unit: helps }
+
+# ── world boss weekends (BALANCE §7) ────────────────────────────────────────
+# One boss with one HP pool for every realm at once. Each realm's room spawns it at the hub and syncs
+# its HP with the database every second (D-120). Rewards are by your own damage, mailed when it ends.
+world_boss:
+  boss: stone_colossus          # attacks and body from bosses.yaml
+  name: The Elder Colossus
+  weekdays: [5, 6]              # Saturday and Sunday (UTC), Monday = 0
+  hours: 48
+  hp_per_realm: 300000          # × realms active in the last 7 days (BALANCE says 2M; tuned down for small servers)
+  min_hp: 300000
+  tiers:                        # by your damage; every tier you reach pays out
+    - { damage: 1,      coins: 200,  items: { cosmetic_token: 1 } }
+    - { damage: 5000,   coins: 600,  items: { golem_shard: 3 } }
+    - { damage: 25000,  coins: 1500, items: { starstone: 2, cosmetic_token: 1 } }
+    - { damage: 100000, coins: 4000, items: { colossus_core: 1, cosmetic_token: 2 } }
+  defeat_bonus: 1.5             # coins × this if the world brings it down
+  top_realms: 10                # their fighters get the title below
+  title: Worldbreaker
+
+# ── festivals (PLAN P16: not "seasons") ─────────────────────────────────────
+# A festival runs between two dates every year. Monsters drop its token; its shop takes the tokens.
+festivals:
+  spring_bloom:
+    name: Spring Bloom
+    desc: "The meadows burst into flower. Slimes are covered in petals, for some reason."
+    start: "03-20"
+    end: "04-03"
+    token: blossom_petal
+    drop_chance: 0.12
+    color: "#f7a8c4"
+    shop:
+      - { item: cosmetic_token, qty: 1, cost: 20 }
+      - { item: swift_tart,     qty: 2, cost: 8 }
+      - { title: Bloomkeeper,          cost: 60 }
+  midsummer:
+    name: Midsummer Lanterns
+    desc: "Paper lanterns float over every pond. The fish are biting late."
+    start: "06-20"
+    end: "07-04"
+    token: summer_lantern
+    drop_chance: 0.12
+    color: "#ffc04d"
+    shop:
+      - { item: cosmetic_token, qty: 1, cost: 20 }
+      - { item: warrior_stew,   qty: 2, cost: 8 }
+      - { title: Lanternlighter,       cost: 60 }
+  harvest_moon:
+    name: Harvest Moon
+    desc: "Pumpkins, lanterns and a big orange moon. Monsters drop moon lanterns all autumn long."
+    start: "10-20"
+    end: "11-15"
+    token: moon_lantern
+    drop_chance: 0.15
+    color: "#f08a33"
+    shop:
+      - { item: cosmetic_token,  qty: 1, cost: 20 }
+      - { item: guard_porridge,  qty: 2, cost: 8 }
+      - { item: healing_potion,  qty: 3, cost: 10 }
+      - { title: Harvest Hero,          cost: 60 }
+  winter_hearth:
+    name: Winter Hearth
+    desc: "Snow on every roof and a fire in every hearth. Even the yetis seem cheerful."
+    start: "12-15"
+    end: "01-05"
+    token: snow_star
+    drop_chance: 0.12
+    color: "#94cdeb"
+    shop:
+      - { item: cosmetic_token,  qty: 1, cost: 20 }
+      - { item: stamina_potion,  qty: 2, cost: 8 }
+      - { title: Hearthwarden,          cost: 60 }

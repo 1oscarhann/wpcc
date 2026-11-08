@@ -14,6 +14,7 @@ import { HappinessChip, VillagersPanel } from "./Villagers";
 import { MiniMap } from "./WorldMap";
 import { JournalButton } from "./Journal";
 import { FriendsButton } from "./Social";
+import { GlobalChips, PlazaButton } from "./Plaza";
 import { useCrafting } from "../../state/crafting";
 import { serverNow, useSession } from "../../state/session";
 import { useVillage } from "../../state/village";
@@ -361,7 +362,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
       <TopBar v={v} now={now} onSettings={onSettings} />
       <div className="village-name"><span className="ribbon">{v.name}</span></div>
       <ClearHint v={v} />
-      <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /></div>
+      <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /><GlobalChips /></div>
       <WaveChip />
       <WaveReportModal />
       <VillagersPanel />
@@ -384,6 +385,7 @@ export function BuildHud({ onSettings, touch, onZoom }: {
             </button>
             <JournalButton />
             <FriendsButton />
+            <PlazaButton />
             <button className="btn secondary icon-only" onClick={() => useRealm.getState().set({ panel: "members" })} aria-label="Realm" title="Realm: members, stash, activity">
               <Icon name="banner" />
             </button>

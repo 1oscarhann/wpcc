@@ -690,3 +690,13 @@ tavern = 1 if a Tavern exists within 12 tiles path-distance of most homes, else 
 - **Mounts.** Horse ×1.6 speed (2,500 coins, Town Hall 3); Mountain Ram ×1.45 (6 tokens).
 - **Fishing.** 23 species across six waters. A bite comes after 1.5–4.5 s; the bar takes 1.8 s; the zone is 300 / 220 / 160 / 120 ms wide for common / uncommon / rare / legendary. Rarity odds 70 / 22 / 7 / 1. Prices 8–200 coins, soft cap 60 a day per species. 6 XP a catch (12 rare, 30 legendary). Seasonal: Blossom Trout (spring), Sunscale (summer), Aurora Cod (winter); night: Moonfin, Lantern Gar, Old Whiskers.
 - **Faucet check.** A steady angler lands about one fish every 6–8 s of attempts; at ~15 coins average that's under 150 coins a minute before soft caps, about the same as hand-gathering and selling.
+
+
+## 12. The global layer (Phase 17, as built)
+
+| System | Numbers |
+|---|---|
+| Player market | 5% fee on each sale (min 1), a sink. Listings last 48 h; 10 at a time; 500 per listing. Prices 0.25×–4× the reference value. Listing needs level 5 or a day-old account. |
+| World boss | Saturday–Sunday UTC. HP 300,000 × realms active this week (min 300,000). Tiers at 1 / 5,000 / 25,000 / 100,000 damage pay 200 / 600 / 1,500 / 4,000 coins (cumulative) plus tokens, Golem Shards, Starstones and a Colossus Core; ×1.5 coins if it falls. Top 10 realms: the title "Worldbreaker". |
+| Festivals | Tokens drop on 12–15% of kills (double from elites). Shops: a cosmetic token for 20, food or potions for 8–10, a title for 60. A steady hunter (~2 kills a minute) earns the title in about 30 minutes. |
+| Leaderboards | Top 50, cached 60 s. |

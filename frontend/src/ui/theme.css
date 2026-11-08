@@ -2451,3 +2451,146 @@ body:has(.boss-bar) .wave-chip {
   width: max-content;
   max-width: calc(100vw - 20px);
 }
+
+/* ── Phase 17: the Plaza ─────────────────────────────────────────────────── */
+.modal.wide:has(.plaza-tabs) {
+  width: min(980px, calc(100vw - 20px));
+}
+.pm-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.pm-list {
+  gap: 3px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.pm-detail,
+.pm-sell {
+  padding: 8px 10px;
+}
+.listing-row {
+  padding: 4px 8px;
+  align-items: center;
+}
+.listing-row.sold,
+.listing-row.expired,
+.listing-row.cancelled {
+  opacity: 0.65;
+}
+.board-row {
+  padding: 3px 8px;
+  align-items: center;
+}
+.board-rank {
+  min-width: 38px;
+}
+.board-row.rank-1 .board-rank {
+  color: var(--gold);
+}
+.board-row.rank-2 .board-rank {
+  color: #8a93a6;
+}
+.board-row.rank-3 .board-rank {
+  color: #b5743d;
+}
+.board-row.me {
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
+}
+.world-card {
+  padding: 8px 12px;
+  align-items: center;
+}
+.world-boss-art {
+  filter: hue-rotate(220deg) saturate(0.7) brightness(1.1);
+  flex: none;
+}
+.world-hp {
+  position: relative;
+  display: block;
+  height: 22px;
+  background: var(--ink);
+  border: 3px solid var(--ink);
+}
+.world-hp > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(#b99ae3, #8d66c4);
+}
+.world-hp > b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 600 13px var(--font-head);
+  color: var(--paper-light);
+  text-shadow: 0 1px 0 var(--ink);
+}
+.world-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tier-row {
+  padding: 3px 8px;
+  align-items: center;
+}
+.tier-row.got {
+  position: relative;
+  isolation: isolate;
+}
+.tier-row.got::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(143 201 92 / 0.35);
+}
+.festival-banner {
+  padding: 10px 14px;
+  position: relative;
+  isolation: isolate;
+}
+.festival-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--fest) 45%, transparent), transparent 70%);
+}
+.festival-chip,
+.world-chip {
+  pointer-events: auto;
+  cursor: pointer;
+  gap: 4px;
+  margin-top: 4px;
+  border-left: 4px solid var(--fest, #8d66c4);
+}
+.boss-bar.world .boss-bar-fill {
+  background: linear-gradient(#b99ae3, #8d66c4);
+}
+@media (max-width: 760px) {
+  .pm-body,
+  .world-cols {
+    grid-template-columns: 1fr;
+  }
+  .plaza-tabs .tab-label {
+    display: none;
+  }
+}
+.world-card .btn {
+  white-space: normal;
+  max-width: 100%;
+  text-align: left;
+}
+@media (max-width: 640px) {
+  .world-card {
+    flex-wrap: wrap;
+  }
+  .world-boss-art {
+    display: none;
+  }
+}

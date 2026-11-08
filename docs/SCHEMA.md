@@ -492,6 +492,8 @@ CREATE TABLE player_market_trades (
 CREATE INDEX ON player_market_trades (item_key, created_at DESC);
 ```
 
+**As built (Phase 17, migration 0012).** `pmarket_listings(id, seller_id, seller_name, item_key, quantity (left in escrow), listed, unit_price, status text: active|sold|cancelled|expired, created_at, expires_at, closed_at)` with checks `0 <= quantity <= listed` and `unit_price >= 1`, and partial indexes on active listings by item and price and by expiry. `pmarket_trades(id, listing_id, seller_id, buyer_id, item_key, quantity, unit_price, fee, created_at)`. Stackables only, so no `instance_id`.
+
 ## 7. Discovery, progression and cosmetics (Phases 6, 9, 16)
 
 ```sql
@@ -702,6 +704,11 @@ CREATE TABLE world_boss_events (
   hp_remaining  bigint NOT NULL,                      -- global pool; api flushes in-memory aggregate every 5s
   status        boss_status NOT NULL
 );
+
+-- As built (Phase 17, migration 0012):
+--   world_boss_events (id, boss_key, name, starts_at UNIQUE, ends_at, hp_max, hp_remaining >= 0,
+--                      status text: active|defeated|expired, finished_at, rewarded)
+--   world_boss_damage (event_id, user_id, realm_id, damage)   -- PK (event_id, user_id)
 
 CREATE TABLE dungeon_runs (
   id           uuid PRIMARY KEY,

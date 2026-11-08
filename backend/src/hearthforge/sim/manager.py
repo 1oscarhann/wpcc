@@ -70,6 +70,9 @@ class RoomManager:
             from hearthforge.sim.bosses import Bosses
 
             room.bosses = Bosses(room)
+            from hearthforge.sim.worldboss import WorldBoss
+
+            room.world = WorldBoss(room)  # Phase 17: the weekend's world boss, shared HP
         self.rooms[realm.id] = room
         room.start()
         log.info("room up for realm %s", realm.id)
@@ -220,6 +223,12 @@ class RoomManager:
             pet=av.pet,
             mount=av.mount,
         )
+
+    def world_reload(self) -> None:
+        """A world boss event started or ended: every room re-reads it on its next flush."""
+        for room in self.rooms.values():
+            if room.world is not None:
+                room.world.reload = True
 
     async def reload_progress(self, user_id: uuid.UUID) -> None:
         """Phase 16: skills, title or block list changed over REST: refresh the room's copy."""

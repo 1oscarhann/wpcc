@@ -305,6 +305,7 @@ class RealmRoom:
         self.dungeons = DungeonSpace(self)
         self.defence = Defence(self)  # Phase 13: monster waves on villages
         self.bosses: Any = None  # Phase 13: the realm boss (sim/bosses.py), set by the manager
+        self.world: Any = None  # Phase 17: the world boss (sim/worldboss.py), set by the manager
 
     # ── lifecycle ────────────────────────────────────────────────────────────
     def new_id(self) -> int:
@@ -452,6 +453,7 @@ class RealmRoom:
     def player_info(self, p: Player) -> dict[str, Any]:
         return {
             "bosses": self.bosses.info() if self.bosses is not None else [],
+            "world_boss": self.world.info() if self.world is not None else None,
             "level": p.level,
             "xp": p.xp,
             "xp_next": xp_to_next(self.cfg, p.level),
@@ -580,6 +582,8 @@ class RealmRoom:
             self.defence.tick(t)
             if self.bosses is not None:
                 self.bosses.tick(t)
+            if self.world is not None:
+                self.world.tick(t)
         self.dungeons.tick(t)
         self.tick_drops(t)
         if t % self.hz == 0:
@@ -661,6 +665,17 @@ class RealmRoom:
                 p.attuned.add(w.index)
                 p.pending.waystones.add(w.index)
                 p.ev.append([EV["WAYSTONE"], w.index, w.name, sorted(p.attuned)])
+
+    # ── Phase 17: festivals ──────────────────────────────────────────────────
+    def festival(self) -> Any:
+        """The festival running now (a FestivalCfg), looked up once a minute."""
+        if self.tick_no - getattr(self, "_fest_at", -(10**9)) >= self.hz * 60:
+            from hearthforge.services import festivals
+
+            act = festivals.active(self.cfg, self.st.clock.now())
+            self._fest = act[1] if act else None
+            self._fest_at = self.tick_no
+        return self._fest
 
     # ── Phase 16b: riding and fishing ────────────────────────────────────────
     def set_mounted(self, p: Player, on: bool) -> str | None:
@@ -1452,6 +1467,8 @@ class RealmRoom:
                 await self._flush_one(p)
             if self.bosses is not None:
                 await self._flush_bosses()
+            if self.world is not None:
+                await self._flush_world()
             if self.defence.results:
                 results, self.defence.results = self.defence.results, []
                 for res in results:
@@ -1510,6 +1527,59 @@ class RealmRoom:
                 b.set_rows(rows)
             except Exception:  # noqa: BLE001
                 log.exception("couldn't load realm bosses")
+
+    async def _flush_world(self) -> None:
+        """Send our damage to the shared pool every second and take back its value; re-read the event
+        every 10 s (or when told to) so a new weekend, a win elsewhere or the end of time shows up."""
+        from sqlalchemy import select as _select
+
+        from hearthforge.db.models import WorldBossEvent
+        from hearthforge.services import worldboss as wb_svc
+        from hearthforge.sim.worldboss import WorldEvent
+
+        w = self.world
+        now = self.st.clock.now()
+        sec = self.tick_no // self.hz
+        dmg = w.take_pending()
+        try:
+            if dmg and w.event is not None:
+                async with self.st.sessionmaker() as s, s.begin():
+                    hp, status = await wb_svc.apply_damage(s, w.event.id, self.realm_id, dmg, now)
+                w.set_event(
+                    WorldEvent(
+                        w.event.id, w.event.key, w.event.name, w.event.hp_max, hp, status, w.event.ends_ms
+                    )
+                )
+                if status != "active" and self.st.rooms is not None:
+                    self.st.rooms.world_reload()  # tell the other realms straight away
+            if sec % 10 == 0 or w.reload:
+                w.reload = False
+                async with self.st.sessionmaker() as s:
+                    ev = await wb_svc.current(s, now)
+                    if ev is None:
+                        # nobody's opened this weekend's event yet (the global loop will; a room can too)
+                        ev = (
+                            await s.execute(
+                                _select(WorldBossEvent).where(WorldBossEvent.status == "active").limit(1)
+                            )
+                        ).scalar_one_or_none()
+                w.set_event(
+                    WorldEvent(
+                        ev.id,
+                        ev.boss_key,
+                        ev.name,
+                        int(ev.hp_max),
+                        int(ev.hp_remaining),
+                        ev.status,
+                        int(ev.ends_at.timestamp() * 1000),
+                    )
+                    if ev is not None and ev.ends_at > now
+                    else None
+                )
+        except Exception:  # noqa: BLE001
+            for k, v in dmg.items():  # keep the tally for the next try
+                w.pending[k] += v
+            log.exception("couldn't sync the world boss")
 
     async def _finish_wave(self, res: dict[str, Any]) -> None:
         from hearthforge.services import waves as wave_svc

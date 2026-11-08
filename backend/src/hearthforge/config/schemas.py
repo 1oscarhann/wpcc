@@ -1586,3 +1586,71 @@ class FishingCfg(Strict):
     waters: dict[str, WaterCfg]
     species: dict[str, SpeciesCfg] = Field(min_length=1)
     market: FishMarketCfg
+
+
+# ── global.yaml (Phase 17) ───────────────────────────────────────────────────
+
+
+class PMarketCfg(Strict):
+    fee: float = Field(ge=0, le=0.5)
+    listing_hours: float = Field(gt=0)
+    max_listings: int = Field(ge=1)
+    max_quantity: int = Field(ge=1)
+    price_band: tuple[float, float]
+    history_days: int = Field(ge=1)
+    categories: list[str] = Field(min_length=1)
+
+
+class BoardCfg(Strict):
+    name: str
+    unit: str
+
+
+class LeaderboardsCfg(Strict):
+    size: int = Field(ge=5, le=200)
+    cache: Duration = 60.0
+    boards: dict[str, BoardCfg] = Field(min_length=1)
+
+
+class WorldTierCfg(Strict):
+    damage: int = Field(ge=1)
+    coins: int = Field(ge=0)
+    items: dict[str, int] = {}
+
+
+class WorldBossCfg(Strict):
+    boss: str
+    name: str
+    weekdays: list[int] = Field(min_length=1)
+    hours: float = Field(gt=0, le=168)
+    hp_per_realm: int = Field(ge=1000)
+    min_hp: int = Field(ge=1000)
+    tiers: list[WorldTierCfg] = Field(min_length=1)
+    defeat_bonus: float = Field(ge=1)
+    top_realms: int = Field(ge=1)
+    title: str
+
+
+class ShopEntryCfg(Strict):
+    item: str | None = None
+    qty: int = Field(default=1, ge=1)
+    title: str | None = None
+    cost: int = Field(ge=1)
+
+
+class FestivalCfg(Strict):
+    name: str
+    desc: str
+    start: str = Field(pattern=r"^\d\d-\d\d$")  # MM-DD
+    end: str = Field(pattern=r"^\d\d-\d\d$")
+    token: str
+    drop_chance: float = Field(ge=0, le=1)
+    color: str
+    shop: list[ShopEntryCfg] = Field(min_length=1)
+
+
+class GlobalCfg(Strict):
+    pmarket: PMarketCfg
+    leaderboards: LeaderboardsCfg
+    world_boss: WorldBossCfg
+    festivals: dict[str, FestivalCfg]

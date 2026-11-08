@@ -129,6 +129,10 @@ export class GameSocket {
         if (msg[1] === "realm") void onRealmNotify(useRealm.getState().realm?.id ?? null);
         else if (msg[1] === "wave") onWaveNotify(msg[2] as Record<string, unknown>);
         else if (msg[1] === "social") onSocialNotify(msg[2] as Record<string, unknown>);
+        else if (msg[1] === "pmarket") {
+          const p = msg[2] as { item: string; qty: number };
+          toast(`Someone bought ${p.qty} of your ${useSession.getState().config?.items[p.item]?.name ?? p.item}!`, "good", "coins");
+        }
         break;
       case "PONG": {
         const [clientMs, serverMs] = [msg[1] as number, msg[2] as number];

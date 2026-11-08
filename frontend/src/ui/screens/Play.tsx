@@ -15,6 +15,8 @@ import { AwayCardModal, Guide } from "../hud/Guide";
 import { RealmPanel } from "../hud/Realm";
 import { JournalPanel } from "../hud/Journal";
 import { PhotoBar } from "../hud/Companions";
+import { PlazaPanel } from "../hud/Plaza";
+import { usePlaza } from "../../state/plaza";
 import { SocialPanel, useSocialSync } from "../hud/Social";
 import { useJournal } from "../../state/journal";
 import { useSocial } from "../../state/social";
@@ -106,6 +108,7 @@ export function PlayScreen() {
   const realmPanel = useRealm((s) => s.panel);
   const journalTab = useJournal((s) => s.tab);
   const photo = useAvatar((s) => s.photo);
+  const plazaTab = usePlaza((s) => s.tab);
   const socialOpen = useSocial((s) => s.open);
   useSocialSync();
 
@@ -154,6 +157,7 @@ export function PlayScreen() {
       {realmPanel && mode === "build" && <RealmPanel onClose={() => useRealm.getState().set({ panel: null })} />}
       {socialOpen && <SocialPanel onClose={() => useSocial.getState().set({ open: false, visiting: null })} />}
       {journalTab && <JournalPanel onClose={() => useJournal.getState().set({ tab: null })} />}
+      {plazaTab && <PlazaPanel onClose={() => usePlaza.getState().set({ tab: null })} />}
       <MapModal />
       {mode === "avatar" && <PartyInvite />}
       {village && <Guide />}

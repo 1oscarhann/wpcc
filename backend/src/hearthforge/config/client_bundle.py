@@ -168,6 +168,10 @@ def client_bundle(cfg: GameConfig) -> dict[str, Any]:
             "chat_radius": cfg.social.chat.radius,
             "ping_s": cfg.social.pings.lasts,
         },
+        "world_boss": {"name": cfg.global_.world_boss.name, "boss": cfg.global_.world_boss.boss},
+        "festivals": {
+            k: {"name": f.name, "token": f.token, "color": f.color} for k, f in cfg.global_.festivals.items()
+        },
         "companions": {
             "pets": {k: {"name": p.name, "desc": p.desc} for k, p in cfg.companions.pets.items()},
             "mounts": {k: {"name": m.name, "speed": m.speed} for k, m in cfg.companions.mounts.items()},

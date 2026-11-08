@@ -497,6 +497,17 @@ Stats are the `user_stats` counters: `kill.<enemy>`, `kill.any`, `kill.realm_bos
 | `species.<key>` | `name`, `rarity`, `kg` (weight range), `price`, `colors` (two palette ramps for the generated icon), optional `season` and `time` (`day`, `night`). Each becomes an item and a market entry (D-116). |
 | `market` | `baseline` and `soft_cap` for every species. |
 
+### `global.yaml` (Phase 17)
+
+| Key | Meaning |
+|---|---|
+| `pmarket` | `fee`, `listing_hours`, `max_listings`, `max_quantity`, `price_band` (low and high, as shares of the reference value), `history_days`, and the item `categories` that can be listed. |
+| `leaderboards` | `size` (rows), `cache`, and `boards`: `likes`, `level` or any `user_stats` key, each with a `name` and a `unit`. |
+| `world_boss` | `boss` (a key in `bosses.yaml`), `name`, `weekdays` (0 = Monday) and `hours` of the window, `hp_per_realm` × realms active in the last 7 days (at least `min_hp`), damage `tiers` (`damage`, `coins`, `items`), `defeat_bonus`, `top_realms` and their `title`. |
+| `festivals.<key>` | `name`, `desc`, `start` and `end` (`MM-DD`), `token` (an item), `drop_chance` per kill, `color`, and a `shop` of `{item, qty, cost}` or `{title, cost}`. |
+
+`items.yaml` gains the four festival tokens: `blossom_petal`, `summer_lantern`, `moon_lantern`, `snow_star`.
+
 ## Secrets in the client bundle
 
 Sections marked secret are stripped from `GET /api/config`:

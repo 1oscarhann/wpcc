@@ -51,6 +51,7 @@ FILES: dict[str, type[BaseModel]] = {
     "progression": s.ProgressionCfg,
     "companions": s.CompanionsCfg,
     "fishing": s.FishingCfg,
+    "global": s.GlobalCfg,
 }
 
 
@@ -128,6 +129,7 @@ class GameConfig:
     progression: s.ProgressionCfg
     companions: s.CompanionsCfg
     fishing: s.FishingCfg
+    global_: s.GlobalCfg
     buildings: dict[str, ResolvedBuilding]
     items: dict[str, ItemInfo]
     hash: str
@@ -276,6 +278,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     progression: s.ProgressionCfg = parsed["progression"]
     companions: s.CompanionsCfg = parsed["companions"]
     fishing: s.FishingCfg = parsed["fishing"]
+    global_: s.GlobalCfg = parsed["global"]
 
     # every fish species is a stackable bag item with an NPC market price (Phase 16b, one source of truth)
     for fk, sp in fishing.species.items():
@@ -717,6 +720,34 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
     if "cosmetic_token" not in items:
         errors.append("items.yaml: weekly quests hand out 'cosmetic_token'; it must exist")
 
+    # ── the global layer (Phase 17) ───────────────────────────────────────────
+    gl = global_
+    lo_b, hi_b = gl.pmarket.price_band
+    if not 0 < lo_b < 1 < hi_b:
+        errors.append("global.yaml:pmarket.price_band: needs 0 < low < 1 < high")
+    for board in gl.leaderboards.boards:
+        if board not in ("likes", "level") and "." not in board:
+            errors.append(f"global.yaml:leaderboards.boards.{board}: must be likes, level or a stat key")
+    wb = gl.world_boss
+    if wb.boss not in bosses.bosses:
+        errors.append(f"global.yaml:world_boss.boss: unknown boss '{wb.boss}'")
+    if any(not 0 <= d <= 6 for d in wb.weekdays):
+        errors.append("global.yaml:world_boss.weekdays: 0 (Monday) to 6 (Sunday)")
+    if [t.damage for t in wb.tiers] != sorted(t.damage for t in wb.tiers):
+        errors.append("global.yaml:world_boss.tiers: must go up in damage")
+    for t in wb.tiers:
+        for it in t.items:
+            if it not in items:
+                errors.append(f"global.yaml:world_boss.tiers: unknown item '{it}'")
+    for fk, fe in gl.festivals.items():
+        if fe.token not in items:
+            errors.append(f"global.yaml:festivals.{fk}.token: unknown item '{fe.token}'")
+        for i, entry in enumerate(fe.shop):
+            if (entry.item is None) == (entry.title is None):
+                errors.append(f"global.yaml:festivals.{fk}.shop[{i}]: needs exactly one of item or title")
+            elif entry.item is not None and entry.item not in items:
+                errors.append(f"global.yaml:festivals.{fk}.shop[{i}]: unknown item '{entry.item}'")
+
     # ── companions and fishing (Phase 16b) ────────────────────────────────────
     for pk, pet in companions.pets.items():
         if (pet.cost is None) == (pet.unlock is None):
@@ -864,6 +895,7 @@ def load_config(config_dir: Path, strict: bool = False) -> GameConfig:
         progression=progression,
         companions=companions,
         fishing=fishing,
+        global_=global_,
         buildings=buildings,
         items=items,
         hash=_hash(raw),

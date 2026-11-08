@@ -69,6 +69,9 @@ def create_app(
             from hearthforge.services.waves import director_loop
 
             tasks.append(asyncio.create_task(director_loop(st), name="wave-director"))
+            from hearthforge.services.global_loop import global_loop
+
+            tasks.append(asyncio.create_task(global_loop(st), name="global-loop"))
         if settings.run_worker_in_process:
             from hearthforge.worker.poller import Worker
 
@@ -119,6 +122,7 @@ def create_app(
         journal,
         market,
         me,
+        plaza,
         progress,
         realm,
         social,
@@ -141,6 +145,7 @@ def create_app(
     app.include_router(social.router)
     app.include_router(journal.router)
     app.include_router(companions.router)
+    app.include_router(plaza.router)
     app.include_router(admin.router)
     app.include_router(gateway.router)
 

@@ -25,6 +25,7 @@ const NIGHT = 16;
 const FRIENDLY = 128; // a guard (Phase 13)
 const VULNERABLE = 256; // a realm boss with its guard down
 const BLIZZARD = 512;
+const WORLD = 1024; // the world boss (Phase 17)
 const MONSTER_SHOT = 1;
 
 interface MonsterView {
@@ -168,8 +169,10 @@ export class CombatFx {
     const name = this.frame(v.key, s.anim, s.at, v.t);
     v.body.texture = tex(name);
     const flip = s.dx > 0.05 ? -1 : 1;
-    const sc = v.elite ? 1.3 : 1;
+    const world = (s.flags & WORLD) !== 0; // Phase 17: the world boss, bigger and moonlit
+    const sc = world ? 1.45 : v.elite ? 1.3 : 1;
     v.body.scale.x = flip * sc;
+    if (world) v.body.scale.y = sc;
     // wind-up: shiver and redden so the attack reads at 16 px
     if (s.anim === ANIM.windup) {
       v.body.x = Math.floor(v.t / 40) % 2 ? 0.7 : -0.7;
@@ -180,6 +183,7 @@ export class CombatFx {
     }
     const st = this.statusTint.get(ent.id);
     if (st && st.until > this.time && s.anim !== ANIM.windup) v.body.tint = st.color;
+    if (world && s.anim !== ANIM.windup) v.body.tint = 0xd8c8ff;
     if ((s.flags & VULNERABLE) !== 0) v.body.tint = Math.floor(v.t / 120) % 2 ? 0xfff6c0 : 0xffd27a; // its core is open
     if (v.flash > 0) {
       v.flash -= dms;

@@ -1230,6 +1230,71 @@ def u_rod(c: Canvas) -> None:  # fishing
 ICONS.update({"camera": u_camera, "paw": u_paw, "saddle": u_saddle, "rod": u_rod})
 
 
+# ── Phase 17: tokens and the Plaza ──────────────────────────────────────────
+def i_cosmetic_token(c: Canvas) -> None:  # a purple coin with a star
+    c.ellipse(8, 8, 6.5, 6.5, PURPLE[1])
+    c.ellipse(7.5, 7.5, 5.2, 5.2, PURPLE[2])
+    pts = [(8, 3.5), (9.3, 6.8), (12.6, 6.9), (10, 9), (10.9, 12.3), (8, 10.4), (5.1, 12.3), (6, 9), (3.4, 6.9), (6.7, 6.8)]
+    c.shape(lambda x, y: _in_poly(x + 0.5, y + 0.5, pts), lambda x, y: GOLD[3])
+
+
+def i_blossom_petal(c: Canvas) -> None:
+    for ang in range(5):
+        import math
+
+        a = ang * 1.2566 - 1.57
+        c.ellipse(8 + math.cos(a) * 3.6, 8 + math.sin(a) * 3.6, 2.6, 2.6, PINK[2] if ang % 2 else ramp("flower_pink")[2])
+    c.ellipse(8, 8, 1.6, 1.6, GOLD[3])
+
+
+def _lantern(c: Canvas, body: list) -> None:
+    c.vline(8, 0, 2, WOOD[2])
+    c.rect(5, 2, 7, 1, WOOD[2])
+    c.ellipse(8, 8, 4.6, 5, body[2])
+    c.ellipse(7, 7, 2.6, 3, body[3])
+    for x in (5, 8, 11):
+        c.vline(x, 4, 12, body[1])
+    c.rect(5, 13, 7, 1, WOOD[2])
+    c.put(8, 14, GOLD[3])
+
+
+def i_summer_lantern(c: Canvas) -> None:
+    _lantern(c, ramp("flower_yellow") + [GOLD[4]])
+
+
+def i_moon_lantern(c: Canvas) -> None:
+    _lantern(c, ramp("pumpkin"))
+    c.put(7, 7, GOLD[4])
+    c.put(9, 7, GOLD[4])
+    c.hline(7, 9, 10, GOLD[4])
+
+
+def i_snow_star(c: Canvas) -> None:
+    snow = ramp("snow")
+    for dx, dy in ((1, 0), (0, 1), (1, 1), (1, -1)):
+        c.line(8 - dx * 6, 8 - dy * 6, 8 + dx * 6, 8 + dy * 6, snow[3] if dx and dy else snow[4])
+    c.ellipse(8, 8, 1.6, 1.6, ramp("ice")[3])
+
+
+def u_globe(c: Canvas) -> None:  # the Plaza: the world beyond your realm
+    c.ellipse(8, 8, 6.6, 6.6, WATER[2])
+    c.ellipse(7, 7, 4.5, 4.5, WATER[3])
+    for x, y in ((5, 5), (6, 5), (6, 6), (7, 6), (5, 7), (10, 9), (11, 9), (10, 10), (9, 11), (11, 5)):
+        c.put(x, y, LEAF[3])
+    c.hline(2, 13, 8, WATER[1])
+    c.vline(8, 2, 13, WATER[1])
+
+
+ICONS.update({
+    "cosmetic_token": i_cosmetic_token,
+    "blossom_petal": i_blossom_petal,
+    "summer_lantern": i_summer_lantern,
+    "moon_lantern": i_moon_lantern,
+    "snow_star": i_snow_star,
+    "globe": u_globe,
+})
+
+
 def generate() -> dict[str, Canvas]:
     out = {}
     for name, fn in ICONS.items():

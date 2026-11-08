@@ -1039,6 +1039,9 @@ class Combat:
                         if night:
                             q = int(q * night.loot_qty + rng.random())
                         room.spawn_drop(p, drop.item, q, m.x, m.y)
+            fest = room.festival()  # Phase 17: the festival's token, rolled per helper like any loot
+            if fest is not None and rng.random() < fest.drop_chance * (2 if m.elite else 1):
+                room.spawn_drop(p, fest.token, 1, m.x, m.y)
         if xp:
             for eid in shared:
                 op = room.players.get(eid)

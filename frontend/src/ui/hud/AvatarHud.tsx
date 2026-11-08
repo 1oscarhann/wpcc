@@ -20,6 +20,7 @@ import { useSocial } from "../../state/social";
 import { ChatWheel } from "./Social";
 import { JournalButton } from "./Journal";
 import { FishingBar, FishPrompt, RideButton } from "./Companions";
+import { GlobalChips, PlazaButton } from "./Plaza";
 
 const KO_FLAG = 2;
 
@@ -334,6 +335,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
             <Icon name="chat" />
           </button>
           <JournalButton iconOnly />
+          <PlazaButton />
           <RideButton />
           <button className="btn secondary icon-only hide-narrow" onClick={() => set({ photo: true })} aria-label="Photo mode" title="Photo mode (P)">
             <Icon name="camera" />
@@ -354,7 +356,7 @@ export function AvatarHud({ touch, onSettings }: { touch: boolean; onSettings: (
       {(flags & KO_FLAG) !== 0 && (
         <div className="av-ko center"><div className="panel head" style={{ fontSize: 24 }}>Knocked out! Waking up at home…</div></div>
       )}
-      {!inDelve && <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /><BlessingChip /><BuffChips /></div>}
+      {!inDelve && <div className="minimap-slot"><MiniMap small={touch} /><WorldChip /><GlobalChips /><BlessingChip /><BuffChips /></div>}
       {inDelve && <div className="minimap-slot"><BlessingChip /><BuffChips /></div>}
       <PartyFrames />
       <WaveChip />

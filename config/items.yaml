@@ -190,4 +190,9 @@ items:
   tyrants_heart:   { name: "Tyrant's Heart",  category: trophy, stackable: true, max_stack: 9, icon: icon.tyrants_heart }
   # Phase 16: weekly quests and the login calendar hand these out; a cosmetics shop spends them (later)
   cosmetic_token: { name: Cosmetic Token, category: cosmetic, stackable: true, max_stack: 99, icon: icon.cosmetic_token }
+  # Phase 17: festival tokens (global.yaml festivals)
+  blossom_petal:  { name: Blossom Petal,  category: cosmetic, stackable: true, max_stack: 999, icon: icon.blossom_petal }
+  summer_lantern: { name: Summer Lantern, category: cosmetic, stackable: true, max_stack: 999, icon: icon.summer_lantern }
+  moon_lantern:   { name: Moon Lantern,   category: cosmetic, stackable: true, max_stack: 999, icon: icon.moon_lantern }
+  snow_star:      { name: Snow Star,      category: cosmetic, stackable: true, max_stack: 999, icon: icon.snow_star }
 resource_max_stack: 999

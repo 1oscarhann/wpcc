@@ -127,6 +127,8 @@ export interface ConfigBundle {
     chat_radius: number;
     ping_s: number;
   };
+  world_boss: { name: string; boss: string };
+  festivals: Record<string, { name: string; token: string; color: string }>;
   companions: {
     pets: Record<string, { name: string; desc: string }>;
     mounts: Record<string, { name: string; speed: number }>;

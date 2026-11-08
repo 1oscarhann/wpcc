@@ -12,6 +12,7 @@ from hearthforge.db.models.accounts import (
 from hearthforge.db.models.crafting import CraftJob, Discovery, DiscoveryKind, JobStatus
 from hearthforge.db.models.defence import BossDamage, MonsterWave, RealmBoss
 from hearthforge.db.models.economy import LedgerAsset, Transaction, Wallet
+from hearthforge.db.models.global_ import Listing, Trade, WorldBossDamage, WorldBossEvent
 from hearthforge.db.models.infra import (
     AdminAuditLog,
     ConfigVersion,
@@ -76,6 +77,10 @@ __all__ = [
     "Friendship",
     "Gift",
     "LoginReward",
+    "Listing",
+    "Trade",
+    "WorldBossDamage",
+    "WorldBossEvent",
     "Mount",
     "Pet",
     "Mail",
